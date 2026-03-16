@@ -7,9 +7,6 @@
     "icon": "./assets/icon.png",
     "scheme": "frontend50",
     "userInterfaceStyle": "automatic",
-    "plugins": [
-      "expo-router"
-    ],
     "ios": {
       "bundleIdentifier": "com.m2so.frontend50",
       "supportsTablet": false,
