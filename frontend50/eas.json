@@ -5,11 +5,8 @@
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal",
-      "workingDirectory": "frontend50"
+      "distribution": "internal"
     },
-    "production": {
-      "workingDirectory": "frontend50"
-    }
+    "production": {}
   }
 }
