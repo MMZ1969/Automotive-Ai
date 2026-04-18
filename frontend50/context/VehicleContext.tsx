@@ -1,25 +1,50 @@
-import { createContext, useContext, useState } from "react";
+import { fetchVehicles } from "@lib/vehicles";
+import React, { createContext, useContext, useState } from "react";
 
-const VehicleContext = createContext(null);
+interface VehicleContextType {
+  vehicles: any[];
+  loading: boolean;
+  setVehicles: (v: any[]) => void;
+  setLoading: (v: boolean) => void;
+  refreshVehicles: () => Promise<void>;
+}
 
-export function VehicleProvider({ children }) {
-  const [vehicles, setVehicles] = useState([]);
+const VehicleContext = createContext<VehicleContextType | null>(null);
 
-  const addVehicle = (vehicle) => {
-    setVehicles((prev) => [...prev, vehicle]);
-  };
+export const VehicleProvider = ({ children }: { children: React.ReactNode }) => {
+  const [vehicles, setVehicles] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const removeVehicle = (id) => {
-    setVehicles((prev) => prev.filter((v) => v.id !== id));
-  };
+  const refreshVehicles = async () =>
+    {
+      setLoading(true);
+      try {
+        const data = await fetchVehicles();
+        setVehicles(data || []);
+      } catch (err) {
+        console.error("refreshVehicles error:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
 
   return (
-    <VehicleContext.Provider value={{ vehicles, addVehicle, removeVehicle }}>
+    <VehicleContext.Provider
+      value={{
+        vehicles,
+        loading,
+        setVehicles,
+        setLoading,
+        refreshVehicles,
+      }}
+    >
       {children}
     </VehicleContext.Provider>
   );
-}
+};
 
-export function useVehicles() {
-  return useContext(VehicleContext);
-}
+export const useVehicle = () => {
+  const ctx = useContext(VehicleContext);
+  if (!ctx) throw new Error("useVehicle must be used inside VehicleProvider");
+  return ctx;
+};

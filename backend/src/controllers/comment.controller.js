@@ -1,7 +1,8 @@
 // src/controllers/comment.controller.js
+import prisma from "../lib/prisma.js";
 import * as CommentService from "../services/comment.service.js";
-import { prisma } from "../lib/prisma.js";
 
+// GET a post and its comments
 export const getPostWithComments = async (req, res) => {
   try {
     const postId = req.params.id;
@@ -26,6 +27,7 @@ export const getPostWithComments = async (req, res) => {
   }
 };
 
+// ADD a comment to a post
 export const addComment = async (req, res) => {
   try {
     const postId = req.params.id;

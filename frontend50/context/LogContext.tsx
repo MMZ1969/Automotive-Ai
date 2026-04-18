@@ -1,25 +1,49 @@
-import { createContext, useContext, useState } from "react";
+import { fetchLogsByVehicle } from "@lib/logs";
+import React, { createContext, useContext, useState } from "react";
 
-const LogContext = createContext(null);
+interface LogContextType {
+  logs: any[];
+  loading: boolean;
+  setLogs: (v: any[]) => void;
+  setLoading: (v: boolean) => void;
+  refreshLogs: (vehicleId: string) => Promise<void>;
+}
 
-export function LogProvider({ children }) {
-  const [logs, setLogs] = useState([]);
+const LogContext = createContext<LogContextType | null>(null);
 
-  const addLog = (log) => {
-    setLogs((prev) => [...prev, log]);
-  };
+export const LogProvider = ({ children }: { children: React.ReactNode }) => {
+  const [logs, setLogs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const removeLog = (id) => {
-    setLogs((prev) => prev.filter((l) => l.id !== id));
+  const refreshLogs = async (vehicleId: string) => {
+    setLoading(true);
+    try {
+      const data = await fetchLogsByVehicle(vehicleId);
+      setLogs(data || []);
+    } catch (err) {
+      console.error("refreshLogs error:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <LogContext.Provider value={{ logs, addLog, removeLog }}>
+    <LogContext.Provider
+      value={{
+        logs,
+        loading,
+        setLogs,
+        setLoading,
+        refreshLogs,
+      }}
+    >
       {children}
     </LogContext.Provider>
   );
-}
+};
 
-export function useLogs() {
-  return useContext(LogContext);
-}
+export const useLog = () => {
+  const ctx = useContext(LogContext);
+  if (!ctx) throw new Error("useLog must be used inside LogProvider");
+  return ctx;
+};

@@ -1,0 +1,63 @@
+import { router } from "expo-router";
+import { Text, TouchableOpacity, View } from "react-native";
+
+export default function Welcome() {
+  return (
+    <View
+      style={{
+        flex: 1,
+        backgroundColor: "#050509",
+        justifyContent: "center",
+        alignItems: "center",
+        paddingHorizontal: 30,
+      }}
+    >
+      {/* Logo / Title */}
+      <Text style={{ fontSize: 42, fontWeight: "900", color: "#345bff", marginBottom: 8 }}>
+        🚗 AutoAI
+      </Text>
+      <Text style={{ fontSize: 16, color: "#9ca3af", marginBottom: 60, textAlign: "center" }}>
+        The social platform for car enthusiasts and mechanics
+      </Text>
+
+      {/* Login Button */}
+      <TouchableOpacity
+        onPress={() => router.push("/(auth)/login")}
+        style={{
+          width: "100%",
+          backgroundColor: "#345bff",
+          paddingVertical: 16,
+          borderRadius: 12,
+          alignItems: "center",
+          marginBottom: 14,
+        }}
+      >
+        <Text style={{ color: "white", fontSize: 18, fontWeight: "700" }}>
+          Login
+        </Text>
+      </TouchableOpacity>
+
+      {/* Sign Up Button */}
+      <TouchableOpacity
+        onPress={() => router.push("/(auth)/register")}
+        style={{
+          width: "100%",
+          backgroundColor: "#11131a",
+          paddingVertical: 16,
+          borderRadius: 12,
+          alignItems: "center",
+          borderWidth: 1,
+          borderColor: "#252838",
+        }}
+      >
+        <Text style={{ color: "white", fontSize: 18, fontWeight: "700" }}>
+          Create Account
+        </Text>
+      </TouchableOpacity>
+
+      <Text style={{ color: "#4b5563", marginTop: 40, fontSize: 12 }}>
+        For DIYers & Mechanics
+      </Text>
+    </View>
+  );
+}

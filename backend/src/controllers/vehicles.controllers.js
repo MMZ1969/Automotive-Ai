@@ -1,4 +1,5 @@
-import { prisma } from "../lib/prisma.js";
+// src/controllers/vehicles.controllers.js
+import prisma from "../lib/prisma.js";
 
 // Create a vehicle
 export const createVehicle = async (req, res) => {
@@ -38,6 +39,27 @@ export const getMyVehicles = async (req, res) => {
   } catch (err) {
     console.error("GET VEHICLES ERROR:", err);
     res.status(500).json({ message: "Failed to fetch vehicles" });
+  }
+};
+
+// ⭐ Get a single vehicle by ID
+export const getVehicleById = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const vehicleId = Number(req.params.id);
+
+    const vehicle = await prisma.vehicle.findUnique({
+      where: { id: vehicleId },
+    });
+
+    if (!vehicle || vehicle.userId !== userId) {
+      return res.status(403).json({ message: "Unauthorized" });
+    }
+
+    res.json(vehicle);
+  } catch (err) {
+    console.error("GET VEHICLE ERROR:", err);
+    res.status(500).json({ message: "Failed to fetch vehicle" });
   }
 };
 

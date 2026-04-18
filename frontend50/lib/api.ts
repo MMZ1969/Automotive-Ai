@@ -1,24 +1,10 @@
-const API_BASE_URL = "http://localhost:3000"; // change when backend is ready
+import axios from "axios";
 
-export async function apiRequest(path: string, options: RequestInit = {}) {
-  const url = `${API_BASE_URL}${path}`;
+const api = axios.create({
+  baseURL: "http://10.0.0.225:5000",
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
 
-  const res = await fetch(url, {
-    headers: {
-      "Content-Type": "application/json",
-      ...(options.headers || {}),
-    },
-    ...options,
-  });
-
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(text || `Request failed: ${res.status}`);
-  }
-
-  try {
-    return await res.json();
-  } catch {
-    return null;
-  }
-}
+export default api;

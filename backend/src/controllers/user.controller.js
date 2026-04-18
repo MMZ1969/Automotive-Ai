@@ -1,6 +1,5 @@
 import bcrypt from "bcryptjs";
-import { prisma } from "../lib/prisma.js";
-
+import prisma from "../lib/prisma.js";
 // GET /users/me
 export async function getMe(req, res) {
   try {

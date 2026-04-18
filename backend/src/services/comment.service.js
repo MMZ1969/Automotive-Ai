@@ -1,6 +1,7 @@
 // src/services/comment.service.js
-import { prisma } from "../lib/prisma.js";
+import prisma from "../lib/prisma.js";
 
+// keep the rest of your comment service logic exactly as-is
 export const createComment = async (postId, userId, content) => {
   return prisma.comment.create({
     data: {

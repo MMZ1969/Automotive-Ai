@@ -49,14 +49,14 @@ export const loginUser = async ({ email, password }) => {
 
   // ⭐ JWT MUST CONTAIN id
   const token = jwt.sign(
-    {
-      id: user.id,
-      email: user.email,
-      role: user.role,
-    },
-    process.env.JWT_SECRET,
-    { expiresIn: "7d" }
-  );
+  {
+    userId: user.id,  // ✅ changed from id to userId
+    email: user.email,
+    role: user.role,
+  },
+  process.env.JWT_SECRET,
+  { expiresIn: "7d" }
+);
 
   return {
     token,

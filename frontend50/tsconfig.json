@@ -1,4 +1,15 @@
 {
-  "compilerOptions": {},
-  "extends": "expo/tsconfig.base"
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "allowJs": true,
+    "jsx": "react-native",
+    "strict": false,
+    "baseUrl": ".",
+    "paths": {
+      "@lib/*": ["lib/*"],
+      "@context/*": ["context/*"],
+      "@constants/*": ["constants/*"],
+      "@components/*": ["components/*"]
+    }
+  }
 }
