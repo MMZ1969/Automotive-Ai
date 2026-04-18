@@ -32,7 +32,7 @@ export const getPostById = async (req, res) => {
         comments: true,
         likes: true,
       },
-    });
+    })
 
     if (!post) {
       return res.status(404).json({ error: "Post not found" });
@@ -127,5 +127,27 @@ export const toggleLike = async (req, res) => {
   } catch (err) {
     console.error("TOGGLE LIKE ERROR:", err);
     res.status(500).json({ error: "Failed to toggle like" });
+  }
+};
+
+// ADD COMMENT
+export const addComment = async (req, res) => {
+  try {
+    const postId = Number(req.params.id);
+    const userId = req.user.id;
+    const { content } = req.body;
+
+    if (!content || content.trim() === "") {
+      return res.status(400).json({ error: "Comment content cannot be empty" });
+    }
+
+    const comment = await prisma.comment.create({
+      data: { content, userId, postId },
+    });
+
+    res.json(comment);
+  } catch (err) {
+    console.error("ADD COMMENT ERROR:", err);
+    res.status(500).json({ error: "Failed to add comment" });
   }
 };

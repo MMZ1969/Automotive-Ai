@@ -1,6 +1,6 @@
 import { useAuth } from "@context/AuthContext";
 import api from "@lib/api";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
@@ -13,6 +13,7 @@ import {
 } from "react-native";
 
 export default function Feed() {
+  const router = useRouter();
   const { user } = useAuth();
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -187,7 +188,10 @@ export default function Feed() {
                 </Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <TouchableOpacity
+                onPress={() => router.push(`/(tabs)/post/${item.id}`)}
+                style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
+              >
                 <Text style={{ fontSize: 18 }}>💬</Text>
                 <Text style={{ color: "#9ca3af", fontSize: 14 }}>
                   {item.comments?.length || 0}

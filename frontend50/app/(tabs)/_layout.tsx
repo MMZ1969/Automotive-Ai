@@ -22,10 +22,11 @@ export default function TabsLayout() {
       }}
     >
       {/* HIDDEN SCREENS */}
-      <Tabs.Screen name="index" options={{ href: null }} />
-      <Tabs.Screen name="explore" options={{ href: null }} />
-      <Tabs.Screen name="diyer/index" options={{ href: null }} />
-      <Tabs.Screen name="mechanic/index" options={{ href: null }} />
+<Tabs.Screen name="index" options={{ href: null }} />
+<Tabs.Screen name="explore" options={{ href: null }} />
+<Tabs.Screen name="diyer/index" options={{ href: null }} />
+<Tabs.Screen name="mechanic/index" options={{ href: null }} />
+<Tabs.Screen name="post/[id]" options={{ href: null }} />
 
       {/* VISIBLE TABS */}
       <Tabs.Screen

@@ -5,6 +5,7 @@ import { useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   Text,
@@ -46,20 +47,27 @@ export default function CreatePostScreen() {
       style={{ flex: 1, backgroundColor: "#050509" }}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      {/* HEADER */}
-      <View style={{
-        paddingTop: 60,
-        paddingHorizontal: 20,
-        paddingBottom: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: "#252838",
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-      }}>
-        <Text style={{ color: "white", fontSize: 22, fontWeight: "900" }}>
-          New Post
-        </Text>
+     {/* HEADER */}
+<View style={{
+  paddingTop: 60,
+  paddingHorizontal: 20,
+  paddingBottom: 16,
+  borderBottomWidth: 1,
+  borderBottomColor: "#252838",
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "space-between",
+}}>
+  <TouchableOpacity onPress={() => {
+    Keyboard.dismiss();
+    setContent("");
+    router.push("/(tabs)/feed");
+  }}>
+    <Text style={{ color: "#9ca3af", fontSize: 16 }}>Cancel</Text>
+  </TouchableOpacity>
+  <Text style={{ color: "white", fontSize: 22, fontWeight: "900" }}>
+    New Post
+  </Text>
         <TouchableOpacity
           onPress={handlePost}
           disabled={submitting || !content.trim()}
