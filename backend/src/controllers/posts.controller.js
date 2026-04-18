@@ -9,6 +9,7 @@ export const getAllPosts = async (req, res) => {
       include: {
         user: true,
         comments: true,
+        likes: true,
       },
     });
 
@@ -29,6 +30,7 @@ export const getPostById = async (req, res) => {
       include: {
         user: true,
         comments: true,
+        likes: true,
       },
     });
 
@@ -98,5 +100,32 @@ export const deletePost = async (req, res) => {
   } catch (err) {
     console.error("DELETE POST ERROR:", err);
     res.status(500).json({ error: "Failed to delete post" });
+  }
+};
+
+// TOGGLE LIKE
+export const toggleLike = async (req, res) => {
+  try {
+    const postId = Number(req.params.id);
+    const userId = req.user.id;
+
+    const existing = await prisma.like.findUnique({
+      where: { postId_userId: { postId, userId } },
+    });
+
+    if (existing) {
+      await prisma.like.delete({
+        where: { postId_userId: { postId, userId } },
+      });
+      return res.json({ liked: false });
+    } else {
+      await prisma.like.create({
+        data: { postId, userId },
+      });
+      return res.json({ liked: true });
+    }
+  } catch (err) {
+    console.error("TOGGLE LIKE ERROR:", err);
+    res.status(500).json({ error: "Failed to toggle like" });
   }
 };

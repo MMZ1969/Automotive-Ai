@@ -41,6 +41,15 @@ export default function Feed() {
     fetchPosts();
   };
 
+  const handleLike = async (postId: number) => {
+    try {
+      await api.post(`/api/posts/${postId}/like`);
+      fetchPosts();
+    } catch (err) {
+      console.error("LIKE ERROR:", err);
+    }
+  };
+
   if (loading) {
     return (
       <View style={{ flex: 1, backgroundColor: "#050509", justifyContent: "center", alignItems: "center" }}>
@@ -51,7 +60,6 @@ export default function Feed() {
 
   return (
     <View style={{ flex: 1, backgroundColor: "#050509" }}>
-      {/* HEADER */}
       <View style={{
         paddingTop: 60,
         paddingHorizontal: 20,
@@ -64,7 +72,6 @@ export default function Feed() {
         </Text>
       </View>
 
-      {/* POSTS */}
       <FlatList
         data={posts}
         keyExtractor={(item) => item.id.toString()}
@@ -168,8 +175,13 @@ export default function Feed() {
               borderTopColor: "#252838",
               gap: 20,
             }}>
-              <TouchableOpacity style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                <Text style={{ fontSize: 18 }}>❤️</Text>
+              <TouchableOpacity
+                onPress={() => handleLike(item.id)}
+                style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
+              >
+                <Text style={{ fontSize: 18 }}>
+                  {item.likes?.some((l: any) => l.userId === user?.id) ? "❤️" : "🤍"}
+                </Text>
                 <Text style={{ color: "#9ca3af", fontSize: 14 }}>
                   {item.likes?.length || 0}
                 </Text>
