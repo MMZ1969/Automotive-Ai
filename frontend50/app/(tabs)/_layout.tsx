@@ -65,6 +65,15 @@ export default function TabsLayout() {
     ),
   }}
 />
+<Tabs.Screen
+  name="diagnose"
+  options={{
+    title: "Diagnose",
+    tabBarIcon: ({ color }) => (
+      <Text style={{ fontSize: 20, color }}>🔌</Text>
+    ),
+  }}
+/>
     </Tabs>
   );
 }
