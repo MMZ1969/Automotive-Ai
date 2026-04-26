@@ -18,11 +18,19 @@ export default function Feed() {
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [postCount, setPostCount] = useState(0);
+  const [vehicleCount, setVehicleCount] = useState(0);
 
   const fetchPosts = async () => {
     try {
-      const res = await api.get("/api/posts");
-      setPosts(res.data);
+      const [postsRes, vehiclesRes] = await Promise.all([
+        api.get("/api/posts"),
+        api.get("/api/vehicles"),
+      ]);
+      setPosts(postsRes.data);
+      const myPosts = postsRes.data.filter((p: any) => p.userId === user?.id);
+      setPostCount(myPosts.length);
+      setVehicleCount(vehiclesRes.data.length);
     } catch (err) {
       console.error("FEED ERROR:", err);
     } finally {
@@ -61,6 +69,8 @@ export default function Feed() {
 
   return (
     <View style={{ flex: 1, backgroundColor: "#050509" }}>
+
+      {/* HEADER */}
       <View style={{
         paddingTop: 60,
         paddingHorizontal: 20,
@@ -68,9 +78,24 @@ export default function Feed() {
         borderBottomWidth: 1,
         borderBottomColor: "#252838",
       }}>
-        <Text style={{ color: "white", fontSize: 28, fontWeight: "900" }}>
-          🚗 AutoFeed
+        <Text style={{ color: "#9ca3af", fontSize: 13 }}>Welcome back 👋</Text>
+        <Text style={{ color: "white", fontSize: 26, fontWeight: "900", marginTop: 2 }}>
+          {user?.name || "Driver"}
         </Text>
+        <View style={{ flexDirection: "row", gap: 12, marginTop: 12 }}>
+          <View style={statPill}>
+            <Text style={{ color: "#9ca3af", fontSize: 11 }}>Posts</Text>
+            <Text style={{ color: "white", fontWeight: "700" }}>{postCount}</Text>
+          </View>
+          <View style={statPill}>
+            <Text style={{ color: "#9ca3af", fontSize: 11 }}>Vehicles</Text>
+            <Text style={{ color: "white", fontWeight: "700" }}>{vehicleCount}</Text>
+          </View>
+          <View style={statPill}>
+            <Text style={{ color: "#9ca3af", fontSize: 11 }}>Rep</Text>
+            <Text style={{ color: "white", fontWeight: "700" }}>0</Text>
+          </View>
+        </View>
       </View>
 
       <FlatList
@@ -204,3 +229,13 @@ export default function Feed() {
     </View>
   );
 }
+
+const statPill = {
+  backgroundColor: "#11131a",
+  paddingHorizontal: 14,
+  paddingVertical: 8,
+  borderRadius: 20,
+  borderWidth: 1,
+  borderColor: "#252838",
+  alignItems: "center" as const,
+};

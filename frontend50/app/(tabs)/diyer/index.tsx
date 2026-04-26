@@ -1,10 +1,33 @@
 import { useAuth } from "@context/AuthContext";
-import { useRouter } from "expo-router";
+import api from "@lib/api";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useState } from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 
 export default function DiyerDashboard() {
   const { user } = useAuth();
   const router = useRouter();
+  const [postCount, setPostCount] = useState(0);
+  const [vehicleCount, setVehicleCount] = useState(0);
+
+  useFocusEffect(
+    useCallback(() => {
+      const fetchStats = async () => {
+        try {
+          const [postsRes, vehiclesRes] = await Promise.all([
+            api.get("/api/posts"),
+            api.get("/api/vehicles"),
+          ]);
+          const myPosts = postsRes.data.filter((p: any) => p.userId === user?.id);
+          setPostCount(myPosts.length);
+          setVehicleCount(vehiclesRes.data.length);
+        } catch (err) {
+          console.error("STATS ERROR:", err);
+        }
+      };
+      fetchStats();
+    }, [user])
+  );
 
   return (
     <ScrollView
@@ -25,21 +48,15 @@ export default function DiyerDashboard() {
       </View>
 
       {/* QUICK STATS */}
-      <View
-        style={{
-          flexDirection: "row",
-          justifyContent: "space-between",
-          marginBottom: 20,
-        }}
-      >
+      <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 20 }}>
         <View style={statCard}>
           <Text style={{ color: "#9fa4c0", fontSize: 13 }}>My Vehicles</Text>
-          <Text style={statNumber}>0</Text>
+          <Text style={statNumber}>{vehicleCount}</Text>
         </View>
 
         <View style={[statCard, { marginHorizontal: 10 }]}>
           <Text style={{ color: "#9fa4c0", fontSize: 13 }}>Posts</Text>
-          <Text style={statNumber}>0</Text>
+          <Text style={statNumber}>{postCount}</Text>
         </View>
 
         <View style={statCard}>
@@ -64,7 +81,7 @@ export default function DiyerDashboard() {
         </Text>
       </TouchableOpacity>
 
-      {/* SECTIONS */}
+      {/* MY GARAGE */}
       <Text style={sectionTitle}>My Garage</Text>
       <TouchableOpacity
         onPress={() => router.push("/(tabs)/(profile)/vehicles")}
@@ -82,10 +99,11 @@ export default function DiyerDashboard() {
         <Text style={actionCardSub}>Track repairs and modifications</Text>
       </TouchableOpacity>
 
+      {/* COMMUNITY */}
       <Text style={[sectionTitle, { marginTop: 10 }]}>Community</Text>
 
       <TouchableOpacity
-        onPress={() => router.push("/(tabs)/explore")}
+        onPress={() => router.push("/(tabs)/feed")}
         style={actionCard}
       >
         <Text style={actionCardTitle}>🔍 Explore Feed</Text>
@@ -93,7 +111,7 @@ export default function DiyerDashboard() {
       </TouchableOpacity>
 
       <TouchableOpacity
-        onPress={() => router.push("/(tabs)/explore")}
+        onPress={() => router.push("/(tabs)/create")}
         style={actionCard}
       >
         <Text style={actionCardTitle}>❓ Ask a Question</Text>
@@ -111,7 +129,6 @@ export default function DiyerDashboard() {
   );
 }
 
-// Shared styles as objects for reuse
 const statCard = {
   flex: 1,
   backgroundColor: "#11131a",
