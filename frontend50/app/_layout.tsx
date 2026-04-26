@@ -15,15 +15,9 @@ function RouteGuard() {
     const inAuthGroup = segments[0] === "(auth)";
 
     if (!user && !inAuthGroup) {
-      // Not logged in, send to login
       router.replace("/(auth)/welcome");
     } else if (user && inAuthGroup) {
-      // Logged in but on auth screen, send to dashboard
-      if (user.role === "MECHANIC") {
-        router.replace("/(tabs)/mechanic");
-      } else {
-        router.replace("/(tabs)/feed");
-      }
+      router.replace("/(tabs)/feed");
     }
   }, [user, loading, segments]);
 
