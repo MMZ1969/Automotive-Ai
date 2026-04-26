@@ -12,6 +12,7 @@ model User {
   email     String    @unique
   password  String
   name      String?
+  profilePhoto  String?
   role      String    @default("DIYER")
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt

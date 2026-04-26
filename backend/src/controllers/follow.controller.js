@@ -6,6 +6,10 @@ export const toggleFollow = async (req, res) => {
     const followerId = req.user.id;
     const followingId = Number(req.params.id);
 
+    if (!followingId || isNaN(followingId)) {
+      return res.status(400).json({ error: "Invalid user ID" });
+    }
+
     if (followerId === followingId) {
       return res.status(400).json({ error: "You cannot follow yourself" });
     }
@@ -40,6 +44,10 @@ export const getFollowStatus = async (req, res) => {
   try {
     const followerId = req.user.id;
     const followingId = Number(req.params.id);
+
+    if (!followingId || isNaN(followingId)) {
+      return res.status(400).json({ error: "Invalid user ID" });
+    }
 
     const follow = await prisma.follow.findUnique({
       where: {

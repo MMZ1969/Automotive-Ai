@@ -69,3 +69,47 @@ export async function updateProfile(req, res) {
     res.status(500).json({ error: "Failed to update profile" });
   }
 }
+// GET /users/search?q=query
+export async function searchUsers(req, res) {
+  try {
+    const { q } = req.query;
+    const currentUserId = req.user.id;
+
+    if (!q || q.trim() === "") {
+      return res.json([]);
+    }
+
+    const users = await prisma.user.findMany({
+      where: {
+        AND: [
+          { id: { not: currentUserId } },
+          {
+            OR: [
+              { name: { contains: q, mode: "insensitive" } },
+              { email: { contains: q, mode: "insensitive" } },
+            ],
+          },
+        ],
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        profilePhoto: true,
+        _count: {
+          select: {
+            followers: true,
+            posts: true,
+          },
+        },
+      },
+      take: 20,
+    });
+
+    res.json(users);
+  } catch (err) {
+    console.error("SEARCH USERS ERROR:", err);
+    res.status(500).json({ error: "Failed to search users" });
+  }
+}
