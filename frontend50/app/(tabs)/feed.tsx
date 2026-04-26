@@ -19,21 +19,22 @@ export default function Feed() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [postCount, setPostCount] = useState(0);
-  const [vehicleCount, setVehicleCount] = useState(0);
+  const [followerCount, setFollowerCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
 
   const fetchPosts = async () => {
     try {
-      const [postsRes, vehiclesRes] = await Promise.all([
+      const [postsRes, followRes] = await Promise.all([
         api.get("/api/posts"),
-        api.get("/api/vehicles"),
+        api.get(`/api/users/${user?.id}/follow-status`),
       ]);
 
       const postsWithFollow = await Promise.all(
         postsRes.data.map(async (post: any) => {
           if (post.user?.id === user?.id) return { ...post, isFollowing: false };
           try {
-            const followRes = await api.get(`/api/users/${post.user?.id}/follow-status`);
-            return { ...post, isFollowing: followRes.data.following };
+            const fr = await api.get(`/api/users/${post.user?.id}/follow-status`);
+            return { ...post, isFollowing: fr.data.following };
           } catch {
             return { ...post, isFollowing: false };
           }
@@ -43,7 +44,8 @@ export default function Feed() {
       setPosts(postsWithFollow);
       const myPosts = postsRes.data.filter((p: any) => p.userId === user?.id);
       setPostCount(myPosts.length);
-      setVehicleCount(vehiclesRes.data.length);
+      setFollowerCount(followRes.data.followerCount || 0);
+      setFollowingCount(followRes.data.followingCount || 0);
     } catch (err) {
       console.error("FEED ERROR:", err);
     } finally {
@@ -110,12 +112,12 @@ export default function Feed() {
             <Text style={{ color: "white", fontWeight: "700" }}>{postCount}</Text>
           </View>
           <View style={statPill}>
-            <Text style={{ color: "#9ca3af", fontSize: 11 }}>Vehicles</Text>
-            <Text style={{ color: "white", fontWeight: "700" }}>{vehicleCount}</Text>
+            <Text style={{ color: "#9ca3af", fontSize: 11 }}>Followers</Text>
+            <Text style={{ color: "white", fontWeight: "700" }}>{followerCount}</Text>
           </View>
           <View style={statPill}>
-            <Text style={{ color: "#9ca3af", fontSize: 11 }}>Rep</Text>
-            <Text style={{ color: "white", fontWeight: "700" }}>0</Text>
+            <Text style={{ color: "#9ca3af", fontSize: 11 }}>Following</Text>
+            <Text style={{ color: "white", fontWeight: "700" }}>{followingCount}</Text>
           </View>
         </View>
       </View>
