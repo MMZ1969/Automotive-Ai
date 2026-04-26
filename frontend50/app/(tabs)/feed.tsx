@@ -27,7 +27,20 @@ export default function Feed() {
         api.get("/api/posts"),
         api.get("/api/vehicles"),
       ]);
-      setPosts(postsRes.data);
+
+      const postsWithFollow = await Promise.all(
+        postsRes.data.map(async (post: any) => {
+          if (post.user?.id === user?.id) return { ...post, isFollowing: false };
+          try {
+            const followRes = await api.get(`/api/users/${post.user?.id}/follow-status`);
+            return { ...post, isFollowing: followRes.data.following };
+          } catch {
+            return { ...post, isFollowing: false };
+          }
+        })
+      );
+
+      setPosts(postsWithFollow);
       const myPosts = postsRes.data.filter((p: any) => p.userId === user?.id);
       setPostCount(myPosts.length);
       setVehicleCount(vehiclesRes.data.length);
@@ -56,6 +69,15 @@ export default function Feed() {
       fetchPosts();
     } catch (err) {
       console.error("LIKE ERROR:", err);
+    }
+  };
+
+  const handleFollow = async (userId: number) => {
+    try {
+      await api.post(`/api/users/${userId}/follow`);
+      fetchPosts();
+    } catch (err) {
+      console.error("FOLLOW ERROR:", err);
     }
   };
 
@@ -173,7 +195,26 @@ export default function Feed() {
                 </View>
               </View>
 
-              <Text style={{ color: "#6b7280", fontSize: 12 }}>
+              {/* FOLLOW BUTTON */}
+              {item.user?.id !== user?.id && (
+                <TouchableOpacity
+                  onPress={() => handleFollow(item.user?.id)}
+                  style={{
+                    backgroundColor: item.isFollowing ? "#1f2937" : "#345bff",
+                    paddingHorizontal: 12,
+                    paddingVertical: 6,
+                    borderRadius: 20,
+                    borderWidth: 1,
+                    borderColor: item.isFollowing ? "#252838" : "#345bff",
+                  }}
+                >
+                  <Text style={{ color: "white", fontSize: 12, fontWeight: "700" }}>
+                    {item.isFollowing ? "Following" : "Follow"}
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              <Text style={{ color: "#6b7280", fontSize: 12, marginLeft: 8 }}>
                 {new Date(item.createdAt).toLocaleDateString()}
               </Text>
             </View>

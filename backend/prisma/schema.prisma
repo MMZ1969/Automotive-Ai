@@ -20,6 +20,8 @@ model User {
   posts     Post[]
   comments  Comment[]
   likes     Like[]
+  followers Follow[]  @relation("UserFollowing")
+  following Follow[]  @relation("UserFollowers")
 }
 
 model Post {
@@ -90,4 +92,14 @@ model playing_with_neon {
   id Int @id @default(autoincrement())
 
   @@ignore
+}
+model Follow {
+  id          Int      @id @default(autoincrement())
+  followerId  Int
+  followingId Int
+  createdAt   DateTime @default(now())
+  follower    User     @relation("UserFollowers", fields: [followerId], references: [id])
+  following   User     @relation("UserFollowing", fields: [followingId], references: [id])
+
+  @@unique([followerId, followingId])
 }
