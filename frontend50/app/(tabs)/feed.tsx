@@ -21,11 +21,14 @@ export default function Feed() {
   const [postCount, setPostCount] = useState(0);
   const [followerCount, setFollowerCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
+  const [activeTab, setActiveTab] = useState<"forYou" | "following">("forYou");
 
-  const fetchPosts = async () => {
+  const fetchPosts = async (tab = activeTab) => {
     try {
       const [postsRes, followRes] = await Promise.all([
-        api.get("/api/posts"),
+        tab === "forYou"
+          ? api.get("/api/posts")
+          : api.get("/api/posts/following"),
         api.get(`/api/users/${user?.id}/follow-status`),
       ]);
 
@@ -42,7 +45,8 @@ export default function Feed() {
       );
 
       setPosts(postsWithFollow);
-      const myPosts = postsRes.data.filter((p: any) => p.userId === user?.id);
+      const allPostsRes = await api.get("/api/posts");
+      const myPosts = allPostsRes.data.filter((p: any) => p.userId === user?.id);
       setPostCount(myPosts.length);
       setFollowerCount(followRes.data.followerCount || 0);
       setFollowingCount(followRes.data.followingCount || 0);
@@ -56,19 +60,25 @@ export default function Feed() {
 
   useFocusEffect(
     useCallback(() => {
-      fetchPosts();
-    }, [])
+      fetchPosts(activeTab);
+    }, [activeTab])
   );
 
   const onRefresh = () => {
     setRefreshing(true);
-    fetchPosts();
+    fetchPosts(activeTab);
+  };
+
+  const handleTabChange = (tab: "forYou" | "following") => {
+    setActiveTab(tab);
+    setLoading(true);
+    fetchPosts(tab);
   };
 
   const handleLike = async (postId: number) => {
     try {
       await api.post(`/api/posts/${postId}/like`);
-      fetchPosts();
+      fetchPosts(activeTab);
     } catch (err) {
       console.error("LIKE ERROR:", err);
     }
@@ -77,7 +87,7 @@ export default function Feed() {
   const handleFollow = async (userId: number) => {
     try {
       await api.post(`/api/users/${userId}/follow`);
-      fetchPosts();
+      fetchPosts(activeTab);
     } catch (err) {
       console.error("FOLLOW ERROR:", err);
     }
@@ -120,6 +130,53 @@ export default function Feed() {
             <Text style={{ color: "white", fontWeight: "700" }}>{followingCount}</Text>
           </View>
         </View>
+
+        {/* FEED TABS */}
+        <View style={{
+          flexDirection: "row",
+          marginTop: 16,
+          backgroundColor: "#11131a",
+          borderRadius: 12,
+          padding: 4,
+        }}>
+          <TouchableOpacity
+            onPress={() => handleTabChange("forYou")}
+            style={{
+              flex: 1,
+              paddingVertical: 8,
+              borderRadius: 10,
+              alignItems: "center",
+              backgroundColor: activeTab === "forYou" ? "#345bff" : "transparent",
+            }}
+          >
+            <Text style={{
+              color: activeTab === "forYou" ? "white" : "#6b7280",
+              fontWeight: "700",
+              fontSize: 14,
+            }}>
+              For You
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => handleTabChange("following")}
+            style={{
+              flex: 1,
+              paddingVertical: 8,
+              borderRadius: 10,
+              alignItems: "center",
+              backgroundColor: activeTab === "following" ? "#345bff" : "transparent",
+            }}
+          >
+            <Text style={{
+              color: activeTab === "following" ? "white" : "#6b7280",
+              fontWeight: "700",
+              fontSize: 14,
+            }}>
+              Following
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <FlatList
@@ -136,10 +193,12 @@ export default function Feed() {
           <View style={{ alignItems: "center", marginTop: 80 }}>
             <Text style={{ fontSize: 48 }}>🔧</Text>
             <Text style={{ color: "white", fontSize: 20, fontWeight: "bold", marginTop: 16 }}>
-              No posts yet
+              {activeTab === "following" ? "No posts yet" : "No posts yet"}
             </Text>
             <Text style={{ color: "#9ca3af", marginTop: 8, textAlign: "center", paddingHorizontal: 40 }}>
-              Be the first to share a build or ask a question!
+              {activeTab === "following"
+                ? "Follow some people to see their posts here!"
+                : "Be the first to share a build or ask a question!"}
             </Text>
           </View>
         }

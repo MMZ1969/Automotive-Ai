@@ -14,5 +14,6 @@ router.put("/:id", authMiddleware, postsController.updatePost);
 router.delete("/:id", authMiddleware, postsController.deletePost);
 router.post("/:id/like", authMiddleware, postsController.toggleLike);
 router.post("/:id/comments", authMiddleware, postsController.addComment);
+router.get("/following", authMiddleware, postsController.getFollowingPosts);
 
 export default router;

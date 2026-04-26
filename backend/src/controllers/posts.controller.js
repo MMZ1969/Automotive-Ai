@@ -137,3 +137,34 @@ export const addComment = async (req, res) => {
     res.status(500).json({ error: "Failed to add comment" });
   }
 };
+// GET FOLLOWING POSTS
+export const getFollowingPosts = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const following = await prisma.follow.findMany({
+      where: { followerId: userId },
+      select: { followingId: true },
+    });
+
+    const followingIds = following.map((f) => f.followingId);
+
+    const posts = await prisma.post.findMany({
+      where: { userId: { in: followingIds } },
+      orderBy: { createdAt: "desc" },
+      include: {
+        user: true,
+        comments: {
+          include: { user: true },
+          orderBy: { createdAt: "asc" },
+        },
+        likes: true,
+      },
+    });
+
+    res.json(posts);
+  } catch (err) {
+    console.error("GET FOLLOWING POSTS ERROR:", err);
+    res.status(500).json({ error: "Failed to fetch following posts" });
+  }
+};
