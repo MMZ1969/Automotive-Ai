@@ -22,7 +22,7 @@ function RouteGuard() {
       if (user.role === "MECHANIC") {
         router.replace("/(tabs)/mechanic");
       } else {
-        router.replace("/(tabs)/diyer");
+        router.replace("/(tabs)/feed");
       }
     }
   }, [user, loading, segments]);
