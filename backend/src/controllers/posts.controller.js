@@ -50,13 +50,13 @@ export const getPostById = async (req, res) => {
 // CREATE a post
 export const createPost = async (req, res) => {
   try {
-    const { content } = req.body;
+    const { content, imageUrl } = req.body;
     const userId = req.user.id;
     if (!content || content.trim() === "") {
       return res.status(400).json({ error: "Post content cannot be empty" });
     }
     const post = await prisma.post.create({
-      data: { content, userId },
+      data: { content, userId, imageUrl },
     });
     res.json(post);
   } catch (err) {
