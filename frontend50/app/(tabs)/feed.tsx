@@ -21,16 +21,18 @@ export default function Feed() {
   const [postCount, setPostCount] = useState(0);
   const [followerCount, setFollowerCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
+  const [repPoints, setRepPoints] = useState(0);
   const [activeTab, setActiveTab] = useState<"forYou" | "following">("forYou");
 
   const fetchPosts = async (tab = activeTab) => {
     try {
-      const [postsRes, followRes] = await Promise.all([
-        tab === "forYou"
-          ? api.get("/api/posts")
-          : api.get("/api/posts/following"),
-        api.get(`/api/users/${user?.id}/follow-status`),
-      ]);
+      const [postsRes, followRes, meRes] = await Promise.all([
+  tab === "forYou"
+    ? api.get("/api/posts")
+    : api.get("/api/posts/following"),
+  api.get(`/api/users/${user?.id}/follow-status`),
+  api.get("/api/users/me"),
+]);
 
       const postsWithFollow = await Promise.all(
         postsRes.data.map(async (post: any) => {
@@ -50,6 +52,7 @@ export default function Feed() {
       setPostCount(myPosts.length);
       setFollowerCount(followRes.data.followerCount || 0);
       setFollowingCount(followRes.data.followingCount || 0);
+      setRepPoints(meRes.data.repPoints || 0);
     } catch (err) {
       console.error("FEED ERROR:", err);
     } finally {
@@ -118,8 +121,8 @@ export default function Feed() {
         </Text>
         <View style={{ flexDirection: "row", gap: 12, marginTop: 12 }}>
           <View style={statPill}>
-            <Text style={{ color: "#9ca3af", fontSize: 11 }}>Posts</Text>
-            <Text style={{ color: "white", fontWeight: "700" }}>{postCount}</Text>
+           <Text style={{ color: "#9ca3af", fontSize: 11 }}>Rep</Text>
+           <Text style={{ color: "white", fontWeight: "700" }}>{repPoints}</Text>
           </View>
           <View style={statPill}>
             <Text style={{ color: "#9ca3af", fontSize: 11 }}>Followers</Text>

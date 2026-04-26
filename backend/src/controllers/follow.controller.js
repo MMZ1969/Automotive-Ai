@@ -26,10 +26,18 @@ export const toggleFollow = async (req, res) => {
           followerId_followingId: { followerId, followingId },
         },
       });
+      await prisma.user.update({
+        where: { id: followingId },
+        data: { repPoints: { decrement: 5 } },
+      });
       return res.json({ following: false });
     } else {
       await prisma.follow.create({
         data: { followerId, followingId },
+      });
+      await prisma.user.update({
+        where: { id: followingId },
+        data: { repPoints: { increment: 5 } },
       });
       return res.json({ following: true });
     }

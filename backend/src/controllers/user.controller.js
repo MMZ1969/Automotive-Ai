@@ -10,6 +10,7 @@ export async function getMe(req, res) {
         email: true,
         name: true,
         role: true,
+        repPoints: true,
         createdAt: true,
       },
     });

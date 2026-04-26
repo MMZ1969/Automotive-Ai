@@ -98,18 +98,34 @@ export const toggleLike = async (req, res) => {
   try {
     const postId = Number(req.params.id);
     const userId = req.user.id;
+
     const existing = await prisma.like.findUnique({
       where: { postId_userId: { postId, userId } },
     });
+
+    const post = await prisma.post.findUnique({ where: { id: postId } });
+
     if (existing) {
       await prisma.like.delete({
         where: { postId_userId: { postId, userId } },
       });
+      if (post && post.userId !== userId) {
+        await prisma.user.update({
+          where: { id: post.userId },
+          data: { repPoints: { decrement: 2 } },
+        });
+      }
       return res.json({ liked: false });
     } else {
       await prisma.like.create({
         data: { postId, userId },
       });
+      if (post && post.userId !== userId) {
+        await prisma.user.update({
+          where: { id: post.userId },
+          data: { repPoints: { increment: 2 } },
+        });
+      }
       return res.json({ liked: true });
     }
   } catch (err) {
@@ -131,24 +147,29 @@ export const addComment = async (req, res) => {
       data: { content, userId, postId },
       include: { user: true },
     });
+    const post = await prisma.post.findUnique({ where: { id: postId } });
+    if (post && post.userId !== userId) {
+      await prisma.user.update({
+        where: { id: post.userId },
+        data: { repPoints: { increment: 1 } },
+      });
+    }
     res.json(comment);
   } catch (err) {
     console.error("ADD COMMENT ERROR:", err);
     res.status(500).json({ error: "Failed to add comment" });
   }
 };
+
 // GET FOLLOWING POSTS
 export const getFollowingPosts = async (req, res) => {
   try {
     const userId = req.user.id;
-
     const following = await prisma.follow.findMany({
       where: { followerId: userId },
       select: { followingId: true },
     });
-
     const followingIds = following.map((f) => f.followingId);
-
     const posts = await prisma.post.findMany({
       where: { userId: { in: followingIds } },
       orderBy: { createdAt: "desc" },
@@ -161,7 +182,6 @@ export const getFollowingPosts = async (req, res) => {
         likes: true,
       },
     });
-
     res.json(posts);
   } catch (err) {
     console.error("GET FOLLOWING POSTS ERROR:", err);
