@@ -8,11 +8,13 @@ export const getAllPosts = async (req, res) => {
       orderBy: { createdAt: "desc" },
       include: {
         user: true,
-        comments: true,
+        comments: {
+          include: { user: true },
+          orderBy: { createdAt: "asc" },
+        },
         likes: true,
       },
     });
-
     res.json(posts);
   } catch (err) {
     console.error("GET ALL POSTS ERROR:", err);
@@ -24,20 +26,20 @@ export const getAllPosts = async (req, res) => {
 export const getPostById = async (req, res) => {
   try {
     const id = Number(req.params.id);
-
     const post = await prisma.post.findUnique({
       where: { id },
       include: {
         user: true,
-        comments: true,
+        comments: {
+          include: { user: true },
+          orderBy: { createdAt: "asc" },
+        },
         likes: true,
       },
-    })
-
+    });
     if (!post) {
       return res.status(404).json({ error: "Post not found" });
     }
-
     res.json(post);
   } catch (err) {
     console.error("GET POST ERROR:", err);
@@ -50,18 +52,12 @@ export const createPost = async (req, res) => {
   try {
     const { content } = req.body;
     const userId = req.user.id;
-
     if (!content || content.trim() === "") {
       return res.status(400).json({ error: "Post content cannot be empty" });
     }
-
     const post = await prisma.post.create({
-      data: {
-        content,
-        userId,
-      },
+      data: { content, userId },
     });
-
     res.json(post);
   } catch (err) {
     console.error("CREATE POST ERROR:", err);
@@ -74,12 +70,10 @@ export const updatePost = async (req, res) => {
   try {
     const id = Number(req.params.id);
     const { content } = req.body;
-
     const post = await prisma.post.update({
       where: { id },
       data: { content },
     });
-
     res.json(post);
   } catch (err) {
     console.error("UPDATE POST ERROR:", err);
@@ -91,11 +85,7 @@ export const updatePost = async (req, res) => {
 export const deletePost = async (req, res) => {
   try {
     const id = Number(req.params.id);
-
-    await prisma.post.delete({
-      where: { id },
-    });
-
+    await prisma.post.delete({ where: { id } });
     res.json({ message: "Post deleted" });
   } catch (err) {
     console.error("DELETE POST ERROR:", err);
@@ -108,11 +98,9 @@ export const toggleLike = async (req, res) => {
   try {
     const postId = Number(req.params.id);
     const userId = req.user.id;
-
     const existing = await prisma.like.findUnique({
       where: { postId_userId: { postId, userId } },
     });
-
     if (existing) {
       await prisma.like.delete({
         where: { postId_userId: { postId, userId } },
@@ -136,15 +124,13 @@ export const addComment = async (req, res) => {
     const postId = Number(req.params.id);
     const userId = req.user.id;
     const { content } = req.body;
-
     if (!content || content.trim() === "") {
       return res.status(400).json({ error: "Comment content cannot be empty" });
     }
-
     const comment = await prisma.comment.create({
       data: { content, userId, postId },
+      include: { user: true },
     });
-
     res.json(comment);
   } catch (err) {
     console.error("ADD COMMENT ERROR:", err);
