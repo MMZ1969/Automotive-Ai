@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "frontend50",
+    "name": "AutoAI",
     "slug": "frontend50",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -9,20 +9,25 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.m2so.frontend50",
+      "bundleIdentifier": "app.automotiveai",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoads": true
-        }
+        },
+        "NSSpeechRecognitionUsageDescription": "AutoAI uses speech recognition to let you describe car problems hands-free.",
+        "NSMicrophoneUsageDescription": "AutoAI uses your microphone to listen for car problem descriptions."
       }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#050509"
       },
-      "package": "com.m2so.frontend50"
+      "package": "app.automotiveai",
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -31,12 +36,13 @@
       "expo-router",
       "expo-speech-recognition"
     ],
-    "scheme": "frontend50",
+    "scheme": "automotiveai",
     "extra": {
       "router": {},
       "eas": {
         "projectId": "6f942beb-c59e-4d1a-b4b0-8317a2566f21"
       }
-    }
+    },
+    "owner": "m2so"
   }
 }
