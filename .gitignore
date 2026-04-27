@@ -37,3 +37,8 @@ yarn-error.*
 *.tsbuildinfo
 
 /generated/prisma
+# Environment variables
+.env
+.env.local
+backend/.env
+frontend50/.env

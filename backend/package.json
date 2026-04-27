@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "node src/server.js"
+    "dev": "node --env-file=.env src/server.js"
   },
   "dependencies": {
     "@prisma/client": "^5.15.0",

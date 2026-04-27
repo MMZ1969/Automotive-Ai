@@ -73,6 +73,10 @@ Respond in JSON format only, no markdown, like this:
     });
 
     const data = await response.json();
+console.log("ANTHROPIC RESPONSE:", JSON.stringify(data));
+if (!data.content || !data.content[0]) {
+  return res.status(500).json({ error: "AI service error", details: data });
+}
     const text = data.content[0].text;
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
