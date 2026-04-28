@@ -8,22 +8,23 @@ datasource db {
 }
 
 model User {
-  id                 Int            @id @default(autoincrement())
-  email              String         @unique
-  password           String
-  name               String?
-  profilePhoto       String?
-  role               String         @default("DIYER")
-  repPoints          Int            @default(0)
-  createdAt          DateTime       @default(now())
-  updatedAt          DateTime       @updatedAt
-  logs               Log[]
-  vehicles           Vehicle[]
-  posts              Post[]
-  comments           Comment[]
-  likes              Like[]
-  followers          Follow[]       @relation("UserFollowing")
-  following          Follow[]       @relation("UserFollowers")
+  id                    Int            @id @default(autoincrement())
+  email                 String         @unique
+  password              String
+  name                  String?
+  profilePhoto          String?
+  role                  String         @default("DIYER")
+  repPoints             Int            @default(0)
+  pushToken             String?
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+  logs                  Log[]
+  vehicles              Vehicle[]
+  posts                 Post[]
+  comments              Comment[]
+  likes                 Like[]
+  followers             Follow[]       @relation("UserFollowing")
+  following             Follow[]       @relation("UserFollowers")
   notificationsReceived Notification[] @relation("NotificationRecipient")
   notificationsGiven    Notification[] @relation("NotificationActor")
 }

@@ -1,4 +1,5 @@
 import prisma from "../lib/prisma.js";
+import { createAndSendNotification } from "./notification.controller.js";
 
 // GET all posts
 export const getAllPosts = async (req, res) => {
@@ -113,16 +114,13 @@ export const toggleLike = async (req, res) => {
           data: { repPoints: { increment: 2 } },
         });
 
-        // Create like notification
         const actor = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
-        await prisma.notification.create({
-          data: {
-            recipientId: post.userId,
-            actorId: userId,
-            type: "like",
-            postId,
-            message: `${actor?.name || "Someone"} liked your post ❤️`,
-          },
+        await createAndSendNotification({
+          recipientId: post.userId,
+          actorId: userId,
+          type: "like",
+          postId,
+          message: `${actor?.name || "Someone"} liked your post ❤️`,
         });
       }
       return res.json({ liked: true });
@@ -156,16 +154,13 @@ export const addComment = async (req, res) => {
         data: { repPoints: { increment: 1 } },
       });
 
-      // Create comment notification
       const actor = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
-      await prisma.notification.create({
-        data: {
-          recipientId: post.userId,
-          actorId: userId,
-          type: "comment",
-          postId,
-          message: `${actor?.name || "Someone"} commented on your post 💬`,
-        },
+      await createAndSendNotification({
+        recipientId: post.userId,
+        actorId: userId,
+        type: "comment",
+        postId,
+        message: `${actor?.name || "Someone"} commented on your post 💬`,
       });
     }
 

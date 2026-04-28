@@ -174,3 +174,20 @@ export async function getUserProfile(req, res) {
     res.status(500).json({ error: "Failed to fetch profile" });
   }
 }
+// POST /users/push-token
+export async function savePushToken(req, res) {
+  try {
+    const userId = req.user.id;
+    const { pushToken } = req.body;
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { pushToken },
+    });
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("SAVE PUSH TOKEN ERROR:", err);
+    res.status(500).json({ error: "Failed to save push token" });
+  }
+}

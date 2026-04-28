@@ -1,4 +1,5 @@
 import prisma from "../lib/prisma.js";
+import { createAndSendNotification } from "./notification.controller.js";
 
 // TOGGLE FOLLOW
 export const toggleFollow = async (req, res) => {
@@ -33,15 +34,12 @@ export const toggleFollow = async (req, res) => {
         data: { repPoints: { increment: 5 } },
       });
 
-      // Create follow notification
       const actor = await prisma.user.findUnique({ where: { id: followerId }, select: { name: true } });
-      await prisma.notification.create({
-        data: {
-          recipientId: followingId,
-          actorId: followerId,
-          type: "follow",
-          message: `${actor?.name || "Someone"} started following you 🚗`,
-        },
+      await createAndSendNotification({
+        recipientId: followingId,
+        actorId: followerId,
+        type: "follow",
+        message: `${actor?.name || "Someone"} started following you 🚗`,
       });
 
       return res.json({ following: true });
