@@ -8,22 +8,24 @@ datasource db {
 }
 
 model User {
-  id        Int       @id @default(autoincrement())
-  email     String    @unique
-  password  String
-  name      String?
-  profilePhoto  String?
-  role      String    @default("DIYER")
-  repPoints    Int       @default(0)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  logs      Log[]
-  vehicles  Vehicle[]
-  posts     Post[]
-  comments  Comment[]
-  likes     Like[]
-  followers Follow[]  @relation("UserFollowing")
-  following Follow[]  @relation("UserFollowers")
+  id                 Int            @id @default(autoincrement())
+  email              String         @unique
+  password           String
+  name               String?
+  profilePhoto       String?
+  role               String         @default("DIYER")
+  repPoints          Int            @default(0)
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+  logs               Log[]
+  vehicles           Vehicle[]
+  posts              Post[]
+  comments           Comment[]
+  likes              Like[]
+  followers          Follow[]       @relation("UserFollowing")
+  following          Follow[]       @relation("UserFollowers")
+  notificationsReceived Notification[] @relation("NotificationRecipient")
+  notificationsGiven    Notification[] @relation("NotificationActor")
 }
 
 model Post {
@@ -90,11 +92,6 @@ model Log {
   vehicle     Vehicle   @relation(fields: [vehicleId], references: [id])
 }
 
-model playing_with_neon {
-  id Int @id @default(autoincrement())
-
-  @@ignore
-}
 model Follow {
   id          Int      @id @default(autoincrement())
   followerId  Int
@@ -104,4 +101,23 @@ model Follow {
   following   User     @relation("UserFollowing", fields: [followingId], references: [id])
 
   @@unique([followerId, followingId])
+}
+
+model Notification {
+  id          Int      @id @default(autoincrement())
+  recipientId Int
+  actorId     Int
+  type        String
+  postId      Int?
+  message     String
+  read        Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  recipient   User     @relation("NotificationRecipient", fields: [recipientId], references: [id])
+  actor       User     @relation("NotificationActor", fields: [actorId], references: [id])
+}
+
+model playing_with_neon {
+  id Int @id @default(autoincrement())
+
+  @@ignore
 }

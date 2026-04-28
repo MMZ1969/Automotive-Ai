@@ -6,6 +6,7 @@ import express from "express";
 import authRoutes from "./auth/auth.routes.js";
 import followRoutes from "./routes/follow.routes.js";
 import logsRoutes from "./routes/logs.routes.js";
+import notificationRoutes from "./routes/notification.routes.js";
 import postsRoutes from "./routes/posts.js";
 import uploadRoutes from "./routes/upload.js";
 import userRoutes from "./routes/user.routes.js";
@@ -26,6 +27,7 @@ app.use("/api/vehicles", vehiclesRoutes);
 app.use("/api/logs", logsRoutes);
 app.use("/api/posts", postsRoutes);
 app.use("/api/upload", uploadRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 // AI Diagnosis route
 app.post("/api/diagnose", async (req, res) => {
@@ -73,10 +75,10 @@ Respond in JSON format only, no markdown, like this:
     });
 
     const data = await response.json();
-console.log("ANTHROPIC RESPONSE:", JSON.stringify(data));
-if (!data.content || !data.content[0]) {
-  return res.status(500).json({ error: "AI service error", details: data });
-}
+    console.log("ANTHROPIC RESPONSE:", JSON.stringify(data));
+    if (!data.content || !data.content[0]) {
+      return res.status(500).json({ error: "AI service error", details: data });
+    }
     const text = data.content[0].text;
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {

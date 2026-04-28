@@ -1,10 +1,36 @@
 import { useAuth } from "@context/AuthContext";
 import { useRouter } from "expo-router";
-import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { useState } from "react";
+import {
+  Alert,
+  Linking,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 export default function Settings() {
-  const { user, logout, isMechanic } = useAuth();
+  const { user, logout, isMechanic, updateName } = useAuth();
   const router = useRouter();
+  const [editingName, setEditingName] = useState(false);
+  const [newName, setNewName] = useState(user?.name || "");
+  const [saving, setSaving] = useState(false);
+
+  const handleSaveName = async () => {
+    if (!newName.trim()) return;
+    try {
+      setSaving(true);
+      await updateName(newName.trim());
+      setEditingName(false);
+      Alert.alert("✅ Name updated!");
+    } catch (err) {
+      Alert.alert("Error", "Could not update name. Try again.");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <ScrollView
@@ -25,10 +51,76 @@ export default function Settings() {
       <Text style={sectionTitle}>Account</Text>
 
       <View style={card}>
-        <View style={row}>
-          <Text style={label}>Name</Text>
-          <Text style={value}>{user?.name || "—"}</Text>
-        </View>
+        {/* NAME ROW */}
+        {editingName ? (
+          <View style={{ padding: 16 }}>
+            <Text style={{ color: "#9ca3af", fontSize: 13, marginBottom: 8 }}>
+              Edit Name
+            </Text>
+            <TextInput
+              value={newName}
+              onChangeText={setNewName}
+              style={{
+                backgroundColor: "#050509",
+                color: "white",
+                padding: 12,
+                borderRadius: 10,
+                borderWidth: 1,
+                borderColor: "#345bff",
+                fontSize: 16,
+                marginBottom: 12,
+              }}
+              autoFocus
+              placeholder="Your name"
+              placeholderTextColor="#4b5563"
+            />
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <TouchableOpacity
+                onPress={handleSaveName}
+                disabled={saving}
+                style={{
+                  flex: 1,
+                  backgroundColor: "#345bff",
+                  padding: 12,
+                  borderRadius: 10,
+                  alignItems: "center",
+                }}
+              >
+                <Text style={{ color: "white", fontWeight: "700" }}>
+                  {saving ? "Saving..." : "Save"}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => {
+                  setEditingName(false);
+                  setNewName(user?.name || "");
+                }}
+                style={{
+                  flex: 1,
+                  backgroundColor: "#11131a",
+                  padding: 12,
+                  borderRadius: 10,
+                  alignItems: "center",
+                  borderWidth: 1,
+                  borderColor: "#252838",
+                }}
+              >
+                <Text style={{ color: "#9ca3af", fontWeight: "700" }}>
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : (
+          <TouchableOpacity style={row} onPress={() => setEditingName(true)}>
+            <Text style={label}>Name</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <Text style={value}>{user?.name || "—"}</Text>
+              <Text style={{ color: "#345bff", fontSize: 13 }}>Edit</Text>
+            </View>
+          </TouchableOpacity>
+        )}
+
         <View style={divider} />
         <View style={row}>
           <Text style={label}>Email</Text>
@@ -62,7 +154,7 @@ export default function Settings() {
       <View style={card}>
         <TouchableOpacity
           style={row}
-          onPress={() => {}}
+          onPress={() => Linking.openURL("https://mmz1969.github.io/Automotive-Ai/privacy-policy.html")}
         >
           <Text style={label}>Privacy Policy</Text>
           <Text style={{ color: "#345bff" }}>View →</Text>
@@ -70,7 +162,7 @@ export default function Settings() {
         <View style={divider} />
         <TouchableOpacity
           style={row}
-          onPress={() => {}}
+          onPress={() => Linking.openURL("https://mmz1969.github.io/Automotive-Ai/terms.html")}
         >
           <Text style={label}>Terms of Service</Text>
           <Text style={{ color: "#345bff" }}>View →</Text>

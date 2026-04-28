@@ -27,12 +27,12 @@ export default function Feed() {
   const fetchPosts = async (tab = activeTab) => {
     try {
       const [postsRes, followRes, meRes] = await Promise.all([
-  tab === "forYou"
-    ? api.get("/api/posts")
-    : api.get("/api/posts/following"),
-  api.get(`/api/users/${user?.id}/follow-status`),
-  api.get("/api/users/me"),
-]);
+        tab === "forYou"
+          ? api.get("/api/posts")
+          : api.get("/api/posts/following"),
+        api.get(`/api/users/${user?.id}/follow-status`),
+        api.get("/api/users/me"),
+      ]);
 
       const postsWithFollow = await Promise.all(
         postsRes.data.map(async (post: any) => {
@@ -115,14 +115,32 @@ export default function Feed() {
         borderBottomWidth: 1,
         borderBottomColor: "#252838",
       }}>
-        <Text style={{ color: "#9ca3af", fontSize: 13 }}>Welcome back 👋</Text>
-        <Text style={{ color: "white", fontSize: 26, fontWeight: "900", marginTop: 2 }}>
-          {user?.name || "Driver"}
-        </Text>
+        {/* TOP ROW — name + search icon */}
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+          <View>
+            <Text style={{ color: "#9ca3af", fontSize: 13 }}>Welcome back 👋</Text>
+            <Text style={{ color: "white", fontSize: 26, fontWeight: "900", marginTop: 2 }}>
+              {user?.name || "Driver"}
+            </Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => router.push("/(tabs)/search")}
+            style={{
+              backgroundColor: "#11131a",
+              borderWidth: 1,
+              borderColor: "#252838",
+              borderRadius: 12,
+              padding: 10,
+            }}
+          >
+            <Text style={{ fontSize: 20 }}>🔍</Text>
+          </TouchableOpacity>
+        </View>
+
         <View style={{ flexDirection: "row", gap: 12, marginTop: 12 }}>
           <View style={statPill}>
-           <Text style={{ color: "#9ca3af", fontSize: 11 }}>Rep</Text>
-           <Text style={{ color: "white", fontWeight: "700" }}>{repPoints}</Text>
+            <Text style={{ color: "#9ca3af", fontSize: 11 }}>Rep</Text>
+            <Text style={{ color: "white", fontWeight: "700" }}>{repPoints}</Text>
           </View>
           <View style={statPill}>
             <Text style={{ color: "#9ca3af", fontSize: 11 }}>Followers</Text>
@@ -196,7 +214,7 @@ export default function Feed() {
           <View style={{ alignItems: "center", marginTop: 80 }}>
             <Text style={{ fontSize: 48 }}>🔧</Text>
             <Text style={{ color: "white", fontSize: 20, fontWeight: "bold", marginTop: 16 }}>
-              {activeTab === "following" ? "No posts yet" : "No posts yet"}
+              No posts yet
             </Text>
             <Text style={{ color: "#9ca3af", marginTop: 8, textAlign: "center", paddingHorizontal: 40 }}>
               {activeTab === "following"
@@ -215,8 +233,11 @@ export default function Feed() {
             borderColor: "#252838",
             padding: 16,
           }}>
-            {/* POST HEADER */}
-            <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 12 }}>
+            {/* POST HEADER — tappable avatar + name */}
+            <TouchableOpacity
+              onPress={() => router.push(`/(tabs)/user/${item.user?.id}`)}
+              style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}
+            >
               <View style={{
                 width: 44,
                 height: 44,
@@ -258,9 +279,16 @@ export default function Feed() {
                   </Text>
                 </View>
               </View>
+            </TouchableOpacity>
 
-              {/* FOLLOW BUTTON */}
-              {item.user?.id !== user?.id && (
+            {/* FOLLOW BUTTON + DATE */}
+            <View style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: 12,
+            }}>
+              {item.user?.id !== user?.id ? (
                 <TouchableOpacity
                   onPress={() => handleFollow(item.user?.id)}
                   style={{
@@ -276,9 +304,10 @@ export default function Feed() {
                     {item.isFollowing ? "Following" : "Follow"}
                   </Text>
                 </TouchableOpacity>
+              ) : (
+                <View />
               )}
-
-              <Text style={{ color: "#6b7280", fontSize: 12, marginLeft: 8 }}>
+              <Text style={{ color: "#6b7280", fontSize: 12 }}>
                 {new Date(item.createdAt).toLocaleDateString()}
               </Text>
             </View>

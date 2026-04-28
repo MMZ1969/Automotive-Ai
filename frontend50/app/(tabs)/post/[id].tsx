@@ -97,9 +97,35 @@ export default function PostDetail() {
               borderColor: "#252838",
               padding: 16,
             }}>
-              <Text style={{ color: "white", fontWeight: "700", fontSize: 16, marginBottom: 4 }}>
-                {post?.user?.name || "Anonymous"}
-              </Text>
+              {/* TAPPABLE POST AUTHOR */}
+              <TouchableOpacity
+                onPress={() => router.push(`/(tabs)/user/${post?.user?.id}`)}
+                style={{ flexDirection: "row", alignItems: "center", marginBottom: 12, gap: 10 }}
+              >
+                <View style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 18,
+                  backgroundColor: "#252838",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  borderWidth: 2,
+                  borderColor: post?.user?.role === "MECHANIC" ? "#345bff" : "#10b981",
+                }}>
+                  <Text style={{ color: "white", fontWeight: "700" }}>
+                    {post?.user?.name?.[0]?.toUpperCase() || "?"}
+                  </Text>
+                </View>
+                <View>
+                  <Text style={{ color: "white", fontWeight: "700", fontSize: 15 }}>
+                    {post?.user?.name || "Anonymous"}
+                  </Text>
+                  <Text style={{ color: "#9ca3af", fontSize: 12 }}>
+                    {post?.user?.role === "MECHANIC" ? "🏁 Mechanic" : "🔧 DIYer"}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+
               <Text style={{ color: "#e5e7eb", fontSize: 15, lineHeight: 22 }}>
                 {post?.content}
               </Text>
@@ -126,10 +152,31 @@ export default function PostDetail() {
             borderColor: "#252838",
             padding: 14,
           }}>
-            <Text style={{ color: "#345bff", fontWeight: "700", marginBottom: 4 }}>
-              {item.user?.name || "Anonymous"}
-            </Text>
-            <Text style={{ color: "#e5e7eb", fontSize: 14 }}>
+            {/* TAPPABLE COMMENT AUTHOR */}
+            <TouchableOpacity
+              onPress={() => router.push(`/(tabs)/user/${item.user?.id}`)}
+              style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 }}
+            >
+              <View style={{
+                width: 28,
+                height: 28,
+                borderRadius: 14,
+                backgroundColor: "#252838",
+                justifyContent: "center",
+                alignItems: "center",
+                borderWidth: 1,
+                borderColor: item.user?.role === "MECHANIC" ? "#345bff" : "#10b981",
+              }}>
+                <Text style={{ color: "white", fontSize: 12, fontWeight: "700" }}>
+                  {item.user?.name?.[0]?.toUpperCase() || "?"}
+                </Text>
+              </View>
+              <Text style={{ color: "#345bff", fontWeight: "700" }}>
+                {item.user?.name || "Anonymous"}
+              </Text>
+            </TouchableOpacity>
+
+            <Text style={{ color: "#e5e7eb", fontSize: 14, paddingLeft: 36 }}>
               {item.content}
             </Text>
           </View>

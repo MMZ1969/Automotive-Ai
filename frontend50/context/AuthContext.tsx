@@ -11,6 +11,7 @@ interface AuthContextType {
   isMechanic: boolean;
   isDIYer: boolean;
   updateProfilePhoto: (url: string) => Promise<void>;
+  updateName: (name: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -46,7 +47,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const login = async (email: string, password: string) => {
-    delete api.defaults.headers.common["Authorization"]; // clear old token before login
+    delete api.defaults.headers.common["Authorization"];
     console.log("AUTH LOGIN: starting login with", email);
     try {
       const res = await api.post("/api/auth/login", { email, password });
@@ -105,7 +106,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     } catch (err) {
       console.error("AUTH LOGOUT ERROR:", err);
     }
-};
+  };
 
   const updateProfilePhoto = async (url: string) => {
     try {
@@ -115,6 +116,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       console.log("AUTH: profile photo updated to", url);
     } catch (err) {
       console.error("AUTH: failed to update profile photo", err);
+      throw err;
+    }
+  };
+
+  const updateName = async (name: string) => {
+    try {
+      await api.put("/api/users/me", { name });
+      const updatedUser = { ...user, name };
+      await AsyncStorage.setItem("user", JSON.stringify(updatedUser));
+      setUser(updatedUser);
+      console.log("AUTH: name updated to", name);
+    } catch (err) {
+      console.error("AUTH: failed to update name", err);
       throw err;
     }
   };
@@ -135,6 +149,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         isMechanic,
         isDIYer,
         updateProfilePhoto,
+        updateName,
       }}
     >
       {children}

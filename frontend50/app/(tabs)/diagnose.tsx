@@ -1,5 +1,4 @@
 import api from "@lib/api";
-import { ExpoSpeechRecognitionModule, useSpeechRecognitionEvent } from "expo-speech-recognition";
 import { useState } from "react";
 import {
   ActivityIndicator,
@@ -14,6 +13,17 @@ import {
   View,
 } from "react-native";
 
+// Safe speech recognition import — won't crash in Expo Go
+let ExpoSpeechRecognitionModule: any = null;
+let useSpeechRecognitionEvent: any = () => {};
+try {
+  const mod = require("expo-speech-recognition");
+  ExpoSpeechRecognitionModule = mod.ExpoSpeechRecognitionModule;
+  useSpeechRecognitionEvent = mod.useSpeechRecognitionEvent;
+} catch (e) {
+  // Running in Expo Go — speech recognition not available
+}
+
 export default function Diagnose() {
   const [query, setQuery] = useState("");
   const [result, setResult] = useState<any>(null);
@@ -21,7 +31,7 @@ export default function Diagnose() {
   const [loading, setLoading] = useState(false);
   const [recording, setRecording] = useState(false);
 
-  useSpeechRecognitionEvent("result", (event) => {
+  useSpeechRecognitionEvent("result", (event: any) => {
     if (event.results[0]?.transcript) {
       setQuery(event.results[0].transcript);
     }
@@ -32,6 +42,10 @@ export default function Diagnose() {
   });
 
   const handleVoice = async () => {
+    if (!ExpoSpeechRecognitionModule) {
+      alert("Voice input is only available in the full app build.");
+      return;
+    }
     const { granted } = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
     if (!granted) return;
 

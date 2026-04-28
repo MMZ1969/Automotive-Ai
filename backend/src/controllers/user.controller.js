@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import prisma from "../lib/prisma.js";
+
 // GET /users/me
 export async function getMe(req, res) {
   try {
@@ -34,10 +35,8 @@ export async function updateProfile(req, res) {
 
     const data = {};
 
-    // Update name
     if (name) data.name = name;
 
-    // Update email (must check if taken)
     if (email) {
       const existing = await prisma.user.findUnique({ where: { email } });
       if (existing && existing.id !== userId) {
@@ -46,7 +45,6 @@ export async function updateProfile(req, res) {
       data.email = email;
     }
 
-    // Update password (must hash)
     if (password) {
       const hashed = await bcrypt.hash(password, 10);
       data.password = hashed;
@@ -70,6 +68,7 @@ export async function updateProfile(req, res) {
     res.status(500).json({ error: "Failed to update profile" });
   }
 }
+
 // GET /users/search?q=query
 export async function searchUsers(req, res) {
   try {
@@ -112,5 +111,66 @@ export async function searchUsers(req, res) {
   } catch (err) {
     console.error("SEARCH USERS ERROR:", err);
     res.status(500).json({ error: "Failed to search users" });
+  }
+}
+
+// GET /users/leaderboard?role=DIYER|MECHANIC
+export async function getLeaderboard(req, res) {
+  try {
+    const { role } = req.query;
+
+    const users = await prisma.user.findMany({
+      where: role ? { role: role.toUpperCase() } : {},
+      orderBy: { repPoints: "desc" },
+      take: 20,
+      select: {
+        id: true,
+        name: true,
+        role: true,
+        profilePhoto: true,
+        repPoints: true,
+        _count: {
+          select: {
+            posts: true,
+            followers: true,
+          },
+        },
+      },
+    });
+
+    res.json(users);
+  } catch (err) {
+    console.error("GET LEADERBOARD ERROR:", err);
+    res.status(500).json({ error: "Failed to fetch leaderboard" });
+  }
+}
+// GET /users/:id/profile
+export async function getUserProfile(req, res) {
+  try {
+    const id = Number(req.params.id);
+    const user = await prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        name: true,
+        role: true,
+        profilePhoto: true,
+        repPoints: true,
+        createdAt: true,
+        _count: {
+          select: {
+            posts: true,
+            followers: true,
+            following: true,
+          },
+        },
+      },
+    });
+
+    if (!user) return res.status(404).json({ error: "User not found" });
+    res.json(user);
+  } catch (err) {
+    console.error("GET USER PROFILE ERROR:", err);
+    res.status(500).json({ error: "Failed to fetch profile" });
   }
 }
