@@ -32,6 +32,8 @@ model User {
   reports               Report[]       @relation("Reporter")
   jobsPosted            Job[]          @relation("JobPoster")
   bids                  Bid[]          @relation("BidMechanic")
+  reviewsGiven    Review[]  @relation("ReviewGiver")
+  reviewsReceived Review[]  @relation("ReviewReceiver")
 }
 
 model Post {
@@ -160,6 +162,7 @@ model Job {
   updatedAt   DateTime @updatedAt
   poster      User     @relation("JobPoster", fields: [userId], references: [id])
   bids        Bid[]
+  review      Review?
 }
 
 model Bid {
@@ -175,6 +178,19 @@ model Bid {
   mechanic   User     @relation("BidMechanic", fields: [mechanicId], references: [id])
 
   @@unique([jobId, mechanicId])
+}
+
+model Review {
+  id         Int      @id @default(autoincrement())
+  jobId      Int      @unique
+  reviewerId Int
+  mechanicId Int
+  rating     Int
+  comment    String?
+  createdAt  DateTime @default(now())
+  job        Job      @relation(fields: [jobId], references: [id])
+  reviewer   User     @relation("ReviewGiver", fields: [reviewerId], references: [id])
+  mechanic   User     @relation("ReviewReceiver", fields: [mechanicId], references: [id])
 }
 
 model playing_with_neon {

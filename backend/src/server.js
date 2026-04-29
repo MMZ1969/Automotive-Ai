@@ -9,6 +9,7 @@ import jobRoutes from "./routes/job.routes.js";
 import logsRoutes from "./routes/logs.routes.js";
 import notificationRoutes from "./routes/notification.routes.js";
 import postsRoutes from "./routes/posts.js";
+import reviewRoutes from "./routes/reviews.js";
 import uploadRoutes from "./routes/upload.js";
 import userRoutes from "./routes/user.routes.js";
 import vehiclesRoutes from "./routes/vehicles.routes.js";
@@ -30,6 +31,8 @@ app.use("/api/posts", postsRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/jobs", jobRoutes);  
+// ...
+app.use("/api/reviews", reviewRoutes);
 
 // AI Diagnosis route
 app.post("/api/diagnose", async (req, res) => {

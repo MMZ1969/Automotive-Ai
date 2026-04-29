@@ -1,25 +1,27 @@
 import prisma from "../lib/prisma.js";
 import { createAndSendNotification } from "./notification.controller.js";
 
-// GET all open jobs
+// GET all jobs (mechanic view)
 export const getJobs = async (req, res) => {
   try {
+    console.log("GET JOBS HIT - user:", req.user);
+
+    const all = await prisma.job.findMany();
+    console.log("RAW JOB COUNT:", all.length);
+
     const jobs = await prisma.job.findMany({
-      where: { status: "OPEN" },
       orderBy: { createdAt: "desc" },
       include: {
-        poster: {
-          select: { id: true, name: true, profilePhoto: true, role: true },
-        },
+        poster: { select: { id: true, name: true, profilePhoto: true, role: true } },
         bids: {
           include: {
-            mechanic: {
-              select: { id: true, name: true, profilePhoto: true, repPoints: true },
-            },
+            mechanic: { select: { id: true, name: true, profilePhoto: true, repPoints: true } },
           },
         },
       },
     });
+
+    console.log("JOBS WITH INCLUDES COUNT:", jobs.length);
     res.json(jobs);
   } catch (err) {
     console.error("GET JOBS ERROR:", err);
@@ -34,14 +36,10 @@ export const getMyJobs = async (req, res) => {
       where: { userId: req.user.id },
       orderBy: { createdAt: "desc" },
       include: {
-        poster: {
-          select: { id: true, name: true, profilePhoto: true },
-        },
+        poster: { select: { id: true, name: true, profilePhoto: true } },
         bids: {
           include: {
-            mechanic: {
-              select: { id: true, name: true, profilePhoto: true, repPoints: true },
-            },
+            mechanic: { select: { id: true, name: true, profilePhoto: true, repPoints: true } },
           },
         },
       },
@@ -62,9 +60,7 @@ export const getMyBids = async (req, res) => {
       include: {
         job: {
           include: {
-            poster: {
-              select: { id: true, name: true, profilePhoto: true },
-            },
+            poster: { select: { id: true, name: true, profilePhoto: true } },
           },
         },
       },
@@ -152,7 +148,6 @@ export const placeBid = async (req, res) => {
       },
     });
 
-    // Notify the job poster
     const mechanic = await prisma.user.findUnique({ where: { id: mechanicId }, select: { name: true } });
     await createAndSendNotification({
       recipientId: job.userId,
@@ -182,25 +177,21 @@ export const acceptBid = async (req, res) => {
     if (!bid) return res.status(404).json({ error: "Bid not found" });
     if (bid.job.userId !== userId) return res.status(403).json({ error: "Not authorized" });
 
-    // Update job status and accepted bid
     await prisma.job.update({
       where: { id: bid.jobId },
       data: { status: "IN_PROGRESS", acceptedBidId: bidId },
     });
 
-    // Update bid status
     await prisma.bid.update({
       where: { id: bidId },
       data: { status: "ACCEPTED" },
     });
 
-    // Reject other bids
     await prisma.bid.updateMany({
       where: { jobId: bid.jobId, id: { not: bidId } },
       data: { status: "REJECTED" },
     });
 
-    // Notify the mechanic
     const poster = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
     await createAndSendNotification({
       recipientId: bid.mechanicId,
