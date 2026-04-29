@@ -30,6 +30,8 @@ model User {
   blockedUsers          Block[]        @relation("Blocker")
   blockedBy             Block[]        @relation("Blocked")
   reports               Report[]       @relation("Reporter")
+  jobsPosted            Job[]          @relation("JobPoster")
+  bids                  Bid[]          @relation("BidMechanic")
 }
 
 model Post {
@@ -142,6 +144,37 @@ model Report {
   post       Post     @relation(fields: [postId], references: [id])
 
   @@unique([reporterId, postId])
+}
+
+model Job {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  title       String
+  description String
+  vehicle     String
+  budget      Float?
+  location    String?
+  status      String   @default("OPEN")
+  acceptedBidId Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  poster      User     @relation("JobPoster", fields: [userId], references: [id])
+  bids        Bid[]
+}
+
+model Bid {
+  id         Int      @id @default(autoincrement())
+  jobId      Int
+  mechanicId Int
+  message    String
+  price      Float
+  status     String   @default("PENDING")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  job        Job      @relation(fields: [jobId], references: [id])
+  mechanic   User     @relation("BidMechanic", fields: [mechanicId], references: [id])
+
+  @@unique([jobId, mechanicId])
 }
 
 model playing_with_neon {

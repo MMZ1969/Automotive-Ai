@@ -5,6 +5,7 @@ import express from "express";
 
 import authRoutes from "./auth/auth.routes.js";
 import followRoutes from "./routes/follow.routes.js";
+import jobRoutes from "./routes/job.routes.js";
 import logsRoutes from "./routes/logs.routes.js";
 import notificationRoutes from "./routes/notification.routes.js";
 import postsRoutes from "./routes/posts.js";
@@ -28,6 +29,7 @@ app.use("/api/logs", logsRoutes);
 app.use("/api/posts", postsRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/jobs", jobRoutes);  
 
 // AI Diagnosis route
 app.post("/api/diagnose", async (req, res) => {
