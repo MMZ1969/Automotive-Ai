@@ -2,6 +2,7 @@ import api from "@lib/api";
 import { useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Image,
   KeyboardAvoidingView,
   Linking,
@@ -62,25 +63,54 @@ export default function Diagnose() {
   };
 
   const handleDiagnose = async () => {
-    if (!query.trim()) return;
-    try {
-      setLoading(true);
-      setResult(null);
-      setVideos([]);
+  if (!query.trim()) return;
 
-      const [diagRes, videoRes] = await Promise.all([
-        api.post("/api/diagnose", { query }),
-        api.get(`/api/youtube?query=${encodeURIComponent(query)}`),
-      ]);
+  // Car-related keyword guard
+  const carKeywords = [
+    "car", "truck", "vehicle", "engine", "motor", "brake", "tire", "wheel",
+    "transmission", "exhaust", "oil", "battery", "alternator", "starter",
+    "radiator", "coolant", "fuel", "gas", "diesel", "spark", "plug",
+    "cylinder", "piston", "valve", "clutch", "differential", "suspension",
+    "steering", "alignment", "noise", "leak", "smoke", "warning", "light",
+    "check engine", "rpm", "mph", "odometer", "mileage", "mechanic",
+    "repair", "fix", "driving", "stall", "idle", "accelerat", "decelerat",
+    "vibrat", "shak", "squeal", "grind", "knock", "click", "rattle",
+    "honda", "toyota", "ford", "chevy", "chevrolet", "bmw", "mercedes",
+    "audi", "volkswagen", "nissan", "hyundai", "kia", "jeep", "dodge",
+    "ram", "gmc", "cadillac", "lexus", "acura", "subaru", "mazda",
+    "motorcycle", "bike", "atv", "suv", "sedan", "coupe", "pickup",
+  ];
 
-      setResult(diagRes.data);
-      setVideos(videoRes.data);
-    } catch (err) {
-      console.error("DIAGNOSE ERROR:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const queryLower = query.toLowerCase();
+  const isCarRelated = carKeywords.some(keyword => queryLower.includes(keyword));
+
+  if (!isCarRelated) {
+    Alert.alert(
+      "🚗 Automotive Only",
+      "This AI is specialized for vehicle diagnostics only. Please describe a car, truck, or motorcycle problem.",
+      [{ text: "Got it" }]
+    );
+    return;
+  }
+
+  try {
+    setLoading(true);
+    setResult(null);
+    setVideos([]);
+
+    const [diagRes, videoRes] = await Promise.all([
+      api.post("/api/diagnose", { query }),
+      api.get(`/api/youtube?query=${encodeURIComponent(query)}`),
+    ]);
+
+    setResult(diagRes.data);
+    setVideos(videoRes.data);
+  } catch (err) {
+    console.error("DIAGNOSE ERROR:", err);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const severityColor = (severity: string) => {
     switch (severity) {
