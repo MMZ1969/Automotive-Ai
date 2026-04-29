@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   KeyboardAvoidingView,
   Platform,
@@ -51,6 +52,29 @@ export default function PostDetail() {
     }
   };
 
+  const handleDelete = async () => {
+    Alert.alert(
+      "Delete Post",
+      "Are you sure you want to delete this post? This cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await api.delete(`/api/posts/${id}`);
+              router.push("/(tabs)/feed");
+            } catch (err) {
+              console.error("DELETE ERROR:", err);
+              Alert.alert("Error", "Could not delete post. Try again.");
+            }
+          },
+        },
+      ]
+    );
+  };
+
   if (loading) {
     return (
       <View style={{ flex: 1, backgroundColor: "#050509", justifyContent: "center", alignItems: "center" }}>
@@ -58,6 +82,8 @@ export default function PostDetail() {
       </View>
     );
   }
+
+  const isMyPost = post?.user?.id === user?.id;
 
   return (
     <KeyboardAvoidingView
@@ -73,14 +99,35 @@ export default function PostDetail() {
         borderBottomColor: "#252838",
         flexDirection: "row",
         alignItems: "center",
-        gap: 12,
+        justifyContent: "space-between",
       }}>
-        <TouchableOpacity onPress={() => router.push("/(tabs)/feed")}>
-          <Text style={{ color: "#345bff", fontSize: 16 }}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={{ color: "white", fontSize: 20, fontWeight: "900" }}>
-          Post
-        </Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+          <TouchableOpacity onPress={() => router.push("/(tabs)/feed")}>
+            <Text style={{ color: "#345bff", fontSize: 16 }}>← Back</Text>
+          </TouchableOpacity>
+          <Text style={{ color: "white", fontSize: 20, fontWeight: "900" }}>
+            Post
+          </Text>
+        </View>
+
+        {/* DELETE BUTTON — only for post owner */}
+        {isMyPost && (
+          <TouchableOpacity
+            onPress={handleDelete}
+            style={{
+              backgroundColor: "#1a0a0a",
+              paddingHorizontal: 12,
+              paddingVertical: 6,
+              borderRadius: 10,
+              borderWidth: 1,
+              borderColor: "#ef444444",
+            }}
+          >
+            <Text style={{ color: "#ef4444", fontSize: 13, fontWeight: "700" }}>
+              🗑️ Delete
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       <FlatList
