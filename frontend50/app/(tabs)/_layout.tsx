@@ -48,6 +48,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="search" options={{ href: null }} />
       <Tabs.Screen name="leaderboard" options={{ href: null }} />
       <Tabs.Screen name="user/[id]" options={{ href: null }} />
+      <Tabs.Screen name="mechanic/jobs" options={{ href: null }} />
 
       {/* VISIBLE TABS */}
       <Tabs.Screen

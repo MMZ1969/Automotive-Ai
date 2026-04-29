@@ -154,7 +154,7 @@ export default function Profile() {
 
       {/* JOBS — DIYer posts jobs, Mechanic browses jobs */}
       <TouchableOpacity
-        onPress={() => router.push("/(tabs)/(profile)/jobs")}
+        onPress={() => router.push("/(tabs)/mechanic/jobs")}
         style={[actionCard, { borderColor: "#345bff44", backgroundColor: "#0f1628" }]}
       >
         <Text style={actionCardTitle}>💼 {isMechanic ? "Browse Jobs" : "My Job Requests"}</Text>
