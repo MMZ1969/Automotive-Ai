@@ -179,7 +179,7 @@ export default function Jobs() {
       setSubmittingReview(true);
       await api.post("/api/reviews", {
         jobId: selectedJob.id,
-        mechanicId: acceptedBid.mechanicId,
+        mechanicId: acceptedBid.mechanic.id,
         rating: reviewRating,
         comment: reviewComment,
       });
