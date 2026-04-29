@@ -31,7 +31,6 @@ export default function Jobs() {
   const [reviewComment, setReviewComment] = useState("");
   const [submittingReview, setSubmittingReview] = useState(false);
 
-  // Create job form
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [vehicle, setVehicle] = useState("");
@@ -39,7 +38,6 @@ export default function Jobs() {
   const [location, setLocation] = useState("");
   const [creating, setCreating] = useState(false);
 
-  // Bid form
   const [bidMessage, setBidMessage] = useState("");
   const [bidPrice, setBidPrice] = useState("");
   const [bidding, setBidding] = useState(false);
@@ -160,7 +158,6 @@ export default function Jobs() {
           try {
             await api.post(`/api/jobs/${job.id}/complete`);
             fetchJobs();
-            // Open review modal after completing
             setSelectedJob(job);
             setShowReviewModal(true);
           } catch (err) {
@@ -252,20 +249,22 @@ export default function Jobs() {
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           style={{ flex: 1, backgroundColor: "#00000088", justifyContent: "flex-end" }}
         >
-          <View style={{ backgroundColor: "#11131a", borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20 }}>
-            <Text style={{ color: "white", fontSize: 22, fontWeight: "900", marginBottom: 4 }}>🔧 Place a Bid</Text>
-            <Text style={{ color: "#9ca3af", fontSize: 13, marginBottom: 20 }}>{selectedJob?.title}</Text>
-            <TextInput placeholder="Your message to the DIYer..." placeholderTextColor="#4b5563" value={bidMessage} onChangeText={setBidMessage} multiline style={[inputStyle, { minHeight: 80, textAlignVertical: "top" }]} />
-            <TextInput placeholder="Your price ($)" placeholderTextColor="#4b5563" value={bidPrice} onChangeText={setBidPrice} keyboardType="numeric" style={inputStyle} />
-            <View style={{ flexDirection: "row", gap: 10, marginTop: 8, marginBottom: 20 }}>
-              <TouchableOpacity onPress={() => setShowBidModal(false)} style={{ flex: 1, backgroundColor: "#252838", padding: 14, borderRadius: 12, alignItems: "center" }}>
-                <Text style={{ color: "white", fontWeight: "700" }}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={handlePlaceBid} disabled={bidding} style={{ flex: 1, backgroundColor: "#345bff", padding: 14, borderRadius: 12, alignItems: "center" }}>
-                <Text style={{ color: "white", fontWeight: "700" }}>{bidding ? "Placing..." : "Place Bid"}</Text>
-              </TouchableOpacity>
+          <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1, justifyContent: "flex-end" }}>
+            <View style={{ backgroundColor: "#11131a", borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20 }}>
+              <Text style={{ color: "white", fontSize: 22, fontWeight: "900", marginBottom: 4 }}>🔧 Place a Bid</Text>
+              <Text style={{ color: "#9ca3af", fontSize: 13, marginBottom: 20 }}>{selectedJob?.title}</Text>
+              <TextInput placeholder="Your message to the DIYer..." placeholderTextColor="#4b5563" value={bidMessage} onChangeText={setBidMessage} multiline style={[inputStyle, { minHeight: 80, textAlignVertical: "top" }]} />
+              <TextInput placeholder="Your price ($)" placeholderTextColor="#4b5563" value={bidPrice} onChangeText={setBidPrice} keyboardType="numeric" style={inputStyle} />
+              <View style={{ flexDirection: "row", gap: 10, marginTop: 8, marginBottom: 30 }}>
+                <TouchableOpacity onPress={() => setShowBidModal(false)} style={{ flex: 1, backgroundColor: "#252838", padding: 14, borderRadius: 12, alignItems: "center" }}>
+                  <Text style={{ color: "white", fontWeight: "700" }}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={handlePlaceBid} disabled={bidding} style={{ flex: 1, backgroundColor: "#345bff", padding: 14, borderRadius: 12, alignItems: "center" }}>
+                  <Text style={{ color: "white", fontWeight: "700" }}>{bidding ? "Placing..." : "Place Bid"}</Text>
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
+          </ScrollView>
         </KeyboardAvoidingView>
       </Modal>
 
@@ -275,37 +274,35 @@ export default function Jobs() {
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           style={{ flex: 1, backgroundColor: "#00000088", justifyContent: "flex-end" }}
         >
-          <View style={{ backgroundColor: "#11131a", borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20 }}>
-            <Text style={{ color: "white", fontSize: 22, fontWeight: "900", marginBottom: 4 }}>⭐ Rate Your Mechanic</Text>
-            <Text style={{ color: "#9ca3af", fontSize: 13, marginBottom: 20 }}>How was the service for: {selectedJob?.title}?</Text>
-
-            {/* STAR RATING */}
-            <View style={{ flexDirection: "row", justifyContent: "center", gap: 12, marginBottom: 20 }}>
-              {[1, 2, 3, 4, 5].map((star) => (
-                <TouchableOpacity key={star} onPress={() => setReviewRating(star)}>
-                  <Text style={{ fontSize: 36 }}>{star <= reviewRating ? "⭐" : "☆"}</Text>
+          <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1, justifyContent: "flex-end" }}>
+            <View style={{ backgroundColor: "#11131a", borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20 }}>
+              <Text style={{ color: "white", fontSize: 22, fontWeight: "900", marginBottom: 4 }}>⭐ Rate Your Mechanic</Text>
+              <Text style={{ color: "#9ca3af", fontSize: 13, marginBottom: 20 }}>How was the service for: {selectedJob?.title}?</Text>
+              <View style={{ flexDirection: "row", justifyContent: "center", gap: 12, marginBottom: 20 }}>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <TouchableOpacity key={star} onPress={() => setReviewRating(star)}>
+                    <Text style={{ fontSize: 36 }}>{star <= reviewRating ? "⭐" : "☆"}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <TextInput
+                placeholder="Leave a comment (optional)..."
+                placeholderTextColor="#4b5563"
+                value={reviewComment}
+                onChangeText={setReviewComment}
+                multiline
+                style={[inputStyle, { minHeight: 80, textAlignVertical: "top" }]}
+              />
+              <View style={{ flexDirection: "row", gap: 10, marginTop: 8, marginBottom: 30 }}>
+                <TouchableOpacity onPress={() => setShowReviewModal(false)} style={{ flex: 1, backgroundColor: "#252838", padding: 14, borderRadius: 12, alignItems: "center" }}>
+                  <Text style={{ color: "white", fontWeight: "700" }}>Skip</Text>
                 </TouchableOpacity>
-              ))}
+                <TouchableOpacity onPress={handleSubmitReview} disabled={submittingReview} style={{ flex: 1, backgroundColor: "#345bff", padding: 14, borderRadius: 12, alignItems: "center" }}>
+                  <Text style={{ color: "white", fontWeight: "700" }}>{submittingReview ? "Submitting..." : "Submit Review"}</Text>
+                </TouchableOpacity>
+              </View>
             </View>
-
-            <TextInput
-              placeholder="Leave a comment (optional)..."
-              placeholderTextColor="#4b5563"
-              value={reviewComment}
-              onChangeText={setReviewComment}
-              multiline
-              style={[inputStyle, { minHeight: 80, textAlignVertical: "top" }]}
-            />
-
-            <View style={{ flexDirection: "row", gap: 10, marginTop: 8, marginBottom: 20 }}>
-              <TouchableOpacity onPress={() => setShowReviewModal(false)} style={{ flex: 1, backgroundColor: "#252838", padding: 14, borderRadius: 12, alignItems: "center" }}>
-                <Text style={{ color: "white", fontWeight: "700" }}>Skip</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={handleSubmitReview} disabled={submittingReview} style={{ flex: 1, backgroundColor: "#345bff", padding: 14, borderRadius: 12, alignItems: "center" }}>
-                <Text style={{ color: "white", fontWeight: "700" }}>{submittingReview ? "Submitting..." : "Submit Review"}</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+          </ScrollView>
         </KeyboardAvoidingView>
       </Modal>
 
@@ -359,19 +356,15 @@ export default function Jobs() {
                 <Text style={{ color: statusColor(item.status), fontSize: 11, fontWeight: "700" }}>{item.status}</Text>
               </View>
             </View>
-
             <Text style={{ color: "#9ca3af", fontSize: 13, marginBottom: 8 }}>🚗 {item.vehicle}</Text>
             <Text style={{ color: "#e5e7eb", fontSize: 14, lineHeight: 20, marginBottom: 8 }}>{item.description}</Text>
-
             <View style={{ flexDirection: "row", gap: 16, marginBottom: 12 }}>
               {item.budget && <Text style={{ color: "#10b981", fontSize: 13, fontWeight: "700" }}>💰 Budget: ${item.budget}</Text>}
               {item.location && <Text style={{ color: "#9ca3af", fontSize: 13 }}>📍 {item.location}</Text>}
             </View>
-
             {isMechanic && item.poster && (
               <Text style={{ color: "#6b7280", fontSize: 12, marginBottom: 12 }}>Posted by {item.poster.name || "Anonymous"}</Text>
             )}
-
             {item.bids?.length > 0 && (
               <View style={{ backgroundColor: "#050509", borderRadius: 10, padding: 12, marginBottom: 12 }}>
                 <Text style={{ color: "#9ca3af", fontSize: 13, fontWeight: "700", marginBottom: 8 }}>
@@ -398,7 +391,6 @@ export default function Jobs() {
                 ))}
               </View>
             )}
-
             <View style={{ flexDirection: "row", gap: 10 }}>
               {isMechanic && item.status === "OPEN" && (
                 <TouchableOpacity onPress={() => { setSelectedJob(item); setShowBidModal(true); }} style={{ flex: 1, backgroundColor: "#345bff", padding: 12, borderRadius: 10, alignItems: "center" }}>
