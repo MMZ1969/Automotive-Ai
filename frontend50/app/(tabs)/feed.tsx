@@ -4,8 +4,10 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Image,
+  Modal,
   RefreshControl,
   Text,
   TouchableOpacity,
@@ -18,11 +20,11 @@ export default function Feed() {
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [postCount, setPostCount] = useState(0);
   const [followerCount, setFollowerCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
   const [repPoints, setRepPoints] = useState(0);
   const [activeTab, setActiveTab] = useState<"forYou" | "following">("forYou");
+  const [menuPost, setMenuPost] = useState<any>(null);
 
   const fetchPosts = async (tab = activeTab) => {
     try {
@@ -47,9 +49,6 @@ export default function Feed() {
       );
 
       setPosts(postsWithFollow);
-      const allPostsRes = await api.get("/api/posts");
-      const myPosts = allPostsRes.data.filter((p: any) => p.userId === user?.id);
-      setPostCount(myPosts.length);
       setFollowerCount(followRes.data.followerCount || 0);
       setFollowingCount(followRes.data.followingCount || 0);
       setRepPoints(meRes.data.repPoints || 0);
@@ -96,6 +95,61 @@ export default function Feed() {
     }
   };
 
+  const handleDeletePost = async (postId: number) => {
+    Alert.alert("Delete Post", "Are you sure you want to delete this post?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await api.delete(`/api/posts/${postId}`);
+            setMenuPost(null);
+            fetchPosts(activeTab);
+          } catch (err) {
+            console.error("DELETE ERROR:", err);
+          }
+        },
+      },
+    ]);
+  };
+
+  const handleReportPost = async (postId: number) => {
+    Alert.alert(
+      "Report Post",
+      "Why are you reporting this post?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Spam",
+          onPress: async () => await submitReport(postId, "Spam"),
+        },
+        {
+          text: "Inappropriate",
+          onPress: async () => await submitReport(postId, "Inappropriate content"),
+        },
+        {
+          text: "Abusive",
+          onPress: async () => await submitReport(postId, "Abusive behavior"),
+        },
+      ]
+    );
+  };
+
+  const submitReport = async (postId: number, reason: string) => {
+    try {
+      await api.post(`/api/posts/${postId}/report`, { reason });
+      setMenuPost(null);
+      Alert.alert("✅ Reported", "Thank you. We'll review this post within 24 hours.");
+    } catch (err: any) {
+      if (err?.response?.status === 400) {
+        Alert.alert("Already Reported", "You've already reported this post.");
+      } else {
+        Alert.alert("Error", "Could not submit report. Try again.");
+      }
+    }
+  };
+
   if (loading) {
     return (
       <View style={{ flex: 1, backgroundColor: "#050509", justifyContent: "center", alignItems: "center" }}>
@@ -107,6 +161,70 @@ export default function Feed() {
   return (
     <View style={{ flex: 1, backgroundColor: "#050509" }}>
 
+      {/* POST MENU MODAL */}
+      <Modal
+        visible={!!menuPost}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setMenuPost(null)}
+      >
+        <TouchableOpacity
+          style={{ flex: 1, backgroundColor: "#00000088", justifyContent: "flex-end" }}
+          onPress={() => setMenuPost(null)}
+        >
+          <View style={{
+            backgroundColor: "#11131a",
+            borderTopLeftRadius: 20,
+            borderTopRightRadius: 20,
+            padding: 20,
+            gap: 12,
+          }}>
+            {menuPost?.userId === user?.id ? (
+              <TouchableOpacity
+                onPress={() => handleDeletePost(menuPost.id)}
+                style={{
+                  backgroundColor: "#b91c1c",
+                  padding: 16,
+                  borderRadius: 12,
+                  alignItems: "center",
+                }}
+              >
+                <Text style={{ color: "white", fontWeight: "700", fontSize: 16 }}>
+                  🗑️ Delete Post
+                </Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                onPress={() => handleReportPost(menuPost.id)}
+                style={{
+                  backgroundColor: "#1f2937",
+                  padding: 16,
+                  borderRadius: 12,
+                  alignItems: "center",
+                  borderWidth: 1,
+                  borderColor: "#ef4444",
+                }}
+              >
+                <Text style={{ color: "#ef4444", fontWeight: "700", fontSize: 16 }}>
+                  🚩 Report Post
+                </Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              onPress={() => setMenuPost(null)}
+              style={{
+                backgroundColor: "#252838",
+                padding: 16,
+                borderRadius: 12,
+                alignItems: "center",
+              }}
+            >
+              <Text style={{ color: "white", fontWeight: "700", fontSize: 16 }}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
       {/* HEADER */}
       <View style={{
         paddingTop: 60,
@@ -115,7 +233,6 @@ export default function Feed() {
         borderBottomWidth: 1,
         borderBottomColor: "#252838",
       }}>
-        {/* TOP ROW — name + search icon */}
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
           <View>
             <Text style={{ color: "#9ca3af", fontSize: 13 }}>Welcome back 👋</Text>
@@ -233,53 +350,62 @@ export default function Feed() {
             borderColor: "#252838",
             padding: 16,
           }}>
-            {/* POST HEADER — tappable avatar + name */}
-            <TouchableOpacity
-              onPress={() => router.push(`/(tabs)/user/${item.user?.id}`)}
-              style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}
-            >
-              <View style={{
-                width: 44,
-                height: 44,
-                borderRadius: 22,
-                backgroundColor: "#1f2937",
-                justifyContent: "center",
-                alignItems: "center",
-                borderWidth: 2,
-                borderColor: item.user?.role === "MECHANIC" ? "#345bff" : "#10b981",
-                overflow: "hidden",
-                marginRight: 12,
-              }}>
-                {item.user?.profilePhoto ? (
-                  <Image
-                    source={{ uri: item.user.profilePhoto }}
-                    style={{ width: 44, height: 44, borderRadius: 22 }}
-                  />
-                ) : (
-                  <Text style={{ color: "white", fontSize: 18, fontWeight: "bold" }}>
-                    {item.user?.name?.[0]?.toUpperCase() || "?"}
-                  </Text>
-                )}
-              </View>
-
-              <View style={{ flex: 1 }}>
-                <Text style={{ color: "white", fontWeight: "700", fontSize: 15 }}>
-                  {item.user?.name || "Anonymous"}
-                </Text>
+            {/* POST HEADER */}
+            <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
+              <TouchableOpacity
+                onPress={() => router.push(`/(tabs)/user/${item.user?.id}`)}
+                style={{ flexDirection: "row", alignItems: "center", flex: 1 }}
+              >
                 <View style={{
-                  backgroundColor: item.user?.role === "MECHANIC" ? "#1e3a8a" : "#064e3b",
-                  paddingHorizontal: 8,
-                  paddingVertical: 2,
-                  borderRadius: 10,
-                  alignSelf: "flex-start",
-                  marginTop: 3,
+                  width: 44,
+                  height: 44,
+                  borderRadius: 22,
+                  backgroundColor: "#1f2937",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  borderWidth: 2,
+                  borderColor: item.user?.role === "MECHANIC" ? "#345bff" : "#10b981",
+                  overflow: "hidden",
+                  marginRight: 12,
                 }}>
-                  <Text style={{ color: "white", fontSize: 11, fontWeight: "600" }}>
-                    {item.user?.role === "MECHANIC" ? "🏁 Mechanic" : "🔧 DIYer"}
-                  </Text>
+                  {item.user?.profilePhoto ? (
+                    <Image
+                      source={{ uri: item.user.profilePhoto }}
+                      style={{ width: 44, height: 44, borderRadius: 22 }}
+                    />
+                  ) : (
+                    <Text style={{ color: "white", fontSize: 18, fontWeight: "bold" }}>
+                      {item.user?.name?.[0]?.toUpperCase() || "?"}
+                    </Text>
+                  )}
                 </View>
-              </View>
-            </TouchableOpacity>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: "white", fontWeight: "700", fontSize: 15 }}>
+                    {item.user?.name || "Anonymous"}
+                  </Text>
+                  <View style={{
+                    backgroundColor: item.user?.role === "MECHANIC" ? "#1e3a8a" : "#064e3b",
+                    paddingHorizontal: 8,
+                    paddingVertical: 2,
+                    borderRadius: 10,
+                    alignSelf: "flex-start",
+                    marginTop: 3,
+                  }}>
+                    <Text style={{ color: "white", fontSize: 11, fontWeight: "600" }}>
+                      {item.user?.role === "MECHANIC" ? "🏁 Mechanic" : "🔧 DIYer"}
+                    </Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+
+              {/* THREE DOT MENU */}
+              <TouchableOpacity
+                onPress={() => setMenuPost(item)}
+                style={{ padding: 8 }}
+              >
+                <Text style={{ color: "#9ca3af", fontSize: 20 }}>⋯</Text>
+              </TouchableOpacity>
+            </View>
 
             {/* FOLLOW BUTTON + DATE */}
             <View style={{

@@ -4,6 +4,7 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Image,
   RefreshControl,
@@ -19,9 +20,11 @@ export default function UserProfile() {
   const [profile, setProfile] = useState<any>(null);
   const [posts, setPosts] = useState<any[]>([]);
   const [isFollowing, setIsFollowing] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
+  const [blockLoading, setBlockLoading] = useState(false);
 
   const fetchProfile = async () => {
     try {
@@ -63,6 +66,39 @@ export default function UserProfile() {
     } finally {
       setFollowLoading(false);
     }
+  };
+
+  const handleBlock = async () => {
+    Alert.alert(
+      isBlocked ? "Unblock User" : "Block User",
+      isBlocked
+        ? `Are you sure you want to unblock ${profile?.name}?`
+        : `Are you sure you want to block ${profile?.name}? They won't be able to see your content and you won't see theirs.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: isBlocked ? "Unblock" : "Block",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              setBlockLoading(true);
+              const res = await api.post(`/api/users/${id}/block`);
+              setIsBlocked(res.data.blocked);
+              if (res.data.blocked) {
+                Alert.alert("✅ Blocked", `${profile?.name} has been blocked.`);
+              } else {
+                Alert.alert("✅ Unblocked", `${profile?.name} has been unblocked.`);
+              }
+            } catch (err) {
+              console.error("BLOCK ERROR:", err);
+              Alert.alert("Error", "Could not block user. Try again.");
+            } finally {
+              setBlockLoading(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   if (loading) {
@@ -161,25 +197,46 @@ export default function UserProfile() {
                 </View>
               </View>
 
-              {/* FOLLOW BUTTON */}
+              {/* FOLLOW + BLOCK BUTTONS */}
               {!isMe && (
-                <TouchableOpacity
-                  onPress={handleFollow}
-                  disabled={followLoading}
-                  style={{
-                    marginTop: 16,
-                    backgroundColor: isFollowing ? "#1f2937" : "#345bff",
-                    paddingVertical: 12,
-                    paddingHorizontal: 40,
-                    borderRadius: 24,
-                    borderWidth: 1,
-                    borderColor: isFollowing ? "#252838" : "#345bff",
-                  }}
-                >
-                  <Text style={{ color: "white", fontWeight: "700", fontSize: 16 }}>
-                    {followLoading ? "..." : isFollowing ? "Following" : "Follow"}
-                  </Text>
-                </TouchableOpacity>
+                <View style={{ flexDirection: "row", gap: 12, marginTop: 16 }}>
+                  <TouchableOpacity
+                    onPress={handleFollow}
+                    disabled={followLoading}
+                    style={{
+                      flex: 1,
+                      backgroundColor: isFollowing ? "#1f2937" : "#345bff",
+                      paddingVertical: 12,
+                      paddingHorizontal: 24,
+                      borderRadius: 24,
+                      borderWidth: 1,
+                      borderColor: isFollowing ? "#252838" : "#345bff",
+                      alignItems: "center",
+                    }}
+                  >
+                    <Text style={{ color: "white", fontWeight: "700", fontSize: 16 }}>
+                      {followLoading ? "..." : isFollowing ? "Following" : "Follow"}
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    onPress={handleBlock}
+                    disabled={blockLoading}
+                    style={{
+                      backgroundColor: "#1f2937",
+                      paddingVertical: 12,
+                      paddingHorizontal: 16,
+                      borderRadius: 24,
+                      borderWidth: 1,
+                      borderColor: "#ef444444",
+                      alignItems: "center",
+                    }}
+                  >
+                    <Text style={{ fontSize: 18 }}>
+                      {blockLoading ? "..." : isBlocked ? "🚫" : "🚫"}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               )}
             </View>
 

@@ -1,7 +1,7 @@
 // src/routes/posts.js
 import express from "express";
-import { reportPost } from "../controllers/post.controller.js";
 import * as postsController from "../controllers/posts.controller.js";
+import { reportPost } from "../controllers/posts.controller.js";
 import authMiddleware from "../middleware/authMiddleware.js";
 
 const router = express.Router();

@@ -1,7 +1,7 @@
 import { useAuth } from "@context/AuthContext";
 import { router } from "expo-router";
 import { useState } from "react";
-import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Alert, Linking, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 
 export default function Register() {
   const { register } = useAuth();
@@ -10,6 +10,7 @@ export default function Register() {
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<"DIYER" | "MECHANIC">("DIYER");
   const [loading, setLoading] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   const handleRegister = async () => {
     if (!name || !email || !password) {
@@ -17,10 +18,14 @@ export default function Register() {
       return;
     }
 
+    if (!agreedToTerms) {
+      Alert.alert("Terms Required", "You must agree to the Terms of Service and Community Guidelines to create an account.");
+      return;
+    }
+
     try {
       setLoading(true);
       await register({ name, email, password, role });
-      // Let (auth)/index handle role-based redirect automatically
     } catch (err: any) {
       Alert.alert("Registration failed", err.message || "Try again.");
     } finally {
@@ -29,7 +34,10 @@ export default function Register() {
   };
 
   return (
-    <View style={styles.container}>
+    <ScrollView
+      style={{ flex: 1, backgroundColor: "#050509" }}
+      contentContainerStyle={{ padding: 20, justifyContent: "center", flexGrow: 1 }}
+    >
       <Text style={styles.title}>Create Account</Text>
 
       <TextInput
@@ -87,10 +95,56 @@ export default function Register() {
         </TouchableOpacity>
       </View>
 
+      {/* TERMS AGREEMENT */}
       <TouchableOpacity
-        style={[styles.button, loading && styles.buttonDisabled]}
+        onPress={() => setAgreedToTerms(!agreedToTerms)}
+        style={{
+          flexDirection: "row",
+          alignItems: "flex-start",
+          marginBottom: 20,
+          gap: 12,
+        }}
+      >
+        <View style={{
+          width: 24,
+          height: 24,
+          borderRadius: 6,
+          borderWidth: 2,
+          borderColor: agreedToTerms ? "#345bff" : "#252838",
+          backgroundColor: agreedToTerms ? "#345bff" : "transparent",
+          justifyContent: "center",
+          alignItems: "center",
+          marginTop: 2,
+        }}>
+          {agreedToTerms && (
+            <Text style={{ color: "white", fontSize: 14, fontWeight: "700" }}>✓</Text>
+          )}
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: "#9ca3af", fontSize: 13, lineHeight: 20 }}>
+            I agree to the{" "}
+            <Text
+              style={{ color: "#345bff", textDecorationLine: "underline" }}
+              onPress={() => Linking.openURL("https://mmz1969.github.io/Automotive-Ai/terms.html")}
+            >
+              Terms of Service
+            </Text>
+            {" "}and{" "}
+            <Text
+              style={{ color: "#345bff", textDecorationLine: "underline" }}
+              onPress={() => Linking.openURL("https://mmz1969.github.io/Automotive-Ai/privacy-policy.html")}
+            >
+              Privacy Policy
+            </Text>
+            . I understand there is zero tolerance for objectionable content or abusive behavior.
+          </Text>
+        </View>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[styles.button, (loading || !agreedToTerms) && styles.buttonDisabled]}
         onPress={handleRegister}
-        disabled={loading}
+        disabled={loading || !agreedToTerms}
       >
         <Text style={styles.buttonText}>
           {loading ? "Creating account..." : "Sign Up"}
@@ -100,17 +154,11 @@ export default function Register() {
       <TouchableOpacity onPress={() => router.push("/(auth)/login")}>
         <Text style={styles.link}>Already have an account? Login</Text>
       </TouchableOpacity>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: "center",
-    padding: 20,
-    backgroundColor: "#050509",
-  },
   title: {
     fontSize: 32,
     fontWeight: "bold",
