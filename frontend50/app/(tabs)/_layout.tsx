@@ -46,6 +46,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="mechanic/index" options={{ href: null }} />
       <Tabs.Screen name="post/[id]" options={{ href: null }} />
       <Tabs.Screen name="search" options={{ href: null }} />
+      <Tabs.Screen name="leaderboard" options={{ href: null }} />
       <Tabs.Screen name="user/[id]" options={{ href: null }} />
 
       {/* VISIBLE TABS */}
@@ -64,6 +65,15 @@ export default function TabsLayout() {
           title: "Post",
           tabBarIcon: ({ color }) => (
             <Text style={{ fontSize: 20, color }}>➕</Text>
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="diagnose"
+        options={{
+          title: "Diagnose",
+          tabBarIcon: ({ color }) => (
+            <Text style={{ fontSize: 20, color }}>🔌</Text>
           ),
         }}
       />
@@ -93,24 +103,6 @@ export default function TabsLayout() {
                 </View>
               )}
             </View>
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="leaderboard"
-        options={{
-          title: "Ranks",
-          tabBarIcon: ({ color }) => (
-            <Text style={{ fontSize: 20, color }}>🏆</Text>
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="diagnose"
-        options={{
-          title: "Diagnose",
-          tabBarIcon: ({ color }) => (
-            <Text style={{ fontSize: 20, color }}>🔌</Text>
           ),
         }}
       />
