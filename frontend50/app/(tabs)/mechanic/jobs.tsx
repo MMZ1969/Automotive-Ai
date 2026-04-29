@@ -3,16 +3,20 @@ import api from "@lib/api";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    Modal,
-    RefreshControl,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  RefreshControl,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from "react-native";
+
 
 export default function Jobs() {
   const { user, isMechanic } = useAuth();
@@ -188,71 +192,36 @@ export default function Jobs() {
     <View style={{ flex: 1, backgroundColor: "#050509" }}>
 
       {/* CREATE JOB MODAL */}
-      <Modal visible={showCreateModal} animationType="slide" transparent>
-        <View style={{ flex: 1, backgroundColor: "#00000088", justifyContent: "flex-end" }}>
-          <View style={{ backgroundColor: "#11131a", borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20 }}>
-            <Text style={{ color: "white", fontSize: 22, fontWeight: "900", marginBottom: 20 }}>
-              💼 Post a Job
-            </Text>
-
-            <TextInput
-              placeholder="Job title (e.g. Brake pad replacement)"
-              placeholderTextColor="#4b5563"
-              value={title}
-              onChangeText={setTitle}
-              style={inputStyle}
-            />
-            <TextInput
-              placeholder="Describe the problem in detail..."
-              placeholderTextColor="#4b5563"
-              value={description}
-              onChangeText={setDescription}
-              multiline
-              style={[inputStyle, { minHeight: 80, textAlignVertical: "top" }]}
-            />
-            <TextInput
-              placeholder="Vehicle (e.g. 2019 Honda Civic)"
-              placeholderTextColor="#4b5563"
-              value={vehicle}
-              onChangeText={setVehicle}
-              style={inputStyle}
-            />
-            <TextInput
-              placeholder="Budget (optional, e.g. 200)"
-              placeholderTextColor="#4b5563"
-              value={budget}
-              onChangeText={setBudget}
-              keyboardType="numeric"
-              style={inputStyle}
-            />
-            <TextInput
-              placeholder="Location (optional, e.g. Newark, NJ)"
-              placeholderTextColor="#4b5563"
-              value={location}
-              onChangeText={setLocation}
-              style={inputStyle}
-            />
-
-            <View style={{ flexDirection: "row", gap: 10, marginTop: 8 }}>
-              <TouchableOpacity
-                onPress={() => setShowCreateModal(false)}
-                style={{ flex: 1, backgroundColor: "#252838", padding: 14, borderRadius: 12, alignItems: "center" }}
-              >
-                <Text style={{ color: "white", fontWeight: "700" }}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={handleCreateJob}
-                disabled={creating}
-                style={{ flex: 1, backgroundColor: "#345bff", padding: 14, borderRadius: 12, alignItems: "center" }}
-              >
-                <Text style={{ color: "white", fontWeight: "700" }}>
-                  {creating ? "Posting..." : "Post Job"}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+<Modal visible={showCreateModal} animationType="slide" transparent>
+  <KeyboardAvoidingView 
+    behavior={Platform.OS === "ios" ? "padding" : "height"}
+    style={{ flex: 1, backgroundColor: "#00000088", justifyContent: "flex-end" }}
+  >
+    <ScrollView 
+      keyboardShouldPersistTaps="handled"
+      contentContainerStyle={{ flexGrow: 1, justifyContent: "flex-end" }}
+    >
+      <View style={{ backgroundColor: "#11131a", borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20 }}>
+        <Text style={{ color: "white", fontSize: 22, fontWeight: "900", marginBottom: 20 }}>
+          💼 Post a Job
+        </Text>
+        <TextInput placeholder="Job title (e.g. Brake pad replacement)" placeholderTextColor="#4b5563" value={title} onChangeText={setTitle} style={inputStyle} />
+        <TextInput placeholder="Describe the problem in detail..." placeholderTextColor="#4b5563" value={description} onChangeText={setDescription} multiline style={[inputStyle, { minHeight: 80, textAlignVertical: "top" }]} />
+        <TextInput placeholder="Vehicle (e.g. 2019 Honda Civic)" placeholderTextColor="#4b5563" value={vehicle} onChangeText={setVehicle} style={inputStyle} />
+        <TextInput placeholder="Budget (optional, e.g. 200)" placeholderTextColor="#4b5563" value={budget} onChangeText={setBudget} keyboardType="numeric" style={inputStyle} />
+        <TextInput placeholder="Location (optional, e.g. Newark, NJ)" placeholderTextColor="#4b5563" value={location} onChangeText={setLocation} style={inputStyle} />
+        <View style={{ flexDirection: "row", gap: 10, marginTop: 8, marginBottom: 30 }}>
+          <TouchableOpacity onPress={() => setShowCreateModal(false)} style={{ flex: 1, backgroundColor: "#252838", padding: 14, borderRadius: 12, alignItems: "center" }}>
+            <Text style={{ color: "white", fontWeight: "700" }}>Cancel</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleCreateJob} disabled={creating} style={{ flex: 1, backgroundColor: "#345bff", padding: 14, borderRadius: 12, alignItems: "center" }}>
+            <Text style={{ color: "white", fontWeight: "700" }}>{creating ? "Posting..." : "Post Job"}</Text>
+          </TouchableOpacity>
         </View>
-      </Modal>
+      </View>
+    </ScrollView>
+  </KeyboardAvoidingView>
+</Modal>
 
       {/* BID MODAL */}
       <Modal visible={showBidModal} animationType="slide" transparent>
