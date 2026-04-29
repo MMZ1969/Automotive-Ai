@@ -10,7 +10,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "app.automotiveai",
-      "buildNumber": "2",
+      "buildNumber": "3",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSAppTransportSecurity": {
@@ -34,9 +34,10 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-router",
-      "expo-speech-recognition"
-    ],
+  "expo-router",
+  "expo-speech-recognition",
+  "expo-notifications"
+],
     "scheme": "automotiveai",
     "extra": {
       "router": {},
