@@ -195,3 +195,32 @@ export const getFollowingPosts = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch following posts" });
   }
 };
+// POST /posts/:id/report
+export const reportPost = async (req, res) => {
+  try {
+    const postId = Number(req.params.id);
+    const reporterId = req.user.id;
+    const { reason } = req.body;
+
+    if (!reason || reason.trim() === "") {
+      return res.status(400).json({ error: "Reason is required" });
+    }
+
+    const existing = await prisma.report.findUnique({
+      where: { reporterId_postId: { reporterId, postId } },
+    });
+
+    if (existing) {
+      return res.status(400).json({ error: "You already reported this post" });
+    }
+
+    await prisma.report.create({
+      data: { reporterId, postId, reason },
+    });
+
+    res.json({ success: true, message: "Post reported successfully" });
+  } catch (err) {
+    console.error("REPORT POST ERROR:", err);
+    res.status(500).json({ error: "Failed to report post" });
+  }
+};

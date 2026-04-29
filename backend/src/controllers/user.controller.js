@@ -191,3 +191,51 @@ export async function savePushToken(req, res) {
     res.status(500).json({ error: "Failed to save push token" });
   }
 }
+// POST /users/:id/block
+export async function blockUser(req, res) {
+  try {
+    const blockerId = req.user.id;
+    const blockedId = Number(req.params.id);
+
+    if (blockerId === blockedId) {
+      return res.status(400).json({ error: "You cannot block yourself" });
+    }
+
+    const existing = await prisma.block.findUnique({
+      where: { blockerId_blockedId: { blockerId, blockedId } },
+    });
+
+    if (existing) {
+      await prisma.block.delete({
+        where: { blockerId_blockedId: { blockerId, blockedId } },
+      });
+      return res.json({ blocked: false });
+    } else {
+      await prisma.block.create({
+        data: { blockerId, blockedId },
+      });
+      return res.json({ blocked: true });
+    }
+  } catch (err) {
+    console.error("BLOCK USER ERROR:", err);
+    res.status(500).json({ error: "Failed to block user" });
+  }
+}
+
+// GET /users/blocked
+export async function getBlockedUsers(req, res) {
+  try {
+    const blocks = await prisma.block.findMany({
+      where: { blockerId: req.user.id },
+      include: {
+        blocked: {
+          select: { id: true, name: true, profilePhoto: true },
+        },
+      },
+    });
+    res.json(blocks.map((b) => b.blocked));
+  } catch (err) {
+    console.error("GET BLOCKED USERS ERROR:", err);
+    res.status(500).json({ error: "Failed to fetch blocked users" });
+  }
+}
