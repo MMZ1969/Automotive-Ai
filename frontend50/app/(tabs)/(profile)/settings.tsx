@@ -1,4 +1,5 @@
 import { useAuth } from "@context/AuthContext";
+import api from "@lib/api";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
@@ -168,6 +169,44 @@ export default function Settings() {
           <Text style={{ color: "#345bff" }}>View →</Text>
         </TouchableOpacity>
       </View>
+      {/* DELETE ACCOUNT */}
+<TouchableOpacity
+  onPress={() => {
+    Alert.alert(
+      "Delete Account",
+      "Are you sure? This will permanently delete your account and all your data. This cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await api.delete("/api/auth/account");
+              await logout();
+            } catch (err) {
+              Alert.alert("Error", "Could not delete account. Try again.");
+            }
+          },
+        },
+      ]
+    );
+  }}
+  style={{
+    backgroundColor: "#0a0a0a",
+    padding: 16,
+    borderRadius: 14,
+    marginTop: 10,
+    marginBottom: 10,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#ef444444",
+  }}
+>
+  <Text style={{ color: "#ef4444", fontWeight: "700", fontSize: 16 }}>
+    🗑️ Delete Account
+  </Text>
+</TouchableOpacity>
 
       {/* LOGOUT */}
       <TouchableOpacity
