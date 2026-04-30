@@ -47,11 +47,11 @@ export const createLog = async (req, res) => {
 const log = await prisma.log.create({
   data: {
     title,
-    description,
-    mileage,
-    cost,
-    category,
-    performedAt: performedAt ? new Date(performedAt) : undefined,
+    description: description || null,
+    mileage: mileage ? parseInt(mileage) : null,
+    cost: cost ? parseFloat(cost) : null,
+    category: category || null,
+    performedAt: performedAt ? new Date(performedAt) : null,
     vehicleId,
     userId,
   },
