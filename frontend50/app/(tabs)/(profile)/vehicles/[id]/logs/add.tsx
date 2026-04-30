@@ -1,8 +1,10 @@
+import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -26,6 +28,88 @@ export default function AddLogScreen() {
     new Date().toISOString().split("T")[0]
   );
   const [loading, setLoading] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [receiptImage, setReceiptImage] = useState<string | null>(null);
+
+  const handleScanReceipt = async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert("Permission needed", "Please allow camera access to scan receipts.");
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        quality: 0.8,
+        base64: true,
+      });
+
+      if (result.canceled) return;
+
+      setReceiptImage(result.assets[0].uri);
+      setScanning(true);
+
+      // Send to Claude AI for extraction
+      const base64 = result.assets[0].base64;
+      const response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": process.env.EXPO_PUBLIC_ANTHROPIC_API_KEY || "",
+          "anthropic-version": "2023-06-01",
+        },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 500,
+          messages: [
+            {
+              role: "user",
+              content: [
+                {
+                  type: "image",
+                  source: {
+                    type: "base64",
+                    media_type: "image/jpeg",
+                    data: base64,
+                  },
+                },
+                {
+                  type: "text",
+                  text: `Extract information from this auto service receipt and respond ONLY with JSON, no markdown:
+{
+  "title": "service type (e.g. Oil Change, Brake Replacement)",
+  "date": "YYYY-MM-DD format or empty string",
+  "cost": "numeric amount only or empty string",
+  "mileage": "numeric mileage or empty string",
+  "description": "brief summary of services performed"
+}`,
+                },
+              ],
+            },
+          ],
+        }),
+      });
+
+      const data = await response.json();
+      const text = data.content[0].text;
+      const parsed = JSON.parse(text.match(/\{[\s\S]*\}/)[0]);
+
+      if (parsed.title) setTitle(parsed.title);
+      if (parsed.date) setPerformedAt(parsed.date);
+      if (parsed.cost) setCost(parsed.cost);
+      if (parsed.mileage) setMileage(parsed.mileage);
+      if (parsed.description) setDescription(parsed.description);
+
+      Alert.alert("✅ Receipt Scanned!", "Review the extracted info and save.");
+    } catch (err) {
+      console.error("SCAN ERROR:", err);
+      Alert.alert("Scan failed", "Could not read receipt. Please fill in manually.");
+    } finally {
+      setScanning(false);
+    }
+  };
 
   const handleSave = async () => {
     if (!title.trim()) {
@@ -63,11 +147,7 @@ export default function AddLogScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: "#050509" }}>
       <ScrollView contentContainerStyle={{ padding: 20 }}>
         {/* HEADER */}
-        <View style={{
-          flexDirection: "row",
-          alignItems: "center",
-          marginBottom: 24,
-        }}>
+        <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 24 }}>
           <TouchableOpacity
             onPress={() => router.push(`/(tabs)/(profile)/vehicles/${id}/logs`)}
             style={{ marginRight: 12 }}
@@ -76,6 +156,48 @@ export default function AddLogScreen() {
           </TouchableOpacity>
           <Text style={styles.title}>Add Log Entry</Text>
         </View>
+
+        {/* SCAN RECEIPT BUTTON */}
+        <TouchableOpacity
+          onPress={handleScanReceipt}
+          disabled={scanning}
+          style={{
+            backgroundColor: "#11131a",
+            borderWidth: 1,
+            borderColor: "#345bff",
+            borderRadius: 14,
+            padding: 16,
+            alignItems: "center",
+            marginBottom: 24,
+            flexDirection: "row",
+            justifyContent: "center",
+            gap: 10,
+          }}
+        >
+          {scanning ? (
+            <>
+              <ActivityIndicator color="#345bff" size="small" />
+              <Text style={{ color: "#345bff", fontWeight: "700", fontSize: 16 }}>
+                Scanning Receipt...
+              </Text>
+            </>
+          ) : (
+            <>
+              <Text style={{ fontSize: 22 }}>📸</Text>
+              <Text style={{ color: "#345bff", fontWeight: "700", fontSize: 16 }}>
+                Scan Receipt with AI
+              </Text>
+            </>
+          )}
+        </TouchableOpacity>
+
+        {/* RECEIPT PREVIEW */}
+        {receiptImage && (
+          <Image
+            source={{ uri: receiptImage }}
+            style={{ width: "100%", height: 150, borderRadius: 12, marginBottom: 20, resizeMode: "cover" }}
+          />
+        )}
 
         <Text style={styles.label}>Title *</Text>
         <TextInput
