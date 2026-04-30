@@ -35,6 +35,7 @@ export default function VehicleLogsScreen() {
   };
 
   const handleAddLog = () => {
+  console.log("NAVIGATING WITH ID:", id);
   router.push(`/(tabs)/(profile)/logs/add?vehicleId=${id}`);
 };
 

@@ -23,6 +23,8 @@ export default function AddLog() {
   const [saving, setSaving] = useState(false);
 
   const categories = ["Maintenance", "Repair", "Modification", "Inspection", "Other"];
+  
+  console.log("VEHICLE ID FROM PARAMS:", vehicleId);
 
   const handleSave = async () => {
     if (!title.trim()) {
