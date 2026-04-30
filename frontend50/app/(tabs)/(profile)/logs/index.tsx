@@ -3,12 +3,11 @@ import React, { useEffect } from "react";
 import { ActivityIndicator, FlatList, Text, View } from "react-native";
 
 import LogCard from "@components/LogCard";
-import WrenchButton from "@components/WrenchButton";
 import { useLog } from "@context/LogContext";
 import { fetchLogsByVehicle } from "@lib/logs";
 
 export default function VehicleLogsScreen() {
-  const { id } = useLocalSearchParams(); // vehicleId
+  const { id } = useLocalSearchParams();
   const router = useRouter();
   const { logs, setLogs, loading, setLoading } = useLog();
 
@@ -34,11 +33,6 @@ export default function VehicleLogsScreen() {
     router.push(`/tabs/(profile)/vehicles/${id}/logs/${logId}`);
   };
 
-  const handleAddLog = () => {
-  console.log("NAVIGATING WITH ID:", id);
-  router.push(`/(tabs)/(profile)/logs/add?vehicleId=${id}`);
-};
-
   if (loading) {
     return (
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
@@ -50,8 +44,8 @@ export default function VehicleLogsScreen() {
   return (
     <View style={{ flex: 1, padding: 16 }}>
       {logs.length === 0 ? (
-        <Text style={{ textAlign: "center", marginTop: 20 }}>
-          No logs found for this vehicle.
+        <Text style={{ textAlign: "center", marginTop: 20, color: "#9ca3af" }}>
+          No logs found. Go to a vehicle to add logs!
         </Text>
       ) : (
         <FlatList
@@ -62,8 +56,6 @@ export default function VehicleLogsScreen() {
           )}
         />
       )}
-
-      <WrenchButton onPress={handleAddLog} />
     </View>
   );
 }
