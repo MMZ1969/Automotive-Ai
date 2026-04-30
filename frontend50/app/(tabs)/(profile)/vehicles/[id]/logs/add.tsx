@@ -61,7 +61,7 @@ export default function AddLogScreen() {
           "anthropic-version": "2023-06-01",
         },
         body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
+          model: "claude-sonnet-4-5",
           max_tokens: 500,
           messages: [
             {
@@ -93,6 +93,7 @@ export default function AddLogScreen() {
       });
 
       const data = await response.json();
+      console.log("CLAUDE RESPONSE:", JSON.stringify(data));
       const text = data.content[0].text;
       const parsed = JSON.parse(text.match(/\{[\s\S]*\}/)[0]);
 
