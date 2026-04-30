@@ -2,14 +2,14 @@ import api from "@lib/api";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 export default function AddLog() {
@@ -31,14 +31,13 @@ export default function AddLog() {
     }
     try {
       setSaving(true);
-      await api.post("/api/logs", {
-        vehicleId: Number(vehicleId),
-        title: title.trim(),
-        description: description.trim(),
-        mileage: mileage ? Number(mileage) : null,
-        cost: cost ? Number(cost) : null,
-        category,
-      });
+      await api.post(`/api/logs/vehicle/${vehicleId}`, {
+  title: title.trim(),
+  description: description.trim(),
+  mileage: mileage ? Number(mileage) : null,
+  cost: cost ? Number(cost) : null,
+  category,
+  });
       Alert.alert("✅ Log Added!", "Your maintenance log has been saved.");
       router.back();
     } catch (err) {
