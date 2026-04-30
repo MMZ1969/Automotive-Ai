@@ -35,8 +35,8 @@ export default function VehicleLogsScreen() {
   };
 
   const handleAddLog = () => {
-    router.push(`/tabs/(profile)/vehicles/${id}/logs/add`);
-  };
+  router.push(`/(tabs)/(profile)/logs/add?vehicleId=${id}`);
+};
 
   if (loading) {
     return (
