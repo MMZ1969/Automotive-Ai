@@ -97,7 +97,7 @@ export default function Notifications() {
         borderBottomColor: "#252838",
       }}>
         <Text style={{ color: "white", fontSize: 28, fontWeight: "900" }}>
-          🔔 Notifications
+        🚨 Notifications
         </Text>
       </View>
 

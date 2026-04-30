@@ -85,7 +85,7 @@ export default function TabsLayout() {
           title: "Alerts",
           tabBarIcon: ({ color }) => (
             <View>
-              <Text style={{ fontSize: 20, color }}>🔔</Text>
+              <Text style={{ fontSize: 20, color }}>🚨</Text>
               {unreadCount > 0 && (
                 <View style={{
                   position: "absolute",
