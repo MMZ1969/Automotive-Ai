@@ -1,5 +1,5 @@
-import { useRouter } from "expo-router";
-import React, { useEffect } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -18,7 +18,8 @@ export default function VehiclesScreen() {
   const router = useRouter();
   const { vehicles, setVehicles, loading, setLoading } = useVehicle();
 
-  useEffect(() => {
+ useFocusEffect(
+  useCallback(() => {
     const load = async () => {
       setLoading(true);
       try {
@@ -31,7 +32,8 @@ export default function VehiclesScreen() {
       }
     };
     load();
-  }, []);
+  }, [])
+);
 
   const handleOpenVehicle = (id: string) => {
     router.push(`/(tabs)/(profile)/vehicles/${id}`);
