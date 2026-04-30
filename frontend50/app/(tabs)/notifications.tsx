@@ -1,25 +1,26 @@
 import api from "@lib/api";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import {
-    ActivityIndicator,
-    FlatList,
-    Image,
-    RefreshControl,
-    Text,
-    View
+  ActivityIndicator,
+  FlatList,
+  Image,
+  RefreshControl,
+  Text,
+  TouchableOpacity,
+  View
 } from "react-native";
 
 export default function Notifications() {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const router = useRouter();
 
   const fetchNotifications = async () => {
     try {
       const res = await api.get("/api/notifications");
       setNotifications(res.data);
-      // Mark all as read
       await api.post("/api/notifications/mark-read");
     } catch (err) {
       console.error("FETCH NOTIFICATIONS ERROR:", err);
@@ -40,11 +41,31 @@ export default function Notifications() {
     fetchNotifications();
   };
 
+  const handleNotificationPress = (item: any) => {
+    switch (item.type) {
+      case "like":
+      case "comment":
+        if (item.postId) router.push(`/(tabs)/post/${item.postId}`);
+        break;
+      case "follow":
+        if (item.actorId) router.push(`/(tabs)/user/${item.actorId}`);
+        break;
+      case "bid":
+      case "bid_accepted":
+        router.push("/(tabs)/mechanic/jobs");
+        break;
+      default:
+        break;
+    }
+  };
+
   const getIcon = (type: string) => {
     switch (type) {
       case "like": return "❤️";
       case "comment": return "💬";
       case "follow": return "🚗";
+      case "bid": return "🔧";
+      case "bid_accepted": return "🎉";
       default: return "🔔";
     }
   };
@@ -97,17 +118,19 @@ export default function Notifications() {
           </View>
         }
         renderItem={({ item }) => (
-          <View style={{
-            flexDirection: "row",
-            alignItems: "center",
-            backgroundColor: item.read ? "#11131a" : "#0f1628",
-            borderRadius: 14,
-            borderWidth: 1,
-            borderColor: item.read ? "#252838" : "#345bff44",
-            padding: 14,
-            marginBottom: 10,
-            gap: 12,
-          }}>
+          <TouchableOpacity
+            onPress={() => handleNotificationPress(item)}
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              backgroundColor: item.read ? "#11131a" : "#0f1628",
+              borderRadius: 14,
+              borderWidth: 1,
+              borderColor: item.read ? "#252838" : "#345bff44",
+              padding: 14,
+              marginBottom: 10,
+              gap: 12,
+            }}>
             {/* ACTOR AVATAR */}
             <View style={{
               width: 44,
@@ -150,7 +173,7 @@ export default function Notifications() {
                 backgroundColor: "#345bff",
               }} />
             )}
-          </View>
+          </TouchableOpacity>
         )}
       />
     </View>
