@@ -1,6 +1,6 @@
 import express from "express";
-import { register, login, me } from "./auth.controller.js";
 import authMiddleware from "../middleware/authMiddleware.js";
+import { deleteAccount, login, me, register } from "./auth.controller.js";
 
 const router = express.Router();
 
@@ -12,5 +12,8 @@ router.post("/login", login);
 
 // RESTORE SESSION
 router.get("/me", authMiddleware, me);
+
+// DELETE ACCOUNT
+router.delete("/account", authMiddleware, deleteAccount);
 
 export default router;

@@ -5,7 +5,7 @@ import prisma from "../lib/prisma.js";
 // REGISTER
 export const register = async (req, res) => {
   try {
-    const { email, password, name, role } = req.body; // 👈 add name and role
+    const { email, password, name, role } = req.body;
 
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
@@ -18,8 +18,8 @@ export const register = async (req, res) => {
       data: {
         email,
         password: hashedPassword,
-        name,                                    // 👈 add name
-        role: role || "DIYER",                   // 👈 use role from request, fallback to DIYER
+        name,
+        role: role || "DIYER",
       },
     });
 
@@ -34,7 +34,7 @@ export const register = async (req, res) => {
       user: {
         id: user.id,
         email: user.email,
-        name: user.name,                         // 👈 add name to response
+        name: user.name,
         role: user.role,
       },
     });
@@ -88,13 +88,43 @@ export const me = async (req, res) => {
       select: {
         id: true,
         email: true,
+        name: true,
         role: true,
+        profilePhoto: true,
+        repPoints: true,
       },
     });
 
     res.json({ user });
   } catch (err) {
     console.error("ME ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// DELETE ACCOUNT
+export const deleteAccount = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Delete in order to respect foreign key constraints
+    await prisma.notification.deleteMany({ where: { OR: [{ recipientId: userId }, { actorId: userId }] } });
+    await prisma.report.deleteMany({ where: { reporterId: userId } });
+    await prisma.block.deleteMany({ where: { OR: [{ blockerId: userId }, { blockedId: userId }] } });
+    await prisma.like.deleteMany({ where: { userId } });
+    await prisma.comment.deleteMany({ where: { userId } });
+    await prisma.follow.deleteMany({ where: { OR: [{ followerId: userId }, { followingId: userId }] } });
+    await prisma.bid.deleteMany({ where: { mechanicId: userId } });
+    await prisma.review.deleteMany({ where: { OR: [{ reviewerId: userId }, { mechanicId: userId }] } });
+    await prisma.log.deleteMany({ where: { userId } });
+    await prisma.vehicle.deleteMany({ where: { userId } });
+    await prisma.post.deleteMany({ where: { userId } });
+    await prisma.job.deleteMany({ where: { userId } });
+    await prisma.user.delete({ where: { id: userId } });
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("DELETE ACCOUNT ERROR:", err);
     res.status(500).json({ message: "Server error" });
   }
 };
