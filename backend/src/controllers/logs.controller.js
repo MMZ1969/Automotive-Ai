@@ -52,8 +52,8 @@ const log = await prisma.log.create({
     cost: cost ? parseFloat(cost) : null,
     category: category || null,
     performedAt: performedAt ? new Date(performedAt) : null,
-    vehicleId,
-    userId,
+    vehicle: { connect: { id: vehicleId } },
+    user: { connect: { id: userId } },
   },
 });
 
