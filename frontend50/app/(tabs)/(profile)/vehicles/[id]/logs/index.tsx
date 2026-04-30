@@ -1,5 +1,5 @@
-import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useEffect } from "react";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import React, { useCallback } from "react";
 import { ActivityIndicator, FlatList, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -13,29 +13,31 @@ export default function VehicleLogsScreen() {
   const router = useRouter();
   const { logs, setLogs, loading, setLoading } = useLog();
 
-  useEffect(() => {
-    if (!id) return;
-    const load = async () => {
-      setLoading(true);
-      try {
-        const data = await fetchLogsByVehicle(id as string);
-        setLogs(data || []);
-      } catch (err) {
-        console.error("Error loading logs:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
-  }, [id]);
+  useFocusEffect(
+    useCallback(() => {
+      if (!id) return;
+      const load = async () => {
+        setLoading(true);
+        try {
+          const data = await fetchLogsByVehicle(id as string);
+          setLogs(data || []);
+        } catch (err) {
+          console.error("Error loading logs:", err);
+        } finally {
+          setLoading(false);
+        }
+      };
+      load();
+    }, [id])
+  );
 
   const handleOpenLog = (logId: string) => {
     router.push(`/(tabs)/(profile)/vehicles/${id}/logs/${logId}`);
   };
 
   const handleAddLog = () => {
-  router.push(`/(tabs)/(profile)/vehicles/${id}/logs/add`);
-};
+    router.push(`/(tabs)/(profile)/vehicles/${id}/logs/add`);
+  };
 
   if (loading) {
     return (
@@ -48,7 +50,6 @@ export default function VehicleLogsScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#050509" }}>
       <View style={{ flex: 1, padding: 16 }}>
-        {/* HEADER */}
         <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 16 }}>
           <TouchableOpacity onPress={() => router.push(`/(tabs)/(profile)/vehicles/${id}`)} style={{ marginRight: 12 }}>
             <Text style={{ color: "#345bff", fontSize: 16 }}>← Back</Text>
