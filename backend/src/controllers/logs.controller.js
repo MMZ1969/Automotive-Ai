@@ -42,20 +42,26 @@ export const createLog = async (req, res) => {
     const vehicleId = parseInt(req.params.vehicleId);
     const userId = req.user.id;
 
+    console.log("VEHICLE ID:", vehicleId, "USER ID:", userId);
+
+    if (isNaN(vehicleId)) {
+      return res.status(400).json({ message: "Invalid vehicle ID" });
+    }
+
     const { title, description, mileage, cost, performedAt, category } = req.body;
 
-const log = await prisma.log.create({
-  data: {
-    title,
-    description: description || null,
-    mileage: mileage ? parseInt(mileage) : null,
-    cost: cost ? parseFloat(cost) : null,
-    category: category || null,
-    performedAt: performedAt ? new Date(performedAt) : null,
-    vehicle: { connect: { id: vehicleId } },
-    user: { connect: { id: userId } },
-  },
-});
+    const log = await prisma.log.create({
+      data: {
+        title,
+        description: description || null,
+        mileage: mileage ? parseInt(mileage) : null,
+        cost: cost ? parseFloat(cost) : null,
+        category: category || null,
+        performedAt: performedAt ? new Date(performedAt) : null,
+        vehicleId,
+        userId,
+      },
+    });
 
     res.json(log);
   } catch (err) {
