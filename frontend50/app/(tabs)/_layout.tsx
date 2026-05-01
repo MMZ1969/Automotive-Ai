@@ -50,6 +50,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="user/[id]" options={{ href: null }} />
       <Tabs.Screen name="mechanic/jobs" options={{ href: null }} />
       <Tabs.Screen name="mechanic/reviews" options={{ href: null }} />
+      <Tabs.Screen name="create" options={{ href: null }} />
 
       {/* VISIBLE TABS */}
       <Tabs.Screen
@@ -62,11 +63,11 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="create"
+        name="(parts)"
         options={{
-          title: "Post",
+          title: "Parts",
           tabBarIcon: ({ color }) => (
-            <Text style={{ fontSize: 20, color }}>➕</Text>
+            <Text style={{ fontSize: 20, color }}>🔩</Text>
           ),
         }}
       />

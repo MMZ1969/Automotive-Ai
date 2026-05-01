@@ -2,7 +2,7 @@
   "expo": {
     "name": "AutoAI",
     "slug": "frontend50",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -10,15 +10,16 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "app.automotiveai",
-      "buildNumber": "5",
+      "buildNumber": "7",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false,
-        "NSAppTransportSecurity": {
-          "NSAllowsArbitraryLoads": true
-        },
-        "NSSpeechRecognitionUsageDescription": "AutoAI uses speech recognition to let you describe car problems hands-free.",
-        "NSMicrophoneUsageDescription": "AutoAI uses your microphone to listen for car problem descriptions."
-      }
+  "ITSAppUsesNonExemptEncryption": false,
+  "NSAppTransportSecurity": {
+    "NSAllowsArbitraryLoads": true
+  },
+  "NSSpeechRecognitionUsageDescription": "AutoAI uses speech recognition to let you describe car problems hands-free.",
+  "NSMicrophoneUsageDescription": "AutoAI uses your microphone to listen for car problem descriptions.",
+  "NSPhotoLibraryUsageDescription": "AutoAI uses your photo library so you can upload photos of your vehicle or car problems to share with the community in posts and to set your profile photo."
+}
     },
     "android": {
       "adaptiveIcon": {

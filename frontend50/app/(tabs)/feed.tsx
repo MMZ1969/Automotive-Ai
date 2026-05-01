@@ -350,7 +350,7 @@ export default function Feed() {
             borderColor: "#252838",
             padding: 16,
           }}>
-            {/* POST HEADER */}
+            {/* POST HEADER — tapping avatar/name goes to user profile */}
             <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
               <TouchableOpacity
                 onPress={() => router.push(`/(tabs)/user/${item.user?.id}`)}
@@ -438,19 +438,23 @@ export default function Feed() {
               </Text>
             </View>
 
-            {/* POST CONTENT */}
-            <Text style={{ color: "#e5e7eb", fontSize: 15, lineHeight: 22 }}>
-              {item.content}
-            </Text>
+            {/* POST CONTENT + IMAGE — tapping goes to post detail */}
+            <TouchableOpacity
+              onPress={() => router.push(`/(tabs)/post/${item.id}`)}
+              activeOpacity={0.8}
+            >
+              <Text style={{ color: "#e5e7eb", fontSize: 15, lineHeight: 22 }}>
+                {item.content}
+              </Text>
 
-            {/* POST IMAGE */}
-            {item.imageUrl && (
-              <Image
-                source={{ uri: item.imageUrl }}
-                style={{ width: "100%", height: 200, borderRadius: 12, marginTop: 12 }}
-                resizeMode="cover"
-              />
-            )}
+              {item.imageUrl && (
+                <Image
+                  source={{ uri: item.imageUrl }}
+                  style={{ width: "100%", height: 200, borderRadius: 12, marginTop: 12 }}
+                  resizeMode="cover"
+                />
+              )}
+            </TouchableOpacity>
 
             {/* ACTIONS */}
             <View style={{
@@ -486,6 +490,30 @@ export default function Feed() {
           </View>
         )}
       />
+
+      {/* FLOATING POST BUTTON */}
+      <TouchableOpacity
+        onPress={() => router.push("/(tabs)/create")}
+        style={{
+          position: "absolute",
+          bottom: 24,
+          right: 24,
+          backgroundColor: "#345bff",
+          width: 56,
+          height: 56,
+          borderRadius: 28,
+          justifyContent: "center",
+          alignItems: "center",
+          shadowColor: "#345bff",
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.4,
+          shadowRadius: 8,
+          elevation: 8,
+        }}
+      >
+        <Text style={{ color: "white", fontSize: 28, fontWeight: "300", marginTop: -2 }}>➕</Text>
+      </TouchableOpacity>
+
     </View>
   );
 }

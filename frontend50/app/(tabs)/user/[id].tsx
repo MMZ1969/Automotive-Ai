@@ -56,13 +56,37 @@ export default function UserProfile() {
   };
 
   const handleFollow = async () => {
+    // Optimistic update — flip instantly, no waiting for server
+    const newFollowing = !isFollowing;
+    setIsFollowing(newFollowing);
+
+    // Also update follower count instantly
+    setProfile((prev: any) => ({
+      ...prev,
+      _count: {
+        ...prev._count,
+        followers: newFollowing
+          ? (prev._count?.followers || 0) + 1
+          : Math.max((prev._count?.followers || 0) - 1, 0),
+      },
+    }));
+
     try {
       setFollowLoading(true);
       await api.post(`/api/users/${id}/follow`);
-      setIsFollowing(!isFollowing);
-      fetchProfile();
     } catch (err) {
+      // If it fails, roll back
       console.error("FOLLOW ERROR:", err);
+      setIsFollowing(!newFollowing);
+      setProfile((prev: any) => ({
+        ...prev,
+        _count: {
+          ...prev._count,
+          followers: newFollowing
+            ? Math.max((prev._count?.followers || 0) - 1, 0)
+            : (prev._count?.followers || 0) + 1,
+        },
+      }));
     } finally {
       setFollowLoading(false);
     }

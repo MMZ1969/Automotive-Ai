@@ -164,9 +164,20 @@ export default function Diagnose() {
             lineHeight: 22,
             minHeight: 100,
             textAlignVertical: "top",
-            marginBottom: 14,
+            marginBottom: 8,
           }}
         />
+
+        {/* AI DISCLOSURE — required for Apple App Store compliance */}
+        <Text style={{ color: "#6b7280", fontSize: 11, marginBottom: 14, paddingHorizontal: 4 }}>
+          🔒 Your description is sent to an AI service for analysis. See our{" "}
+          <Text
+            style={{ color: "#345bff" }}
+            onPress={() => Linking.openURL("https://mmz1969.github.io/Automotive-Ai/privacy-policy.html")}
+      >
+              Privacy Policy
+        </Text> for details.
+        </Text>
 
         {/* VOICE BUTTON */}
         <TouchableOpacity

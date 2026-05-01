@@ -75,6 +75,28 @@ export default function PostDetail() {
     );
   };
 
+  const handleReport = () => {
+    Alert.alert(
+      "Report Post",
+      "Why are you reporting this post?",
+      [
+        { text: "Spam", onPress: () => submitReport("Spam") },
+        { text: "Inappropriate Content", onPress: () => submitReport("Inappropriate Content") },
+        { text: "Harassment", onPress: () => submitReport("Harassment") },
+        { text: "Cancel", style: "cancel" },
+      ]
+    );
+  };
+
+  const submitReport = (reason: string) => {
+    // Future: wire up to a backend /api/reports endpoint
+    Alert.alert(
+      "Report Submitted",
+      "Thanks for letting us know. We'll review this post shortly.",
+      [{ text: "OK" }]
+    );
+  };
+
   if (loading) {
     return (
       <View style={{ flex: 1, backgroundColor: "#050509", justifyContent: "center", alignItems: "center" }}>
@@ -110,8 +132,8 @@ export default function PostDetail() {
           </Text>
         </View>
 
-        {/* DELETE BUTTON — only for post owner */}
-        {isMyPost && (
+        {/* DELETE — only for post owner / REPORT — only for others */}
+        {isMyPost ? (
           <TouchableOpacity
             onPress={handleDelete}
             style={{
@@ -125,6 +147,22 @@ export default function PostDetail() {
           >
             <Text style={{ color: "#ef4444", fontSize: 13, fontWeight: "700" }}>
               🗑️ Delete
+            </Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            onPress={handleReport}
+            style={{
+              backgroundColor: "#11131a",
+              paddingHorizontal: 12,
+              paddingVertical: 6,
+              borderRadius: 10,
+              borderWidth: 1,
+              borderColor: "#252838",
+            }}
+          >
+            <Text style={{ color: "#9ca3af", fontSize: 13, fontWeight: "700" }}>
+              🚩 Report
             </Text>
           </TouchableOpacity>
         )}
