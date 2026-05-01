@@ -17,6 +17,7 @@ import {
   View,
 } from "react-native";
 import { storage } from "../../../firebaseConfig.js";
+
 const CATEGORIES = ["Engine", "Suspension", "Brakes", "Body", "Interior", "Tires", "Exhaust", "Electrical", "Other"];
 const CONDITIONS = ["New", "Like New", "Good", "Fair"];
 const PRICE_TYPES = ["FIXED", "OBO", "TRADE", "FREE"];
@@ -42,26 +43,90 @@ export default function AddPartScreen() {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
 
   const handlePickPhoto = async () => {
+  Alert.alert(
+    "Add Photo",
+    "Choose an option",
+    [
+      {
+        text: "Take Photo",
+        onPress: async () => {
+          try {
+            const { status } = await ImagePicker.requestCameraPermissionsAsync();
+            if (status !== "granted") {
+              Alert.alert("Permission needed", "Please allow camera access.");
+              return;
+            }
+            const result = await ImagePicker.launchCameraAsync({
+              allowsEditing: true,
+              quality: 0.7,
+              base64: true,
+            });
+            if (result.canceled) return;
+            const asset = result.assets[0];
+            setImageUri(asset.uri);
+            await Promise.all([
+              uploadToFirebase(asset.uri),
+              analyzeWithAI(asset.base64!, asset.mimeType || "image/jpeg"),
+            ]);
+          } catch (err) {
+            Alert.alert("Error", "Could not open camera.");
+          }
+        },
+      },
+      {
+        text: "Choose from Library",
+        onPress: async () => {
+          try {
+            const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+            if (status !== "granted") {
+              Alert.alert("Permission needed", "Please allow access to your photo library.");
+              return;
+            }
+            const result = await ImagePicker.launchImageLibraryAsync({
+              mediaTypes: ["images"],
+              allowsEditing: true,
+              quality: 0.7,
+              base64: true,
+            });
+            if (result.canceled) return;
+            const asset = result.assets[0];
+            setImageUri(asset.uri);
+            await Promise.all([
+              uploadToFirebase(asset.uri),
+              analyzeWithAI(asset.base64!, asset.mimeType || "image/jpeg"),
+            ]);
+          } catch (err) {
+            Alert.alert("Error", "Could not open photo library.");
+          }
+        },
+      },
+      { text: "Cancel", style: "cancel" },
+    ]
+  );
+};
+
+  const analyzeWithAI = async (base64: string, mediaType: string) => {
     try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== "granted") {
-        Alert.alert("Permission needed", "Please allow access to your photo library.");
-        return;
-      }
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ["images"],
-        allowsEditing: true,
-        quality: 0.7,
+      setAnalyzing(true);
+      const res = await api.post("/api/analyze-part", {
+        imageBase64: base64,
+        mediaType,
       });
-      if (result.canceled) return;
-      const uri = result.assets[0].uri;
-      setImageUri(uri);
-      await uploadToFirebase(uri);
+      const { title, category, condition, description } = res.data;
+
+      // Autofill the fields
+      if (title) setTitle(title);
+      if (description) setDescription(description);
+      if (category && CATEGORIES.includes(category)) setCategory(category);
+      if (condition && CONDITIONS.includes(condition)) setCondition(condition);
     } catch (err) {
-      console.error("PHOTO PICK ERROR:", err);
-      Alert.alert("Error", "Could not open photo library.");
+      console.error("AI ANALYZE ERROR:", err);
+      // Silently fail — user can fill in manually
+    } finally {
+      setAnalyzing(false);
     }
   };
 
@@ -102,8 +167,8 @@ export default function AddPartScreen() {
       Alert.alert("Missing Info", "Please add a title for your listing.");
       return;
     }
-    if (uploading) {
-      Alert.alert("Please wait", "Photo is still uploading...");
+    if (uploading || analyzing) {
+      Alert.alert("Please wait", "Still processing your photo...");
       return;
     }
     try {
@@ -143,9 +208,9 @@ export default function AddPartScreen() {
           <Text style={{ color: "white", fontSize: 22, fontWeight: "900" }}>List a Part</Text>
           <TouchableOpacity
             onPress={handleSubmit}
-            disabled={submitting || uploading}
+            disabled={submitting || uploading || analyzing}
             style={{
-              backgroundColor: submitting || uploading ? "#1f2937" : "#345bff",
+              backgroundColor: submitting || uploading || analyzing ? "#1f2937" : "#345bff",
               paddingHorizontal: 16,
               paddingVertical: 8,
               borderRadius: 20,
@@ -160,7 +225,7 @@ export default function AddPartScreen() {
         {/* PHOTO */}
         <TouchableOpacity
           onPress={handlePickPhoto}
-          disabled={uploading}
+          disabled={uploading || analyzing}
           style={{
             backgroundColor: "#11131a",
             borderRadius: 14,
@@ -170,24 +235,26 @@ export default function AddPartScreen() {
             height: 180,
             justifyContent: "center",
             alignItems: "center",
-            marginBottom: 20,
+            marginBottom: 12,
             overflow: "hidden",
           }}
         >
           {imageUri ? (
             <>
               <Image source={{ uri: imageUri }} style={{ width: "100%", height: 180 }} resizeMode="cover" />
-              {uploading && (
+              {(uploading || analyzing) && (
                 <View style={{
                   position: "absolute",
-                  backgroundColor: "rgba(0,0,0,0.6)",
+                  backgroundColor: "rgba(0,0,0,0.7)",
                   width: "100%",
                   height: "100%",
                   justifyContent: "center",
                   alignItems: "center",
                 }}>
-                  <ActivityIndicator color="white" />
-                  <Text style={{ color: "white", marginTop: 8 }}>{uploadProgress}%</Text>
+                  <ActivityIndicator color="#345bff" size="large" />
+                  <Text style={{ color: "white", marginTop: 12, fontWeight: "700" }}>
+                    {analyzing ? "🤖 AI analyzing part..." : `Uploading ${uploadProgress}%`}
+                  </Text>
                 </View>
               )}
             </>
@@ -195,10 +262,31 @@ export default function AddPartScreen() {
             <>
               <Text style={{ fontSize: 36 }}>📷</Text>
               <Text style={{ color: "#9ca3af", marginTop: 8, fontWeight: "600" }}>Add Photo</Text>
-              <Text style={{ color: "#6b7280", fontSize: 12, marginTop: 4 }}>Tap to upload</Text>
+              <Text style={{ color: "#6b7280", fontSize: 12, marginTop: 4 }}>AI will autofill your listing!</Text>
             </>
           )}
         </TouchableOpacity>
+
+        {/* AI BADGE */}
+        {!imageUri && (
+          <View style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 6,
+            marginBottom: 20,
+            backgroundColor: "#0a1628",
+            padding: 10,
+            borderRadius: 10,
+            borderWidth: 1,
+            borderColor: "#345bff33",
+          }}>
+            <Text style={{ fontSize: 16 }}>🤖</Text>
+            <Text style={{ color: "#9ca3af", fontSize: 12 }}>
+              Take a photo and AI will fill in title, category, condition & description
+            </Text>
+          </View>
+        )}
 
         {/* TITLE */}
         <Text style={label}>Title *</Text>
