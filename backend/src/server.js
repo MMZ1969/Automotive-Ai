@@ -8,6 +8,7 @@ import followRoutes from "./routes/follow.routes.js";
 import jobRoutes from "./routes/job.routes.js";
 import logsRoutes from "./routes/logs.routes.js";
 import notificationRoutes from "./routes/notification.routes.js";
+import partsRoutes from "./routes/parts.routes.js";
 import postsRoutes from "./routes/posts.js";
 import reviewRoutes from "./routes/reviews.js";
 import uploadRoutes from "./routes/upload.js";
@@ -30,8 +31,8 @@ app.use("/api/logs", logsRoutes);
 app.use("/api/posts", postsRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/notifications", notificationRoutes);
-app.use("/api/jobs", jobRoutes);  
-// ...
+app.use("/api/jobs", jobRoutes);
+app.use("/api/parts", partsRoutes);
 app.use("/api/reviews", reviewRoutes);
 
 // AI Diagnosis route
