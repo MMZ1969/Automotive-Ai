@@ -20,7 +20,7 @@ dotenv.config();
 const app = express();
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: "10mb" }));
 
 // Routes
 app.use("/api/auth", authRoutes);
@@ -95,6 +95,72 @@ Respond in JSON format only, no markdown, like this:
   } catch (err) {
     console.error("DIAGNOSE ERROR:", err);
     res.status(500).json({ error: "Failed to diagnose" });
+  }
+});
+
+// AI Part Analyzer route — photo → autofill listing
+app.post("/api/analyze-part", async (req, res) => {
+  try {
+    const { imageBase64, mediaType } = req.body;
+
+    if (!imageBase64) {
+      return res.status(400).json({ error: "No image provided" });
+    }
+
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": process.env.ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: "claude-opus-4-5",
+        max_tokens: 1000,
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "image",
+                source: {
+                  type: "base64",
+                  media_type: mediaType || "image/jpeg",
+                  data: imageBase64,
+                },
+              },
+              {
+                type: "text",
+                text: `You are an expert automotive parts identifier. Look at this image of a car part and provide listing details for someone selling it.
+
+Respond in JSON format only, no markdown, like this:
+{
+  "title": "specific part name and fitment if visible (e.g. K&N Cold Air Intake for Honda Civic)",
+  "category": "one of: Engine, Suspension, Brakes, Body, Interior, Tires, Exhaust, Electrical, Other",
+  "condition": "one of: New, Like New, Good, Fair — based on visual appearance",
+  "description": "2-3 sentences describing the part, any visible wear, notable features, and potential fitment"
+}`,
+              },
+            ],
+          },
+        ],
+      }),
+    });
+
+    const data = await response.json();
+    if (!data.content || !data.content[0]) {
+      return res.status(500).json({ error: "AI service error" });
+    }
+    const text = data.content[0].text;
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      return res.status(500).json({ error: "Invalid AI response" });
+    }
+    const parsed = JSON.parse(jsonMatch[0]);
+    res.json(parsed);
+  } catch (err) {
+    console.error("ANALYZE PART ERROR:", err);
+    res.status(500).json({ error: "Failed to analyze part" });
   }
 });
 
