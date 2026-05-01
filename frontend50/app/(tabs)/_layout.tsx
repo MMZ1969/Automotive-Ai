@@ -1,4 +1,5 @@
 import { useAuth } from "@context/AuthContext";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import api from "@lib/api";
 import { Tabs, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
@@ -57,8 +58,12 @@ export default function TabsLayout() {
         name="feed"
         options={{
           title: "Feed",
-          tabBarIcon: ({ color }) => (
-            <Text style={{ fontSize: 20, color }}>🏠</Text>
+          tabBarIcon: ({ focused, size }) => (
+            <MaterialCommunityIcons
+              name="garage-open-variant"
+              size={size}
+              color={focused ? "#10b981" : "#6b7280"}
+            />
           ),
         }}
       />
@@ -66,8 +71,12 @@ export default function TabsLayout() {
         name="(parts)"
         options={{
           title: "Parts",
-          tabBarIcon: ({ color }) => (
-            <Text style={{ fontSize: 20, color }}>🔩</Text>
+          tabBarIcon: ({ focused, size }) => (
+            <MaterialCommunityIcons
+              name="car-wrench"
+              size={size}
+              color={focused ? "#f97316" : "#6b7280"}
+            />
           ),
         }}
       />
@@ -75,8 +84,12 @@ export default function TabsLayout() {
         name="diagnose"
         options={{
           title: "Diagnose",
-          tabBarIcon: ({ color }) => (
-            <Text style={{ fontSize: 20, color }}>🔌</Text>
+          tabBarIcon: ({ focused, size }) => (
+            <MaterialCommunityIcons
+              name="car-brake-alert"
+              size={size}
+              color={focused ? "#facc15" : "#6b7280"}
+            />
           ),
         }}
       />
@@ -84,9 +97,13 @@ export default function TabsLayout() {
         name="notifications"
         options={{
           title: "Alerts",
-          tabBarIcon: ({ color }) => (
+          tabBarIcon: ({ focused, size }) => (
             <View>
-              <Text style={{ fontSize: 20, color }}>🚨</Text>
+              <MaterialCommunityIcons
+                name="bell"
+                size={size}
+                color={focused ? "#ef4444" : "#6b7280"}
+              />
               {unreadCount > 0 && (
                 <View style={{
                   position: "absolute",
@@ -113,8 +130,12 @@ export default function TabsLayout() {
         name="(profile)"
         options={{
           title: "Profile",
-          tabBarIcon: ({ color }) => (
-            <Text style={{ fontSize: 20, color }}>👤</Text>
+          tabBarIcon: ({ focused, size }) => (
+            <MaterialCommunityIcons
+              name="account-circle"
+              size={size}
+              color={focused ? "#345bff" : "#6b7280"}
+            />
           ),
         }}
       />
