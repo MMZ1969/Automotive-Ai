@@ -147,6 +147,23 @@ Respond in JSON format only, no markdown, like this:
       }),
     });
 
+    const data = await response.json();
+    if (!data.content || !data.content[0]) {
+      return res.status(500).json({ error: "AI service error" });
+    }
+    const text = data.content[0].text;
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      return res.status(500).json({ error: "Invalid AI response" });
+    }
+    const parsed = JSON.parse(jsonMatch[0]);
+    res.json(parsed);
+  } catch (err) {
+    console.error("ANALYZE PART ERROR:", err);
+    res.status(500).json({ error: "Failed to analyze part" });
+  }
+});
+
 // AI Image Diagnosis route — photo → diagnosis
 app.post("/api/analyze-image-diagnosis", async (req, res) => {
   try {
@@ -204,6 +221,23 @@ If the image is not automotive related, return:
         ],
       }),
     });
+
+    const data = await response.json();
+    if (!data.content || !data.content[0]) {
+      return res.status(500).json({ error: "AI service error" });
+    }
+    const text = data.content[0].text;
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      return res.status(500).json({ error: "Invalid AI response" });
+    }
+    const parsed = JSON.parse(jsonMatch[0]);
+    res.json(parsed);
+  } catch (err) {
+    console.error("ANALYZE IMAGE DIAGNOSIS ERROR:", err);
+    res.status(500).json({ error: "Failed to analyze image" });
+  }
+});
 
 // VIN Scanner route — image → VIN number
 app.post("/api/scan-vin", async (req, res) => {
@@ -266,41 +300,6 @@ If no VIN is visible, respond with:
   } catch (err) {
     console.error("SCAN VIN ERROR:", err);
     res.status(500).json({ error: "Failed to scan VIN" });
-  }
-});
-
-
-    const data = await response.json();
-    if (!data.content || !data.content[0]) {
-      return res.status(500).json({ error: "AI service error" });
-    }
-    const text = data.content[0].text;
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      return res.status(500).json({ error: "Invalid AI response" });
-    }
-    const parsed = JSON.parse(jsonMatch[0]);
-    res.json(parsed);
-  } catch (err) {
-    console.error("ANALYZE IMAGE DIAGNOSIS ERROR:", err);
-    res.status(500).json({ error: "Failed to analyze image" });
-  }
-});
-
-    const data = await response.json();
-    if (!data.content || !data.content[0]) {
-      return res.status(500).json({ error: "AI service error" });
-    }
-    const text = data.content[0].text;
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      return res.status(500).json({ error: "Invalid AI response" });
-    }
-    const parsed = JSON.parse(jsonMatch[0]);
-    res.json(parsed);
-  } catch (err) {
-    console.error("ANALYZE PART ERROR:", err);
-    res.status(500).json({ error: "Failed to analyze part" });
   }
 });
 
