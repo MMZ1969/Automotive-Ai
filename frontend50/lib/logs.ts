@@ -1,5 +1,15 @@
 import api from "@lib/api";
 
+export async function fetchAllLogs() {
+  try {
+    const res = await api.get("/api/logs");
+    return res.data;
+  } catch (err) {
+    console.error("fetchAllLogs error:", err);
+    return [];
+  }
+}
+
 export async function fetchLogsByVehicle(vehicleId: string) {
   try {
     const res = await api.get(`/api/logs/vehicle/${vehicleId}`);

@@ -1,4 +1,6 @@
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import api from "@lib/api";
+import * as ImagePicker from "expo-image-picker";
 import { useState } from "react";
 import {
   ActivityIndicator,
@@ -31,6 +33,8 @@ export default function Diagnose() {
   const [videos, setVideos] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [recording, setRecording] = useState(false);
+  const [scanImage, setScanImage] = useState<string | null>(null);
+  const [scanning, setScanning] = useState(false);
 
   useSpeechRecognitionEvent("result", (event: any) => {
     if (event.results[0]?.transcript) {
@@ -62,55 +66,144 @@ export default function Diagnose() {
     }
   };
 
-  const handleDiagnose = async () => {
-  if (!query.trim()) return;
-
-  // Car-related keyword guard
-  const carKeywords = [
-    "car", "truck", "vehicle", "engine", "motor", "brake", "tire", "wheel",
-    "transmission", "exhaust", "oil", "battery", "alternator", "starter",
-    "radiator", "coolant", "fuel", "gas", "diesel", "spark", "plug",
-    "cylinder", "piston", "valve", "clutch", "differential", "suspension",
-    "steering", "alignment", "noise", "leak", "smoke", "warning", "light",
-    "check engine", "rpm", "mph", "odometer", "mileage", "mechanic",
-    "repair", "fix", "driving", "stall", "idle", "accelerat", "decelerat",
-    "vibrat", "shak", "squeal", "grind", "knock", "click", "rattle",
-    "honda", "toyota", "ford", "chevy", "chevrolet", "bmw", "mercedes",
-    "audi", "volkswagen", "nissan", "hyundai", "kia", "jeep", "dodge",
-    "ram", "gmc", "cadillac", "lexus", "acura", "subaru", "mazda",
-    "motorcycle", "bike", "atv", "suv", "sedan", "coupe", "pickup",
-  ];
-
-  const queryLower = query.toLowerCase();
-  const isCarRelated = carKeywords.some(keyword => queryLower.includes(keyword));
-
-  if (!isCarRelated) {
+  const handleScanPhoto = async () => {
     Alert.alert(
-      "🚗 Automotive Only",
-      "This AI is specialized for vehicle diagnostics only. Please describe a car, truck, or motorcycle problem.",
-      [{ text: "Got it" }]
+      "Scan Vehicle Problem",
+      "Take or choose a photo of the issue",
+      [
+        {
+          text: "Take Photo",
+          onPress: async () => {
+            try {
+              const { status } = await ImagePicker.requestCameraPermissionsAsync();
+              if (status !== "granted") {
+                Alert.alert("Permission needed", "Please allow camera access.");
+                return;
+              }
+              const result = await ImagePicker.launchCameraAsync({
+                allowsEditing: true,
+                quality: 0.7,
+                base64: true,
+              });
+              if (result.canceled) return;
+              await analyzeImage(result.assets[0]);
+            } catch (err) {
+              Alert.alert("Error", "Could not open camera.");
+            }
+          },
+        },
+        {
+          text: "Choose from Library",
+          onPress: async () => {
+            try {
+              const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+              if (status !== "granted") {
+                Alert.alert("Permission needed", "Please allow photo library access.");
+                return;
+              }
+              const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ["images"],
+                allowsEditing: true,
+                quality: 0.7,
+                base64: true,
+              });
+              if (result.canceled) return;
+              await analyzeImage(result.assets[0]);
+            } catch (err) {
+              Alert.alert("Error", "Could not open photo library.");
+            }
+          },
+        },
+        { text: "Cancel", style: "cancel" },
+      ]
     );
-    return;
-  }
+  };
 
-  try {
-    setLoading(true);
-    setResult(null);
-    setVideos([]);
+  const analyzeImage = async (asset: any) => {
+    try {
+      setScanning(true);
+      setResult(null);
+      setVideos([]);
+      setScanImage(asset.uri);
 
-    const [diagRes, videoRes] = await Promise.all([
-      api.post("/api/diagnose", { query }),
-      api.get(`/api/youtube?query=${encodeURIComponent(query)}`),
-    ]);
+      const res = await api.post("/api/analyze-image-diagnosis", {
+        imageBase64: asset.base64,
+        mediaType: asset.mimeType || "image/jpeg",
+      });
 
-    setResult(diagRes.data);
-    setVideos(videoRes.data);
-  } catch (err) {
-    console.error("DIAGNOSE ERROR:", err);
-  } finally {
-    setLoading(false);
-  }
-};
+      if (res.data.error === "not_automotive") {
+        Alert.alert("Not Automotive", "This image doesn't appear to show a vehicle problem. Please try another photo.");
+        setScanImage(null);
+        return;
+      }
+
+      setResult(res.data);
+
+      if (res.data.summary) {
+        try {
+          const videoRes = await api.get(`/api/youtube?query=${encodeURIComponent(res.data.summary)}`);
+          setVideos(videoRes.data);
+        } catch (err) {
+          // silently fail
+        }
+      }
+    } catch (err) {
+      console.error("SCAN ERROR:", err);
+      Alert.alert("Error", "Could not analyze image. Please try again.");
+    } finally {
+      setScanning(false);
+    }
+  };
+
+  const handleDiagnose = async () => {
+    if (!query.trim()) return;
+
+    const carKeywords = [
+      "car", "truck", "vehicle", "engine", "motor", "brake", "tire", "wheel",
+      "transmission", "exhaust", "oil", "battery", "alternator", "starter",
+      "radiator", "coolant", "fuel", "gas", "diesel", "spark", "plug",
+      "cylinder", "piston", "valve", "clutch", "differential", "suspension",
+      "steering", "alignment", "noise", "leak", "smoke", "warning", "light",
+      "check engine", "rpm", "mph", "odometer", "mileage", "mechanic",
+      "repair", "fix", "driving", "stall", "idle", "accelerat", "decelerat",
+      "vibrat", "shak", "squeal", "grind", "knock", "click", "rattle",
+      "honda", "toyota", "ford", "chevy", "chevrolet", "bmw", "mercedes",
+      "audi", "volkswagen", "nissan", "hyundai", "kia", "jeep", "dodge",
+      "ram", "gmc", "cadillac", "lexus", "acura", "subaru", "mazda",
+      "motorcycle", "bike", "atv", "suv", "sedan", "coupe", "pickup",
+    ];
+
+    const queryLower = query.toLowerCase();
+    const isCarRelated = carKeywords.some(keyword => queryLower.includes(keyword));
+
+    if (!isCarRelated) {
+      Alert.alert(
+        "🚗 Automotive Only",
+        "This AI is specialized for vehicle diagnostics only. Please describe a car, truck, or motorcycle problem.",
+        [{ text: "Got it" }]
+      );
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setResult(null);
+      setVideos([]);
+      setScanImage(null);
+
+      const [diagRes, videoRes] = await Promise.all([
+        api.post("/api/diagnose", { query }),
+        api.get(`/api/youtube?query=${encodeURIComponent(query)}`),
+      ]);
+
+      setResult(diagRes.data);
+      setVideos(videoRes.data);
+    } catch (err) {
+      console.error("DIAGNOSE ERROR:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const severityColor = (severity: string) => {
     switch (severity) {
@@ -134,16 +227,78 @@ export default function Diagnose() {
         paddingBottom: 16,
         borderBottomWidth: 1,
         borderBottomColor: "#252838",
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 10,
       }}>
-        <Text style={{ color: "white", fontSize: 28, fontWeight: "900" }}>
-          🔌 AI Diagnose
-        </Text>
-        <Text style={{ color: "#9ca3af", fontSize: 13, marginTop: 4 }}>
-          Describe your car problem and get an instant diagnosis
-        </Text>
+        <MaterialCommunityIcons name="car-brake-alert" size={30} color="#facc15" />
+        <View>
+          <Text style={{ color: "white", fontSize: 28, fontWeight: "900" }}>
+            AI Diagnose
+          </Text>
+          <Text style={{ color: "#9ca3af", fontSize: 13, marginTop: 2 }}>
+            Describe or scan your car problem
+          </Text>
+        </View>
       </View>
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }}>
+
+        {/* SCAN PHOTO BUTTON */}
+        <TouchableOpacity
+          onPress={handleScanPhoto}
+          disabled={scanning}
+          style={{
+            backgroundColor: "#11131a",
+            borderRadius: 14,
+            borderWidth: 1,
+            borderColor: "#facc1544",
+            borderStyle: "dashed",
+            height: scanImage ? 180 : 100,
+            justifyContent: "center",
+            alignItems: "center",
+            marginBottom: 14,
+            overflow: "hidden",
+          }}
+        >
+          {scanImage ? (
+            <>
+              <Image source={{ uri: scanImage }} style={{ width: "100%", height: 180 }} resizeMode="cover" />
+              {scanning && (
+                <View style={{
+                  position: "absolute",
+                  backgroundColor: "rgba(0,0,0,0.75)",
+                  width: "100%",
+                  height: "100%",
+                  justifyContent: "center",
+                  alignItems: "center",
+                }}>
+                  <ActivityIndicator color="#facc15" size="large" />
+                  <Text style={{ color: "white", marginTop: 12, fontWeight: "700" }}>
+                    🤖 AI analyzing...
+                  </Text>
+                </View>
+              )}
+            </>
+          ) : (
+            <>
+              <MaterialCommunityIcons name="camera" size={28} color="#facc15" />
+              <Text style={{ color: "#facc15", fontWeight: "700", marginTop: 6 }}>
+                Scan a Problem
+              </Text>
+              <Text style={{ color: "#6b7280", fontSize: 12, marginTop: 2 }}>
+                Photo a warning light, leak, damage & more
+              </Text>
+            </>
+          )}
+        </TouchableOpacity>
+
+        {/* DIVIDER */}
+        <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 14, gap: 10 }}>
+          <View style={{ flex: 1, height: 1, backgroundColor: "#252838" }} />
+          <Text style={{ color: "#6b7280", fontSize: 12 }}>or describe it</Text>
+          <View style={{ flex: 1, height: 1, backgroundColor: "#252838" }} />
+        </View>
 
         {/* INPUT */}
         <TextInput
@@ -168,62 +323,74 @@ export default function Diagnose() {
           }}
         />
 
-        {/* AI DISCLOSURE — required for Apple App Store compliance */}
+        {/* AI DISCLOSURE */}
         <Text style={{ color: "#6b7280", fontSize: 11, marginBottom: 14, paddingHorizontal: 4 }}>
           🔒 Your description is sent to an AI service for analysis. See our{" "}
           <Text
             style={{ color: "#345bff" }}
             onPress={() => Linking.openURL("https://mmz1969.github.io/Automotive-Ai/privacy-policy.html")}
-      >
-              Privacy Policy
-        </Text> for details.
+          >
+            Privacy Policy
+          </Text> for details.
         </Text>
 
-        {/* VOICE BUTTON */}
+        {/* VOICE BUTTON — big and chunky for greasy fingers */}
         <TouchableOpacity
           onPress={handleVoice}
           style={{
             backgroundColor: recording ? "#ef4444" : "#11131a",
-            paddingVertical: 14,
-            borderRadius: 14,
+            paddingVertical: 22,
+            borderRadius: 16,
             borderWidth: 1,
             borderColor: recording ? "#ef4444" : "#252838",
             alignItems: "center",
             marginBottom: 14,
-            flexDirection: "row",
-            justifyContent: "center",
-            gap: 8,
           }}
         >
-          <Text style={{ fontSize: 20 }}>{recording ? "🔴" : "🎤"}</Text>
-          <Text style={{ color: recording ? "white" : "#9ca3af", fontWeight: "700" }}>
-            {recording ? "Listening... tap to stop" : "Tap to speak"}
+          <MaterialCommunityIcons
+            name="microphone"
+            size={32}
+            color={recording ? "white" : "#9ca3af"}
+          />
+          <Text style={{
+            color: recording ? "white" : "#9ca3af",
+            fontWeight: "700",
+            fontSize: 16,
+            marginTop: 8,
+          }}>
+            {recording ? "Listening... tap to stop" : "Tap to Speak"}
           </Text>
         </TouchableOpacity>
 
-        {/* DIAGNOSE BUTTON */}
+        {/* DIAGNOSE BUTTON — big and chunky */}
         <TouchableOpacity
           onPress={handleDiagnose}
           disabled={loading || !query.trim()}
           style={{
             backgroundColor: loading || !query.trim() ? "#1f2937" : "#345bff",
-            paddingVertical: 16,
-            borderRadius: 14,
+            paddingVertical: 22,
+            borderRadius: 16,
             alignItems: "center",
             marginBottom: 24,
+            flexDirection: "row",
+            justifyContent: "center",
+            gap: 10,
           }}
         >
           {loading ? (
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+            <>
               <ActivityIndicator color="white" size="small" />
-              <Text style={{ color: "white", fontWeight: "700", fontSize: 16 }}>
+              <Text style={{ color: "white", fontWeight: "700", fontSize: 18 }}>
                 Analyzing...
               </Text>
-            </View>
+            </>
           ) : (
-            <Text style={{ color: "white", fontWeight: "700", fontSize: 16 }}>
-              🔌 Run Diagnosis
-            </Text>
+            <>
+              <MaterialCommunityIcons name="car-brake-alert" size={24} color="white" />
+              <Text style={{ color: "white", fontWeight: "700", fontSize: 18 }}>
+                Run Diagnosis
+              </Text>
+            </>
           )}
         </TouchableOpacity>
 

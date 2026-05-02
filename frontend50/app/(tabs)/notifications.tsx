@@ -97,8 +97,8 @@ export default function Notifications() {
         borderBottomColor: "#252838",
       }}>
         <Text style={{ color: "white", fontSize: 28, fontWeight: "900" }}>
-        🚨 Notifications
-        </Text>
+         Notifications
+      </Text>
       </View>
 
       <FlatList
@@ -156,9 +156,8 @@ export default function Notifications() {
             {/* MESSAGE */}
             <View style={{ flex: 1 }}>
               <Text style={{ color: "white", fontSize: 15, lineHeight: 20 }}>
-                <Text style={{ fontWeight: "700" }}>{getIcon(item.type)} </Text>
-                {item.message}
-              </Text>
+  {item.message}
+              </Text>     
               <Text style={{ color: "#6b7280", fontSize: 12, marginTop: 4 }}>
                 {timeAgo(item.createdAt)}
               </Text>

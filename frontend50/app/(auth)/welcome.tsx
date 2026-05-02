@@ -56,7 +56,7 @@ export default function Welcome() {
       </TouchableOpacity>
 
       <Text style={{ color: "#4b5563", marginTop: 40, fontSize: 12 }}>
-        For DIYers & Mechanics
+        For DIYers, Mechanics & Anyone who likes to get their hands dirty under the hood!
       </Text>
     </View>
   );
