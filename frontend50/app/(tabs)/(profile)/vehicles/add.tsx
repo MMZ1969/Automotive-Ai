@@ -1,3 +1,5 @@
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -12,6 +14,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import api from "@lib/api";
 import { createVehicle } from "@lib/vehicles";
 
 export default function AddVehicleScreen() {
@@ -26,6 +29,102 @@ export default function AddVehicleScreen() {
   const [vin, setVin] = useState("");
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
+  const [scanning, setScanning] = useState(false);
+
+  const handleScanVin = () => {
+    Alert.alert(
+      "Scan VIN",
+      "Point your camera at the VIN plate on your dashboard or door jamb",
+      [
+        {
+          text: "Take Photo",
+          onPress: async () => {
+            try {
+              const { status } = await ImagePicker.requestCameraPermissionsAsync();
+              if (status !== "granted") {
+                Alert.alert("Permission needed", "Please allow camera access.");
+                return;
+              }
+              const result = await ImagePicker.launchCameraAsync({
+                allowsEditing: true,
+                quality: 0.9,
+                base64: true,
+              });
+              if (result.canceled) return;
+              await extractVinFromImage(result.assets[0]);
+            } catch (err) {
+              Alert.alert("Error", "Could not open camera.");
+            }
+          },
+        },
+        {
+          text: "Choose from Library",
+          onPress: async () => {
+            try {
+              const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+              if (status !== "granted") {
+                Alert.alert("Permission needed", "Please allow photo library access.");
+                return;
+              }
+              const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ["images"],
+                allowsEditing: true,
+                quality: 0.9,
+                base64: true,
+              });
+              if (result.canceled) return;
+              await extractVinFromImage(result.assets[0]);
+            } catch (err) {
+              Alert.alert("Error", "Could not open photo library.");
+            }
+          },
+        },
+        { text: "Cancel", style: "cancel" },
+      ]
+    );
+  };
+
+  const extractVinFromImage = async (asset: any) => {
+    try {
+      setScanning(true);
+
+      // Step 1 — AI reads the VIN from the image
+      const res = await api.post("/api/scan-vin", {
+        imageBase64: asset.base64,
+        mediaType: asset.mimeType || "image/jpeg",
+      });
+
+      const scannedVin = res.data.vin;
+
+      if (!scannedVin) {
+        Alert.alert("No VIN Found", "Couldn't read a VIN from that photo. Try again with better lighting or a closer shot.");
+        return;
+      }
+
+      setVin(scannedVin);
+
+      // Step 2 — NHTSA API decodes the VIN for free
+      const nhtsaRes = await fetch(
+        `https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVinValues/${scannedVin}?format=json`
+      );
+      const nhtsaData = await nhtsaRes.json();
+      const v = nhtsaData.Results?.[0];
+
+      if (v) {
+        if (v.Make) setMake(v.Make);
+        if (v.Model) setModel(v.Model);
+        if (v.ModelYear) setYear(v.ModelYear);
+        if (v.Trim) setTrim(v.Trim);
+      }
+
+      Alert.alert("VIN Scanned! 🎉", `VIN: ${scannedVin}\n\nVehicle details have been filled in. Please verify and add any missing info.`);
+    } catch (err) {
+      console.error("VIN SCAN ERROR:", err);
+      Alert.alert("Error", "Could not scan VIN. Please enter it manually.");
+    } finally {
+      setScanning(false);
+    }
+  };
 
   const handleSave = async () => {
     if (!make.trim() || !model.trim() || !year.trim()) {
@@ -79,6 +178,45 @@ export default function AddVehicleScreen() {
           </TouchableOpacity>
           <Text style={styles.title}>Add Vehicle</Text>
         </View>
+
+        {/* VIN SCANNER */}
+        <TouchableOpacity
+          onPress={handleScanVin}
+          disabled={scanning}
+          style={{
+            backgroundColor: "#0a1628",
+            borderRadius: 14,
+            borderWidth: 1,
+            borderColor: "#345bff44",
+            padding: 18,
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 10,
+            marginBottom: 24,
+          }}
+        >
+          {scanning ? (
+            <>
+              <ActivityIndicator color="#345bff" size="small" />
+              <Text style={{ color: "#345bff", fontWeight: "700", fontSize: 16 }}>
+                Reading VIN...
+              </Text>
+            </>
+          ) : (
+            <>
+              <MaterialCommunityIcons name="barcode-scan" size={26} color="#345bff" />
+              <View>
+                <Text style={{ color: "#345bff", fontWeight: "700", fontSize: 16 }}>
+                  Scan VIN
+                </Text>
+                <Text style={{ color: "#6b7280", fontSize: 12, marginTop: 2 }}>
+                  AI reads your VIN & autofills vehicle details
+                </Text>
+              </View>
+            </>
+          )}
+        </TouchableOpacity>
 
         <Text style={styles.label}>Make *</Text>
         <TextInput
