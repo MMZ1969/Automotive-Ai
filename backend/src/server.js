@@ -205,6 +205,71 @@ If the image is not automotive related, return:
       }),
     });
 
+// VIN Scanner route — image → VIN number
+app.post("/api/scan-vin", async (req, res) => {
+  try {
+    const { imageBase64, mediaType } = req.body;
+
+    if (!imageBase64) {
+      return res.status(400).json({ error: "No image provided" });
+    }
+
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": process.env.ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: "claude-opus-4-5",
+        max_tokens: 100,
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "image",
+                source: {
+                  type: "base64",
+                  media_type: mediaType || "image/jpeg",
+                  data: imageBase64,
+                },
+              },
+              {
+                type: "text",
+                text: `Look at this image and extract the VIN (Vehicle Identification Number). A VIN is exactly 17 characters, containing only letters and numbers (no I, O, or Q).
+
+Respond in JSON format only, no markdown:
+{"vin": "17CHARVIN"} 
+
+If no VIN is visible, respond with:
+{"vin": null}`,
+              },
+            ],
+          },
+        ],
+      }),
+    });
+
+    const data = await response.json();
+    if (!data.content || !data.content[0]) {
+      return res.status(500).json({ error: "AI service error" });
+    }
+    const text = data.content[0].text;
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      return res.status(500).json({ vin: null });
+    }
+    const parsed = JSON.parse(jsonMatch[0]);
+    res.json(parsed);
+  } catch (err) {
+    console.error("SCAN VIN ERROR:", err);
+    res.status(500).json({ error: "Failed to scan VIN" });
+  }
+});
+
+
     const data = await response.json();
     if (!data.content || !data.content[0]) {
       return res.status(500).json({ error: "AI service error" });
