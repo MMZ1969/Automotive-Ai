@@ -57,12 +57,13 @@ export async function updateProfile(req, res) {
       where: { id: userId },
       data,
       select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        createdAt: true,
-      },
+      id: true,
+      email: true,
+      name: true,
+      role: true,
+      profilePhoto: true,  // ← this is missing from the response
+      createdAt: true,
+},
     });
 
     res.json(updated);
