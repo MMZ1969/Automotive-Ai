@@ -104,6 +104,11 @@ export const deleteVehicle = async (req, res) => {
       return res.status(403).json({ message: "Unauthorized" });
     }
 
+    // Delete related logs first to avoid constraint errors
+    await prisma.log.deleteMany({
+      where: { vehicleId },
+    });
+
     await prisma.vehicle.delete({
       where: { id: vehicleId },
     });
