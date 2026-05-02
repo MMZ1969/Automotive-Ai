@@ -12,6 +12,7 @@ export async function getMe(req, res) {
         name: true,
         role: true,
         repPoints: true,
+        profilePhoto: true,
         createdAt: true,
       },
     });
@@ -36,6 +37,8 @@ export async function updateProfile(req, res) {
     const data = {};
 
     if (name) data.name = name;
+    if (req.body.profilePhoto) data.profilePhoto = req.body.profilePhoto;
+
 
     if (email) {
       const existing = await prisma.user.findUnique({ where: { email } });
