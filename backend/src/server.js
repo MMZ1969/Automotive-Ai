@@ -147,6 +147,81 @@ Respond in JSON format only, no markdown, like this:
       }),
     });
 
+// AI Image Diagnosis route — photo → diagnosis
+app.post("/api/analyze-image-diagnosis", async (req, res) => {
+  try {
+    const { imageBase64, mediaType } = req.body;
+
+    if (!imageBase64) {
+      return res.status(400).json({ error: "No image provided" });
+    }
+
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": process.env.ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: "claude-opus-4-5",
+        max_tokens: 1000,
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "image",
+                source: {
+                  type: "base64",
+                  media_type: mediaType || "image/jpeg",
+                  data: imageBase64,
+                },
+              },
+              {
+                type: "text",
+                text: `You are an expert automotive mechanic. Look at this image which may show a car problem, warning light, damage, engine bay, or other automotive issue. Describe what you see and provide a diagnosis.
+
+Respond in JSON format only, no markdown, like this:
+{
+  "summary": "brief one line summary of what you see",
+  "severity": "Low|Medium|High|Critical",
+  "causes": ["cause 1", "cause 2", "cause 3"],
+  "estimatedCost": "$X - $Y",
+  "diyDifficulty": "Easy|Medium|Hard|Professional Only",
+  "immediateAction": "what to do right now",
+  "diagnosisSteps": ["step 1", "step 2", "step 3"],
+  "proTip": "one expert tip"
+}
+
+If the image is not automotive related, return:
+{
+  "error": "not_automotive"
+}`,
+              },
+            ],
+          },
+        ],
+      }),
+    });
+
+    const data = await response.json();
+    if (!data.content || !data.content[0]) {
+      return res.status(500).json({ error: "AI service error" });
+    }
+    const text = data.content[0].text;
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      return res.status(500).json({ error: "Invalid AI response" });
+    }
+    const parsed = JSON.parse(jsonMatch[0]);
+    res.json(parsed);
+  } catch (err) {
+    console.error("ANALYZE IMAGE DIAGNOSIS ERROR:", err);
+    res.status(500).json({ error: "Failed to analyze image" });
+  }
+});
+
     const data = await response.json();
     if (!data.content || !data.content[0]) {
       return res.status(500).json({ error: "AI service error" });
