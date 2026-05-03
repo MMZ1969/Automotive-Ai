@@ -140,12 +140,12 @@ export default function Settings() {
       <View style={card}>
         <View style={row}>
           <Text style={label}>Version</Text>
-          <Text style={value}>1.0.0</Text>
+          <Text style={value}>1.0.2</Text>
         </View>
         <View style={divider} />
         <View style={row}>
           <Text style={label}>Build</Text>
-          <Text style={value}>1</Text>
+          <Text style={value}>11</Text>
         </View>
       </View>
 

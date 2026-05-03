@@ -109,16 +109,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const updateProfilePhoto = async (url: string) => {
-    try {
-      const updatedUser = { ...user, profilePhoto: url };
-      await AsyncStorage.setItem("user", JSON.stringify(updatedUser));
-      setUser(updatedUser);
-      console.log("AUTH: profile photo updated to", url);
-    } catch (err) {
-      console.error("AUTH: failed to update profile photo", err);
-      throw err;
-    }
-  };
+  try {
+    const res = await api.put("/api/users/me", { profilePhoto: url });
+    const updatedUser = { ...user, ...res.data, profilePhoto: url };
+    await AsyncStorage.setItem("user", JSON.stringify(updatedUser));
+    setUser(updatedUser);
+  } catch (err) {
+    console.error("AUTH: failed to update profile photo", err);
+    throw err;
+  }
+};
 
   const updateName = async (name: string) => {
     try {

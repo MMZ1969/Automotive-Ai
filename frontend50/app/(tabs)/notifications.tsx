@@ -19,9 +19,10 @@ export default function Notifications() {
 
   const fetchNotifications = async () => {
     try {
+      // Mark read FIRST so badge clears immediately
+      await api.post("/api/notifications/mark-read");
       const res = await api.get("/api/notifications");
       setNotifications(res.data);
-      await api.post("/api/notifications/mark-read");
     } catch (err) {
       console.error("FETCH NOTIFICATIONS ERROR:", err);
     } finally {
@@ -59,17 +60,6 @@ export default function Notifications() {
     }
   };
 
-  const getIcon = (type: string) => {
-    switch (type) {
-      case "like": return "❤️";
-      case "comment": return "💬";
-      case "follow": return "🚗";
-      case "bid": return "🔧";
-      case "bid_accepted": return "🎉";
-      default: return "🔔";
-    }
-  };
-
   const timeAgo = (date: string) => {
     const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
     if (seconds < 60) return "just now";
@@ -97,8 +87,8 @@ export default function Notifications() {
         borderBottomColor: "#252838",
       }}>
         <Text style={{ color: "white", fontSize: 28, fontWeight: "900" }}>
-         Notifications
-      </Text>
+          Notifications
+        </Text>
       </View>
 
       <FlatList
@@ -156,8 +146,8 @@ export default function Notifications() {
             {/* MESSAGE */}
             <View style={{ flex: 1 }}>
               <Text style={{ color: "white", fontSize: 15, lineHeight: 20 }}>
-  {item.message}
-              </Text>     
+                {item.message}
+              </Text>
               <Text style={{ color: "#6b7280", fontSize: 12, marginTop: 4 }}>
                 {timeAgo(item.createdAt)}
               </Text>
