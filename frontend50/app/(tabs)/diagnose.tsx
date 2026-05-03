@@ -159,18 +159,75 @@ export default function Diagnose() {
     if (!query.trim()) return;
 
     const carKeywords = [
-      "car", "truck", "vehicle", "engine", "motor", "brake", "tire", "wheel",
-      "transmission", "exhaust", "oil", "battery", "alternator", "starter",
-      "radiator", "coolant", "fuel", "gas", "diesel", "spark", "plug",
-      "cylinder", "piston", "valve", "clutch", "differential", "suspension",
-      "steering", "alignment", "noise", "leak", "smoke", "warning", "light",
-      "check engine", "rpm", "mph", "odometer", "mileage", "mechanic",
-      "repair", "fix", "driving", "stall", "idle", "accelerat", "decelerat",
-      "vibrat", "shak", "squeal", "grind", "knock", "click", "rattle",
-      "honda", "toyota", "ford", "chevy", "chevrolet", "bmw", "mercedes",
-      "audi", "volkswagen", "nissan", "hyundai", "kia", "jeep", "dodge",
-      "ram", "gmc", "cadillac", "lexus", "acura", "subaru", "mazda",
-      "motorcycle", "bike", "atv", "suv", "sedan", "coupe", "pickup",
+      // General vehicle terms
+      "car", "truck", "vehicle", "automobile", "auto", "van", "minivan",
+      "suv", "sedan", "coupe", "pickup", "hatchback", "wagon", "convertible",
+      "motorcycle", "bike", "atv", "utv", "rv", "boat", "trailer",
+
+      // Engine & drivetrain
+      "engine", "motor", "transmission", "gearbox", "drivetrain", "driveshaft",
+      "differential", "axle", "transfer case", "torque", "horsepower",
+      "cylinder", "piston", "valve", "camshaft", "crankshaft", "timing",
+      "turbo", "supercharger", "intercooler", "carburetor", "throttle",
+      "intake", "injector", "fuel injection", "compression",
+
+      // Fuel & fluids
+      "oil", "coolant", "antifreeze", "transmission fluid", "brake fluid",
+      "power steering fluid", "washer fluid", "fluid", "leak", "drip",
+      "fuel", "gas", "gasoline", "diesel", "petrol", "ethanol",
+
+      // Electrical
+      "battery", "alternator", "starter", "fuse", "relay", "wiring",
+      "electrical", "sensor", "module", "ecu", "computer", "code",
+      "check engine", "warning light", "dashboard light", "obd",
+      "abs light", "traction control", "airbag light", "voltage",
+      "low voltage", "dead battery", "jump start",
+
+      // Brakes & suspension
+      "brake", "rotor", "caliper", "pad", "drum", "abs", "parking brake",
+      "emergency brake", "suspension", "shock", "strut", "spring",
+      "control arm", "ball joint", "tie rod", "sway bar", "alignment",
+      "steering", "power steering", "rack", "pinion",
+
+      // Tires & wheels
+      "tire", "tyre", "wheel", "rim", "flat", "blowout", "pressure",
+      "tread", "rotation", "balance", "lug",
+
+      // Exhaust & emissions
+      "exhaust", "muffler", "catalytic converter", "cat", "dpf",
+      "emission", "smoke", "fumes",
+
+      // Cooling
+      "radiator", "thermostat", "water pump", "overheat", "temperature",
+      "cooling", "fan", "hose",
+
+      // Symptoms
+      "noise", "sound", "squeal", "grind", "knock", "click", "rattle",
+      "vibrat", "shak", "pull", "drift", "stall", "hesitat", "surge",
+      "idle", "rough", "misfire", "backfire", "sputter",
+      "hard start", "won't start", "dead", "slow", "sluggish",
+      "accelerat", "decelerat", "bog", "lag", "lurch",
+
+      // General repair
+      "mechanic", "repair", "fix", "replace", "service", "maintenance",
+      "inspect", "diagnose", "problem", "issue", "broken", "damaged",
+      "worn", "failing", "bad", "blow", "bust",
+
+      // Driving terms
+      "driving", "drive", "highway", "city", "parking", "reverse",
+      "gear", "shift", "rpm", "mph", "speed", "mileage", "odometer",
+
+      // Makes
+      "honda", "toyota", "ford", "chevy", "chevrolet", "gmc", "dodge",
+      "ram", "jeep", "chrysler", "bmw", "mercedes", "benz", "audi",
+      "volkswagen", "vw", "porsche", "volvo", "saab", "nissan", "infiniti",
+      "hyundai", "kia", "genesis", "lexus", "acura", "subaru", "mazda",
+      "mitsubishi", "suzuki", "isuzu", "tesla", "rivian", "lucid",
+      "cadillac", "buick", "lincoln", "mercury", "pontiac", "oldsmobile",
+      "saturn", "hummer", "land rover", "range rover", "jaguar", "mini",
+      "fiat", "alfa romeo", "maserati", "ferrari", "lamborghini",
+      "harley", "davidson", "kawasaki", "yamaha", "ducati", "triumph",
+      "can-am", "polaris", "arctic cat",
     ];
 
     const queryLower = query.toLowerCase();
@@ -334,7 +391,7 @@ export default function Diagnose() {
           </Text> for details.
         </Text>
 
-        {/* VOICE BUTTON — big and chunky for greasy fingers */}
+        {/* VOICE BUTTON */}
         <TouchableOpacity
           onPress={handleVoice}
           style={{
@@ -362,7 +419,7 @@ export default function Diagnose() {
           </Text>
         </TouchableOpacity>
 
-        {/* DIAGNOSE BUTTON — big and chunky */}
+        {/* DIAGNOSE BUTTON */}
         <TouchableOpacity
           onPress={handleDiagnose}
           disabled={loading || !query.trim()}
@@ -447,6 +504,10 @@ export default function Diagnose() {
                   </Text>
                 </View>
               </View>
+              {/* AI DISCLAIMER */}
+              <Text style={{ color: "#6b7280", fontSize: 11, marginTop: 10, fontStyle: "italic" }}>
+                ⚠️ AI diagnosis is for informational purposes only. Results may vary by vehicle trim and configuration. Always consult a certified mechanic for safety critical repairs.
+              </Text>
             </View>
 
             {/* IMMEDIATE ACTION */}
@@ -552,8 +613,11 @@ export default function Diagnose() {
                 padding: 16,
                 marginBottom: 40,
               }}>
-                <Text style={{ color: "white", fontWeight: "700", fontSize: 16, marginBottom: 12 }}>
+                <Text style={{ color: "white", fontWeight: "700", fontSize: 16, marginBottom: 6 }}>
                   📺 Repair Videos
+                </Text>
+                <Text style={{ color: "#6b7280", fontSize: 11, marginBottom: 12, fontStyle: "italic" }}>
+                  Videos are AI matched and may not be exact. Always verify with your owner's manual or a certified mechanic.
                 </Text>
                 {videos.map((video) => (
                   <TouchableOpacity

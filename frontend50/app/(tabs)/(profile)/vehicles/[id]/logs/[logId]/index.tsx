@@ -2,6 +2,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -11,7 +12,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import WrenchButton from "@components/WrenchButton";
-import { fetchLogById } from "@lib/logs";
+import { deleteLog, fetchLogById } from "@lib/logs";
 
 export default function LogDetailsScreen() {
   const { id, logId } = useLocalSearchParams();
@@ -44,6 +45,28 @@ export default function LogDetailsScreen() {
     router.push(`/(tabs)/(profile)/vehicles/${id}/logs/${String(logId)}/edit`);
   };
 
+  const handleDelete = () => {
+    Alert.alert(
+      "Delete Log",
+      "Are you sure you want to delete this log? This cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteLog(id as string, logId as string);
+              router.push(`/(tabs)/(profile)/vehicles/${id}/logs`);
+            } catch (err) {
+              Alert.alert("Error", "Could not delete log. Try again.");
+            }
+          },
+        },
+      ]
+    );
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: "#050509" }}>
@@ -64,11 +87,16 @@ export default function LogDetailsScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: "#050509" }}>
       <ScrollView contentContainerStyle={{ padding: 20 }}>
         {/* HEADER */}
-        <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 24 }}>
-          <TouchableOpacity onPress={goBack} style={{ marginRight: 12 }}>
-            <Text style={{ color: "#345bff", fontSize: 16 }}>← Back</Text>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 24, marginTop: 10 }}>
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
+            <TouchableOpacity onPress={goBack} style={{ marginRight: 12 }}>
+              <Text style={{ color: "#345bff", fontSize: 16 }}>← Back</Text>
+            </TouchableOpacity>
+            <Text style={styles.title}>{log.title || "Log Detail"}</Text>
+          </View>
+          <TouchableOpacity onPress={handleDelete}>
+            <Text style={{ color: "#ef4444", fontSize: 14, fontWeight: "700" }}>Delete</Text>
           </TouchableOpacity>
-          <Text style={styles.title}>{log.title || "Log Detail"}</Text>
         </View>
 
         <View style={styles.card}>

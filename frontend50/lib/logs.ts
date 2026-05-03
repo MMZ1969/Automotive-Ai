@@ -49,3 +49,12 @@ export async function updateLog(vehicleId: string, logId: string, data: any) {
     throw err;
   }
 }
+
+export async function deleteLog(vehicleId: string, logId: string) {
+  try {
+    await api.delete(`/api/logs/vehicle/${vehicleId}/${logId}`);
+  } catch (err) {
+    console.error("deleteLog error:", err);
+    throw err;
+  }
+}

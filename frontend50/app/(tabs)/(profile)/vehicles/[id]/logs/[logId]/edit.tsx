@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { fetchLogById, updateLog } from "@lib/logs";
 
@@ -81,95 +82,85 @@ export default function EditLogScreen() {
 
   if (loading) {
     return (
-      <View style={styles.center}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: "#050509" }}>
         <ActivityIndicator size="large" color="#345bff" />
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={{ padding: 20 }}
-    >
-      {/* HEADER */}
-      <View
-        style={{
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#050509" }}>
+      <ScrollView contentContainerStyle={{ padding: 20 }}>
+        {/* HEADER */}
+        <View style={{
           flexDirection: "row",
           alignItems: "center",
           marginBottom: 24,
           marginTop: 10,
-        }}
-      >
-        <TouchableOpacity onPress={goBack} style={{ marginRight: 12 }}>
-          <Text style={{ color: "#345bff", fontSize: 16 }}>← Back</Text>
+        }}>
+          <TouchableOpacity onPress={goBack} style={{ marginRight: 12 }}>
+            <Text style={{ color: "#345bff", fontSize: 16 }}>← Back</Text>
+          </TouchableOpacity>
+          <Text style={styles.title}>Edit Log</Text>
+        </View>
+
+        <Text style={styles.label}>Title *</Text>
+        <TextInput
+          style={styles.input}
+          value={title}
+          onChangeText={setTitle}
+          placeholder="Oil Change, Brake Job..."
+          placeholderTextColor="#6b7280"
+        />
+
+        <Text style={styles.label}>Date</Text>
+        <TextInput
+          style={styles.input}
+          value={performedAt}
+          onChangeText={setPerformedAt}
+          placeholder="YYYY-MM-DD"
+          placeholderTextColor="#6b7280"
+        />
+
+        <Text style={styles.label}>Cost ($)</Text>
+        <TextInput
+          style={styles.input}
+          value={cost}
+          onChangeText={setCost}
+          placeholder="0.00"
+          placeholderTextColor="#6b7280"
+          keyboardType="numeric"
+        />
+
+        <Text style={styles.label}>Mileage at Service</Text>
+        <TextInput
+          style={styles.input}
+          value={mileage}
+          onChangeText={setMileage}
+          placeholder="50000"
+          placeholderTextColor="#6b7280"
+          keyboardType="numeric"
+        />
+
+        <Text style={styles.label}>Description</Text>
+        <TextInput
+          style={[styles.input, { height: 120 }]}
+          value={description}
+          onChangeText={setDescription}
+          placeholder="Details about the service..."
+          placeholderTextColor="#6b7280"
+          multiline
+        />
+
+        <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+          <Text style={styles.saveButtonText}>💾 Save Changes</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>Edit Log</Text>
-      </View>
-
-      <Text style={styles.label}>Title *</Text>
-      <TextInput
-        style={styles.input}
-        value={title}
-        onChangeText={setTitle}
-        placeholder="Oil Change, Brake Job..."
-        placeholderTextColor="#6b7280"
-      />
-
-      <Text style={styles.label}>Date</Text>
-      <TextInput
-        style={styles.input}
-        value={performedAt}
-        onChangeText={setPerformedAt}
-        placeholder="YYYY-MM-DD"
-        placeholderTextColor="#6b7280"
-      />
-
-      <Text style={styles.label}>Cost ($)</Text>
-      <TextInput
-        style={styles.input}
-        value={cost}
-        onChangeText={setCost}
-        placeholder="0.00"
-        placeholderTextColor="#6b7280"
-        keyboardType="numeric"
-      />
-
-      <Text style={styles.label}>Mileage at Service</Text>
-      <TextInput
-        style={styles.input}
-        value={mileage}
-        onChangeText={setMileage}
-        placeholder="50000"
-        placeholderTextColor="#6b7280"
-        keyboardType="numeric"
-      />
-
-      <Text style={styles.label}>Description</Text>
-      <TextInput
-        style={[styles.input, { height: 120 }]}
-        value={description}
-        onChangeText={setDescription}
-        placeholder="Details about the service..."
-        placeholderTextColor="#6b7280"
-        multiline
-      />
-
-      <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-        <Text style={styles.saveButtonText}>💾 Save Changes</Text>
-      </TouchableOpacity>
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#050509" },
-  center: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#050509",
-  },
   title: { fontSize: 22, fontWeight: "bold", color: "white" },
   label: {
     fontSize: 15,
