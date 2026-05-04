@@ -1,7 +1,8 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import api from "@lib/api";
 import * as ImagePicker from "expo-image-picker";
-import { useState } from "react";
+import { useFocusEffect } from "expo-router";
+import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -35,6 +36,23 @@ export default function Diagnose() {
   const [recording, setRecording] = useState(false);
   const [scanImage, setScanImage] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
+  const [vehicles, setVehicles] = useState<any[]>([]);
+  const [selectedVehicle, setSelectedVehicle] = useState<any>(null);
+
+  // Load user's vehicles when screen focuses
+  useFocusEffect(
+    useCallback(() => {
+      const loadVehicles = async () => {
+        try {
+          const res = await api.get("/api/vehicles");
+          setVehicles(res.data || []);
+        } catch (err) {
+          // silently fail
+        }
+      };
+      loadVehicles();
+    }, [])
+  );
 
   useSpeechRecognitionEvent("result", (event: any) => {
     if (event.results[0]?.transcript) {
@@ -159,65 +177,42 @@ export default function Diagnose() {
     if (!query.trim()) return;
 
     const carKeywords = [
-      // General vehicle terms
       "car", "truck", "vehicle", "automobile", "auto", "van", "minivan",
       "suv", "sedan", "coupe", "pickup", "hatchback", "wagon", "convertible",
       "motorcycle", "bike", "atv", "utv", "rv", "boat", "trailer",
-
-      // Engine & drivetrain
       "engine", "motor", "transmission", "gearbox", "drivetrain", "driveshaft",
       "differential", "axle", "transfer case", "torque", "horsepower",
       "cylinder", "piston", "valve", "camshaft", "crankshaft", "timing",
       "turbo", "supercharger", "intercooler", "carburetor", "throttle",
       "intake", "injector", "fuel injection", "compression",
-
-      // Fuel & fluids
       "oil", "coolant", "antifreeze", "transmission fluid", "brake fluid",
       "power steering fluid", "washer fluid", "fluid", "leak", "drip",
       "fuel", "gas", "gasoline", "diesel", "petrol", "ethanol",
-
-      // Electrical
       "battery", "alternator", "starter", "fuse", "relay", "wiring",
       "electrical", "sensor", "module", "ecu", "computer", "code",
       "check engine", "warning light", "dashboard light", "obd",
       "abs light", "traction control", "airbag light", "voltage",
       "low voltage", "dead battery", "jump start",
-
-      // Brakes & suspension
       "brake", "rotor", "caliper", "pad", "drum", "abs", "parking brake",
       "emergency brake", "suspension", "shock", "strut", "spring",
       "control arm", "ball joint", "tie rod", "sway bar", "alignment",
       "steering", "power steering", "rack", "pinion",
-
-      // Tires & wheels
       "tire", "tyre", "wheel", "rim", "flat", "blowout", "pressure",
       "tread", "rotation", "balance", "lug",
-
-      // Exhaust & emissions
       "exhaust", "muffler", "catalytic converter", "cat", "dpf",
       "emission", "smoke", "fumes",
-
-      // Cooling
       "radiator", "thermostat", "water pump", "overheat", "temperature",
       "cooling", "fan", "hose",
-
-      // Symptoms
       "noise", "sound", "squeal", "grind", "knock", "click", "rattle",
       "vibrat", "shak", "pull", "drift", "stall", "hesitat", "surge",
       "idle", "rough", "misfire", "backfire", "sputter",
       "hard start", "won't start", "dead", "slow", "sluggish",
       "accelerat", "decelerat", "bog", "lag", "lurch",
-
-      // General repair
       "mechanic", "repair", "fix", "replace", "service", "maintenance",
       "inspect", "diagnose", "problem", "issue", "broken", "damaged",
       "worn", "failing", "bad", "blow", "bust",
-
-      // Driving terms
       "driving", "drive", "highway", "city", "parking", "reverse",
       "gear", "shift", "rpm", "mph", "speed", "mileage", "odometer",
-
-      // Makes
       "honda", "toyota", "ford", "chevy", "chevrolet", "gmc", "dodge",
       "ram", "jeep", "chrysler", "bmw", "mercedes", "benz", "audi",
       "volkswagen", "vw", "porsche", "volvo", "saab", "nissan", "infiniti",
@@ -228,12 +223,21 @@ export default function Diagnose() {
       "fiat", "alfa romeo", "maserati", "ferrari", "lamborghini",
       "harley", "davidson", "kawasaki", "yamaha", "ducati", "triumph",
       "can-am", "polaris", "arctic cat",
+      "spark plug", "gap", "torque spec", "oil change", "filter",
+      "reset", "calibrate", "bleed", "flush", "rebuild", "gasket",
     ];
 
     const queryLower = query.toLowerCase();
     const isCarRelated = carKeywords.some(keyword => queryLower.includes(keyword));
 
-    if (!isCarRelated) {
+    // Build the full query with vehicle context if selected
+    const vehicleContext = selectedVehicle
+      ? `Vehicle: ${selectedVehicle.year} ${selectedVehicle.make} ${selectedVehicle.model}${selectedVehicle.trim ? ` ${selectedVehicle.trim}` : ""}. `
+      : "";
+
+    const fullQuery = vehicleContext + query;
+
+    if (!isCarRelated && !selectedVehicle) {
       Alert.alert(
         "🚗 Automotive Only",
         "This AI is specialized for vehicle diagnostics only. Please describe a car, truck, or motorcycle problem.",
@@ -249,8 +253,8 @@ export default function Diagnose() {
       setScanImage(null);
 
       const [diagRes, videoRes] = await Promise.all([
-        api.post("/api/diagnose", { query }),
-        api.get(`/api/youtube?query=${encodeURIComponent(query)}`),
+        api.post("/api/diagnose", { query: fullQuery }),
+        api.get(`/api/youtube?query=${encodeURIComponent(fullQuery)}`),
       ]);
 
       setResult(diagRes.data);
@@ -300,6 +304,56 @@ export default function Diagnose() {
       </View>
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }}>
+
+        {/* VEHICLE SELECTOR */}
+        {vehicles.length > 0 && (
+          <View style={{ marginBottom: 16 }}>
+            <Text style={{ color: "#9ca3af", fontSize: 12, fontWeight: "600", marginBottom: 8 }}>
+              🚗 SELECT YOUR VEHICLE
+            </Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+              {vehicles.map((vehicle) => (
+                <TouchableOpacity
+                  key={vehicle.id}
+                  onPress={() => setSelectedVehicle(selectedVehicle?.id === vehicle.id ? null : vehicle)}
+                  style={{
+                    backgroundColor: selectedVehicle?.id === vehicle.id ? "#345bff" : "#11131a",
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    borderColor: selectedVehicle?.id === vehicle.id ? "#345bff" : "#252838",
+                    paddingHorizontal: 14,
+                    paddingVertical: 10,
+                    alignItems: "center",
+                    minWidth: 100,
+                  }}
+                >
+                  <Text style={{ fontSize: 18 }}>🚗</Text>
+                  <Text style={{
+                    color: selectedVehicle?.id === vehicle.id ? "white" : "#9ca3af",
+                    fontSize: 12,
+                    fontWeight: "700",
+                    marginTop: 4,
+                    textAlign: "center",
+                  }}>
+                    {vehicle.year} {vehicle.make}
+                  </Text>
+                  <Text style={{
+                    color: selectedVehicle?.id === vehicle.id ? "#ffffff99" : "#6b7280",
+                    fontSize: 11,
+                    textAlign: "center",
+                  }}>
+                    {vehicle.model}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            {selectedVehicle && (
+              <Text style={{ color: "#10b981", fontSize: 12, marginTop: 8 }}>
+                ✓ AI will use your {selectedVehicle.year} {selectedVehicle.make} {selectedVehicle.model} as context
+              </Text>
+            )}
+          </View>
+        )}
 
         {/* SCAN PHOTO BUTTON */}
         <TouchableOpacity
@@ -361,7 +415,10 @@ export default function Diagnose() {
         <TextInput
           value={query}
           onChangeText={setQuery}
-          placeholder="e.g. My 2019 Honda Civic makes a grinding noise when braking..."
+          placeholder={selectedVehicle
+            ? `What's wrong with your ${selectedVehicle.year} ${selectedVehicle.make} ${selectedVehicle.model}?`
+            : "e.g. My 2019 Honda Civic makes a grinding noise when braking..."
+          }
           placeholderTextColor="#4b5563"
           multiline
           style={{
@@ -371,7 +428,7 @@ export default function Diagnose() {
             paddingVertical: 14,
             borderRadius: 14,
             borderWidth: 1,
-            borderColor: "#252838",
+            borderColor: selectedVehicle ? "#345bff44" : "#252838",
             fontSize: 15,
             lineHeight: 22,
             minHeight: 100,
@@ -422,9 +479,9 @@ export default function Diagnose() {
         {/* DIAGNOSE BUTTON */}
         <TouchableOpacity
           onPress={handleDiagnose}
-          disabled={loading || !query.trim()}
+          disabled={loading || (!query.trim() && !selectedVehicle)}
           style={{
-            backgroundColor: loading || !query.trim() ? "#1f2937" : "#345bff",
+            backgroundColor: loading || (!query.trim() && !selectedVehicle) ? "#1f2937" : "#345bff",
             paddingVertical: 22,
             borderRadius: 16,
             alignItems: "center",
