@@ -1,9 +1,19 @@
-import BadWords from "bad-words";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import prisma from "../lib/prisma.js";
 
-const filter = new BadWords();
+// Simple profanity filter — no external package needed
+const BANNED_WORDS = [
+  "fuck", "shit", "ass", "bitch", "dick", "cock", "pussy",
+  "cunt", "bastard", "nigger", "nigga", "faggot", "retard",
+  "whore", "slut", "piss", "crap", "douche"
+];
+
+const isProfane = (text) => {
+  if (!text) return false;
+  const lower = text.toLowerCase();
+  return BANNED_WORDS.some(word => lower.includes(word));
+};
 
 // REGISTER
 export const register = async (req, res) => {
@@ -11,7 +21,7 @@ export const register = async (req, res) => {
     const { email, password, name, role } = req.body;
 
     // Check for inappropriate username
-    if (filter.isProfane(name)) {
+    if (isProfane(name)) {
       return res.status(400).json({ message: "Username contains inappropriate language. Please choose a different name." });
     }
 
