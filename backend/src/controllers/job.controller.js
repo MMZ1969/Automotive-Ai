@@ -90,31 +90,36 @@ export const createJob = async (req, res) => {
       },
     });
 
+    // Notify all mechanics about new job
+    try {
+      const mechanics = await prisma.user.findMany({
+        where: { role: "MECHANIC" },
+        select: { id: true },
+      });
+
+      await Promise.all(
+        mechanics
+          .filter(m => m.id !== userId)
+          .map(m =>
+            createAndSendNotification({
+              recipientId: m.id,
+              actorId: userId,
+              type: "bid",
+              message: `🔧 New job posted: ${title} — tap to view and bid!`,
+            })
+          )
+      );
+    } catch (notifErr) {
+      console.error("NOTIFY MECHANICS ERROR:", notifErr);
+      // silently fail — don't block job creation
+    }
+
     res.json(job);
   } catch (err) {
     console.error("CREATE JOB ERROR:", err);
     res.status(500).json({ error: "Failed to create job" });
   }
 };
-
-// Notify all mechanics about new job
-const mechanics = await prisma.user.findMany({
-  where: { role: "MECHANIC" },
-  select: { id: true },
-});
-
-await Promise.all(
-  mechanics
-    .filter(m => m.id !== userId)
-    .map(m =>
-      createAndSendNotification({
-        recipientId: m.id,
-        actorId: userId,
-        type: "bid",
-        message: `🔧 New job posted: ${title} — tap to view and bid!`,
-      })
-    )
-);
 
 // DELETE a job
 export const deleteJob = async (req, res) => {
@@ -211,13 +216,17 @@ export const acceptBid = async (req, res) => {
       data: { status: "REJECTED" },
     });
 
-    const poster = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
+    const poster = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true, email: true },
+    });
+
     await createAndSendNotification({
-  recipientId: bid.mechanicId,
-  actorId: userId,
-  type: "bid_accepted",
-  message: `${poster?.name || "Someone"} accepted your bid! 🎉 Contact them at ${poster?.email} to get started.`,
-});
+      recipientId: bid.mechanicId,
+      actorId: userId,
+      type: "bid_accepted",
+      message: `${poster?.name || "Someone"} accepted your bid! 🎉 Contact them at ${poster?.email} to get started.`,
+    });
 
     res.json({ success: true });
   } catch (err) {
