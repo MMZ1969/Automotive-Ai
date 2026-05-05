@@ -13,6 +13,7 @@ export async function getMe(req, res) {
         role: true,
         repPoints: true,
         profilePhoto: true,
+        phone: true,
         createdAt: true,
       },
     });
@@ -37,7 +38,7 @@ export async function updateProfile(req, res) {
     const data = {};
 
     if (name) data.name = name;
-    if (req.body.profilePhoto) data.profilePhoto = req.body.profilePhoto;
+    if (req.body.phone !== undefined) data.phone = req.body.phone;  // ADD THIS
 
 
     if (email) {
@@ -61,7 +62,8 @@ export async function updateProfile(req, res) {
       email: true,
       name: true,
       role: true,
-      profilePhoto: true,  // ← this is missing from the response
+      profilePhoto: true,
+      phone: true,  
       createdAt: true,
 },
     });
