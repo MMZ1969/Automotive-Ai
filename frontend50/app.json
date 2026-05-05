@@ -10,7 +10,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "app.automotiveai",
-      "buildNumber": "11",
+      "buildNumber": "12",
       "infoPlist": {
   "ITSAppUsesNonExemptEncryption": false,
   "NSAppTransportSecurity": {
