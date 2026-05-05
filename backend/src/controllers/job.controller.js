@@ -218,15 +218,15 @@ export const acceptBid = async (req, res) => {
 
     const poster = await prisma.user.findUnique({
       where: { id: userId },
-      select: { name: true, email: true },
+      select: { name: true, email: true, phone: true  },
     });
 
     await createAndSendNotification({
-      recipientId: bid.mechanicId,
-      actorId: userId,
-      type: "bid_accepted",
-      message: `${poster?.name || "Someone"} accepted your bid! 🎉 Contact them at ${poster?.email} to get started.`,
-    });
+  recipientId: bid.mechanicId,
+  actorId: userId,
+  type: "bid_accepted",
+  message: `${poster?.name || "Someone"} accepted your bid! 🎉 Contact them at ${poster?.phone || poster?.email} to get started.`,
+});
 
     res.json({ success: true });
   } catch (err) {
