@@ -145,7 +145,7 @@ export default function Settings() {
         <View style={divider} />
         <View style={row}>
           <Text style={label}>Build</Text>
-          <Text style={value}>11</Text>
+          <Text style={value}>13</Text>
         </View>
       </View>
 
