@@ -63,6 +63,7 @@ export async function getPartById(req, res) {
             profilePhoto: true,
             role: true,
             repPoints: true,
+            phone: true,
           },
         },
       },
