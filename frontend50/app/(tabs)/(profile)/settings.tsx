@@ -140,7 +140,7 @@ export default function Settings() {
       <View style={card}>
         <View style={row}>
           <Text style={label}>Version</Text>
-          <Text style={value}>1.0.2</Text>
+          <Text style={value}>1.0.3</Text>
         </View>
         <View style={divider} />
         <View style={row}>
