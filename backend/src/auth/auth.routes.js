@@ -1,6 +1,14 @@
 import express from "express";
 import authMiddleware from "../middleware/authMiddleware.js";
-import { deleteAccount, login, me, register } from "./auth.controller.js";
+import {
+    changePassword,
+    deleteAccount,
+    forgotPassword,
+    login,
+    me,
+    register,
+    resetPassword,
+} from "./auth.controller.js";
 
 const router = express.Router();
 
@@ -15,5 +23,14 @@ router.get("/me", authMiddleware, me);
 
 // DELETE ACCOUNT
 router.delete("/account", authMiddleware, deleteAccount);
+
+// FORGOT PASSWORD
+router.post("/forgot-password", forgotPassword);
+
+// RESET PASSWORD
+router.post("/reset-password", resetPassword);
+
+// CHANGE PASSWORD
+router.put("/change-password", authMiddleware, changePassword);
 
 export default router;
