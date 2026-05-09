@@ -27,6 +27,7 @@ export default function CreatePostScreen() {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [postType, setPostType] = useState<"VANITY" | "QUESTION">("VANITY");
 
   const handlePickPhoto = async () => {
     try {
@@ -93,10 +94,12 @@ export default function CreatePostScreen() {
     }
     try {
       setSubmitting(true);
-      await api.post("/api/posts", { content, imageUrl });
+      console.log("POSTING WITH TYPE:", postType);
+      await api.post("/api/posts", { content, imageUrl, postType });
       setContent("");
       setImageUri(null);
       setImageUrl(null);
+      setPostType("VANITY");
       Alert.alert("Posted! 🚗", "Your post is live!", [
         { text: "View Feed", onPress: () => router.push("/(tabs)/feed") },
         { text: "Stay here" },
@@ -188,11 +191,73 @@ export default function CreatePostScreen() {
         </View>
       </View>
 
+      {/* POST TYPE SELECTOR */}
+      <View style={{
+        flexDirection: "row",
+        paddingHorizontal: 20,
+        paddingTop: 16,
+        gap: 10,
+      }}>
+        <TouchableOpacity
+          onPress={() => setPostType("VANITY")}
+          style={{
+            flex: 1,
+            paddingVertical: 10,
+            borderRadius: 12,
+            alignItems: "center",
+            backgroundColor: postType === "VANITY" ? "#10b981" : "#11131a",
+            borderWidth: 1,
+            borderColor: postType === "VANITY" ? "#10b981" : "#252838",
+          }}
+        >
+          <Text style={{ fontSize: 16 }}>🚗</Text>
+          <Text style={{
+            color: postType === "VANITY" ? "white" : "#6b7280",
+            fontWeight: "700",
+            fontSize: 12,
+            marginTop: 4,
+          }}>Vanity</Text>
+          <Text style={{
+            color: postType === "VANITY" ? "#d1fae5" : "#4b5563",
+            fontSize: 10,
+            marginTop: 2,
+          }}>Show off your ride</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => setPostType("QUESTION")}
+          style={{
+            flex: 1,
+            paddingVertical: 10,
+            borderRadius: 12,
+            alignItems: "center",
+            backgroundColor: postType === "QUESTION" ? "#345bff" : "#11131a",
+            borderWidth: 1,
+            borderColor: postType === "QUESTION" ? "#345bff" : "#252838",
+          }}
+        >
+          <Text style={{ fontSize: 16 }}>🔧</Text>
+          <Text style={{
+            color: postType === "QUESTION" ? "white" : "#6b7280",
+            fontWeight: "700",
+            fontSize: 12,
+            marginTop: 4,
+          }}>Question</Text>
+          <Text style={{
+            color: postType === "QUESTION" ? "#dbeafe" : "#4b5563",
+            fontSize: 10,
+            marginTop: 2,
+          }}>Ask the community</Text>
+        </TouchableOpacity>
+      </View>
+
       {/* TEXT INPUT */}
       <TextInput
         value={content}
         onChangeText={setContent}
-        placeholder="Share a build, ask a question, or post a tip..."
+        placeholder={postType === "QUESTION"
+          ? "Ask the community a car question..."
+          : "Share a build, mod, or car moment..."}
         placeholderTextColor="#4b5563"
         multiline
         autoFocus

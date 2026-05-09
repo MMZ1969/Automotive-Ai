@@ -1,24 +1,28 @@
 import { useAuth } from "@context/AuthContext";
+import { useRouter } from "expo-router";
 import React, { useState } from "react";
-import { ActivityIndicator, Text, TextInput, TouchableOpacity, View } from "react-native";
+import {
+  ActivityIndicator,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 export default function LoginScreen() {
   const { login } = useAuth();
+  const router = useRouter();
 
-  const [email, setEmail] = useState("Mz@gmail.com");
-  const [password, setPassword] = useState("password"); // adjust as needed
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleLogin = async () => {
     setError(null);
     setSubmitting(true);
-
     try {
-      console.log("LOGIN SCREEN: calling AuthContext.login");
       await login(email, password);
-      console.log("LOGIN SCREEN: login resolved, navigation handled by tabs/auth logic");
-      // Do NOT manually navigate here – (auth)/index + (tabs)/_layout handle it
     } catch (err: any) {
       console.error("LOGIN SCREEN ERROR:", err?.response?.data || err?.message || err);
       setError("Login failed. Check your credentials.");
@@ -28,17 +32,19 @@ export default function LoginScreen() {
   };
 
   return (
-    <View
-      style={{
-        flex: 1,
-        backgroundColor: "#050509",
-        justifyContent: "center",
-        alignItems: "center",
-        paddingHorizontal: 30,
-      }}
-    >
-      <Text style={{ color: "white", fontSize: 32, fontWeight: "900", marginBottom: 24 }}>
-        Login
+    <View style={{
+      flex: 1,
+      backgroundColor: "#050509",
+      justifyContent: "center",
+      alignItems: "center",
+      paddingHorizontal: 30,
+    }}>
+      <Text style={{ fontSize: 48, marginBottom: 8 }}>🚗</Text>
+      <Text style={{ color: "white", fontSize: 32, fontWeight: "900", marginBottom: 8 }}>
+        AutoAI™
+      </Text>
+      <Text style={{ color: "#9ca3af", fontSize: 14, marginBottom: 32 }}>
+        The social platform for car enthusiasts
       </Text>
 
       <TextInput
@@ -74,11 +80,19 @@ export default function LoginScreen() {
           paddingHorizontal: 16,
           paddingVertical: 12,
           borderRadius: 10,
-          marginBottom: 16,
+          marginBottom: 8,
           borderWidth: 1,
           borderColor: "#252838",
         }}
       />
+
+      {/* FORGOT PASSWORD LINK */}
+      <TouchableOpacity
+        onPress={() => router.push("/forgot-password")}
+        style={{ alignSelf: "flex-end", marginBottom: 16 }}
+      >
+        <Text style={{ color: "#345bff", fontSize: 13 }}>Forgot Password?</Text>
+      </TouchableOpacity>
 
       {error && (
         <Text style={{ color: "#f87171", marginBottom: 12, textAlign: "center" }}>
@@ -95,6 +109,7 @@ export default function LoginScreen() {
           paddingVertical: 16,
           borderRadius: 12,
           alignItems: "center",
+          marginBottom: 16,
         }}
       >
         {submitting ? (

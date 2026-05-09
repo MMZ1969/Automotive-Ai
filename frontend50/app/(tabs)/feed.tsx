@@ -24,14 +24,15 @@ export default function Feed() {
   const [followingCount, setFollowingCount] = useState(0);
   const [repPoints, setRepPoints] = useState(0);
   const [activeTab, setActiveTab] = useState<"forYou" | "following">("forYou");
+  const [postFilter, setPostFilter] = useState<"ALL" | "VANITY" | "QUESTION">("ALL");
   const [menuPost, setMenuPost] = useState<any>(null);
 
-  const fetchPosts = async (tab = activeTab) => {
+  const fetchPosts = async (tab = activeTab, filter = postFilter) => {
     try {
       const [postsRes, followRes, meRes] = await Promise.all([
         tab === "forYou"
-          ? api.get("/api/posts")
-          : api.get("/api/posts/following"),
+          ? api.get("/api/posts", { params: { type: filter } })
+          : api.get("/api/posts/following", { params: { type: filter } }),
         api.get(`/api/users/${user?.id}/follow-status`),
         api.get("/api/users/me"),
       ]);
@@ -62,25 +63,31 @@ export default function Feed() {
 
   useFocusEffect(
     useCallback(() => {
-      fetchPosts(activeTab);
-    }, [activeTab])
+      fetchPosts(activeTab, postFilter);
+    }, [activeTab, postFilter])
   );
 
   const onRefresh = () => {
     setRefreshing(true);
-    fetchPosts(activeTab);
+    fetchPosts(activeTab, postFilter);
   };
 
   const handleTabChange = (tab: "forYou" | "following") => {
     setActiveTab(tab);
     setLoading(true);
-    fetchPosts(tab);
+    fetchPosts(tab, postFilter);
+  };
+
+  const handleFilterChange = (filter: "ALL" | "VANITY" | "QUESTION") => {
+    setPostFilter(filter);
+    setLoading(true);
+    fetchPosts(activeTab, filter);
   };
 
   const handleLike = async (postId: number) => {
     try {
       await api.post(`/api/posts/${postId}/like`);
-      fetchPosts(activeTab);
+      fetchPosts(activeTab, postFilter);
     } catch (err) {
       console.error("LIKE ERROR:", err);
     }
@@ -89,7 +96,7 @@ export default function Feed() {
   const handleFollow = async (userId: number) => {
     try {
       await api.post(`/api/users/${userId}/follow`);
-      fetchPosts(activeTab);
+      fetchPosts(activeTab, postFilter);
     } catch (err) {
       console.error("FOLLOW ERROR:", err);
     }
@@ -105,7 +112,7 @@ export default function Feed() {
           try {
             await api.delete(`/api/posts/${postId}`);
             setMenuPost(null);
-            fetchPosts(activeTab);
+            fetchPosts(activeTab, postFilter);
           } catch (err) {
             console.error("DELETE ERROR:", err);
           }
@@ -120,18 +127,9 @@ export default function Feed() {
       "Why are you reporting this post?",
       [
         { text: "Cancel", style: "cancel" },
-        {
-          text: "Spam",
-          onPress: async () => await submitReport(postId, "Spam"),
-        },
-        {
-          text: "Inappropriate",
-          onPress: async () => await submitReport(postId, "Inappropriate content"),
-        },
-        {
-          text: "Abusive",
-          onPress: async () => await submitReport(postId, "Abusive behavior"),
-        },
+        { text: "Spam", onPress: async () => await submitReport(postId, "Spam") },
+        { text: "Inappropriate", onPress: async () => await submitReport(postId, "Inappropriate content") },
+        { text: "Abusive", onPress: async () => await submitReport(postId, "Abusive behavior") },
       ]
     );
   };
@@ -269,7 +267,7 @@ export default function Feed() {
           </View>
         </View>
 
-        {/* FEED TABS */}
+        {/* FOR YOU / FOLLOWING TABS */}
         <View style={{
           flexDirection: "row",
           marginTop: 16,
@@ -291,9 +289,7 @@ export default function Feed() {
               color: activeTab === "forYou" ? "white" : "#6b7280",
               fontWeight: "700",
               fontSize: 14,
-            }}>
-              For You
-            </Text>
+            }}>For You</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -310,10 +306,40 @@ export default function Feed() {
               color: activeTab === "following" ? "white" : "#6b7280",
               fontWeight: "700",
               fontSize: 14,
-            }}>
-              Following
-            </Text>
+            }}>Following</Text>
           </TouchableOpacity>
+        </View>
+
+        {/* POST TYPE FILTER */}
+        <View style={{
+          flexDirection: "row",
+          marginTop: 10,
+          gap: 8,
+        }}>
+          {[
+            { label: "All", value: "ALL" },
+            { label: "🚗 Vanity", value: "VANITY" },
+            { label: "🔧 Questions", value: "QUESTION" },
+          ].map((f) => (
+            <TouchableOpacity
+              key={f.value}
+              onPress={() => handleFilterChange(f.value as "ALL" | "VANITY" | "QUESTION")}
+              style={{
+                paddingHorizontal: 14,
+                paddingVertical: 6,
+                borderRadius: 20,
+                backgroundColor: postFilter === f.value ? "#1e2a4a" : "#11131a",
+                borderWidth: 1,
+                borderColor: postFilter === f.value ? "#345bff" : "#252838",
+              }}
+            >
+              <Text style={{
+                color: postFilter === f.value ? "#345bff" : "#6b7280",
+                fontSize: 13,
+                fontWeight: "600",
+              }}>{f.label}</Text>
+            </TouchableOpacity>
+          ))}
         </View>
       </View>
 
@@ -321,11 +347,7 @@ export default function Feed() {
         data={posts}
         keyExtractor={(item) => item.id.toString()}
         refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor="#345bff"
-          />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#345bff" />
         }
         ListEmptyComponent={
           <View style={{ alignItems: "center", marginTop: 80 }}>
@@ -350,7 +372,21 @@ export default function Feed() {
             borderColor: "#252838",
             padding: 16,
           }}>
-            {/* POST HEADER — tapping avatar/name goes to user profile */}
+            {/* POST TYPE BADGE */}
+            <View style={{
+              alignSelf: "flex-start",
+              backgroundColor: item.postType === "QUESTION" ? "#1e3a8a" : "#064e3b",
+              paddingHorizontal: 10,
+              paddingVertical: 3,
+              borderRadius: 10,
+              marginBottom: 10,
+            }}>
+              <Text style={{ color: "white", fontSize: 11, fontWeight: "600" }}>
+                {item.postType === "QUESTION" ? "🔧 Question" : "🚗 Vanity"}
+              </Text>
+            </View>
+
+            {/* POST HEADER */}
             <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
               <TouchableOpacity
                 onPress={() => router.push(`/(tabs)/user/${item.user?.id}`)}
@@ -398,11 +434,7 @@ export default function Feed() {
                 </View>
               </TouchableOpacity>
 
-              {/* THREE DOT MENU */}
-              <TouchableOpacity
-                onPress={() => setMenuPost(item)}
-                style={{ padding: 8 }}
-              >
+              <TouchableOpacity onPress={() => setMenuPost(item)} style={{ padding: 8 }}>
                 <Text style={{ color: "#9ca3af", fontSize: 20 }}>⋯</Text>
               </TouchableOpacity>
             </View>
@@ -438,7 +470,7 @@ export default function Feed() {
               </Text>
             </View>
 
-            {/* POST CONTENT + IMAGE — tapping goes to post detail */}
+            {/* POST CONTENT + IMAGE */}
             <TouchableOpacity
               onPress={() => router.push(`/(tabs)/post/${item.id}`)}
               activeOpacity={0.8}
@@ -446,7 +478,6 @@ export default function Feed() {
               <Text style={{ color: "#e5e7eb", fontSize: 15, lineHeight: 22 }}>
                 {item.content}
               </Text>
-
               {item.imageUrl && (
                 <Image
                   source={{ uri: item.imageUrl }}

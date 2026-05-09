@@ -148,7 +148,12 @@ export default function Settings() {
           <Text style={label}>Role</Text>
           <Text style={value}>{isMechanic ? "🏁 Mechanic" : "🔧 DIYer"}</Text>
         </View>
-
+        <View style={divider} />
+        <TouchableOpacity style={row} onPress={() => router.push("/change-password")}>
+          <Text style={label}>Password</Text>
+          <Text style={{ color: "#345bff", fontSize: 13 }}>Change →</Text>
+        </TouchableOpacity>
+        
         {/* PHONE ROW */}
         <View style={divider} />
         {editingPhone ? (
