@@ -177,7 +177,7 @@ export const forgotPassword = async (req, res) => {
       },
     });
 
-    const resetLink = `autoai://reset-password?token=${token}`;
+    const resetLink = `automotiveai://reset-password?token=${token}`;
 
     await sgMail.send({
       to: email,
