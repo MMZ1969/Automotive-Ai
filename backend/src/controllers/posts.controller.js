@@ -45,7 +45,6 @@ export const getPostById = async (req, res) => {
 // CREATE a post
 export const createPost = async (req, res) => {
   try {
-    console.log("CREATE POST BODY:", req.body);
     const { content, imageUrl, postType } = req.body;
     const userId = req.user.id;
     if (!content || content.trim() === "") {
@@ -234,5 +233,33 @@ export const reportPost = async (req, res) => {
   } catch (err) {
     console.error("REPORT POST ERROR:", err);
     res.status(500).json({ error: "Failed to report post" });
+  }
+};
+
+// SEARCH POSTS
+export const searchPosts = async (req, res) => {
+  try {
+    const { q } = req.query;
+    if (!q || q.trim().length < 2) {
+      return res.json([]);
+    }
+    const posts = await prisma.post.findMany({
+      where: {
+        content: {
+          contains: q,
+          mode: "insensitive",
+        },
+      },
+      orderBy: { createdAt: "desc" },
+      include: {
+        user: true,
+        likes: true,
+        comments: true,
+      },
+    });
+    res.json(posts);
+  } catch (err) {
+    console.error("SEARCH POSTS ERROR:", err);
+    res.status(500).json({ error: "Failed to search posts" });
   }
 };

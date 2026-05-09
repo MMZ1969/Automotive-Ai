@@ -8,6 +8,7 @@ const router = express.Router();
 
 router.get("/", postsController.getAllPosts);
 router.get("/following", authMiddleware, postsController.getFollowingPosts);
+router.get("/search", authMiddleware, postsController.searchPosts);
 router.post("/", authMiddleware, postsController.createPost);
 router.get("/:id", postsController.getPostById);
 router.put("/:id", authMiddleware, postsController.updatePost);
