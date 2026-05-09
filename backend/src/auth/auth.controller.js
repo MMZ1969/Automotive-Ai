@@ -1,8 +1,10 @@
+import sgMail from "@sendgrid/mail";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
-import nodemailer from "nodemailer";
 import prisma from "../lib/prisma.js";
+
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 // Simple profanity filter — no external package needed
 const BANNED_WORDS = [
@@ -16,17 +18,6 @@ const isProfane = (text) => {
   const lower = text.toLowerCase();
   return BANNED_WORDS.some(word => lower.includes(word));
 };
-
-// EMAIL TRANSPORTER
-const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 587,
-  secure: false,
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_PASS,
-  },
-});
 
 // REGISTER
 export const register = async (req, res) => {
@@ -172,7 +163,6 @@ export const forgotPassword = async (req, res) => {
 
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
-      // Don't reveal if email exists or not
       return res.json({ message: "If that email exists, a reset link has been sent." });
     }
 
@@ -189,9 +179,9 @@ export const forgotPassword = async (req, res) => {
 
     const resetLink = `autoai://reset-password?token=${token}`;
 
-    await transporter.sendMail({
-      from: `"AutoAI" <${process.env.GMAIL_USER}>`,
+    await sgMail.send({
       to: email,
+      from: "maz@amazmade.com",
       subject: "Reset Your AutoAI Password 🔧",
       html: `
         <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; background: #050509; color: white; padding: 32px; border-radius: 16px;">
