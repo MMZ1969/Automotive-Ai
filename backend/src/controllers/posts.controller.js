@@ -4,7 +4,10 @@ import { createAndSendNotification } from "./notification.controller.js";
 // GET all posts
 export const getAllPosts = async (req, res) => {
   try {
+    const { type } = req.query;
+    const where = type && type !== "ALL" ? { postType: type } : {};
     const posts = await prisma.post.findMany({
+      where,
       orderBy: { createdAt: "desc" },
       include: {
         user: true,
@@ -42,13 +45,16 @@ export const getPostById = async (req, res) => {
 // CREATE a post
 export const createPost = async (req, res) => {
   try {
-    const { content, imageUrl } = req.body;
+    console.log("CREATE POST BODY:", req.body);
+    const { content, imageUrl, postType } = req.body;
     const userId = req.user.id;
     if (!content || content.trim() === "") {
       return res.status(400).json({ error: "Post content cannot be empty" });
     }
+    const validTypes = ["VANITY", "QUESTION"];
+    const type = validTypes.includes(postType) ? postType : "VANITY";
     const post = await prisma.post.create({
-      data: { content, userId, imageUrl },
+      data: { content, userId, imageUrl, postType: type },
     });
     res.json(post);
   } catch (err) {
@@ -175,13 +181,18 @@ export const addComment = async (req, res) => {
 export const getFollowingPosts = async (req, res) => {
   try {
     const userId = req.user.id;
+    const { type } = req.query;
     const following = await prisma.follow.findMany({
       where: { followerId: userId },
       select: { followingId: true },
     });
     const followingIds = following.map((f) => f.followingId);
+    const where = {
+      userId: { in: followingIds },
+      ...(type && type !== "ALL" ? { postType: type } : {}),
+    };
     const posts = await prisma.post.findMany({
-      where: { userId: { in: followingIds } },
+      where,
       orderBy: { createdAt: "desc" },
       include: {
         user: true,
@@ -195,7 +206,8 @@ export const getFollowingPosts = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch following posts" });
   }
 };
-// POST /posts/:id/report
+
+// REPORT POST
 export const reportPost = async (req, res) => {
   try {
     const postId = Number(req.params.id);
