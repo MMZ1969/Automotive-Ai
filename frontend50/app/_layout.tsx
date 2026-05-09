@@ -4,7 +4,7 @@ import { VehicleProvider } from "@context/VehicleContext";
 import { Slot, useRouter, useSegments } from "expo-router";
 import { useEffect } from "react";
 
-const PUBLIC_ROUTES = ["forgot-password", "reset-password", "change-password"];
+const PUBLIC_ROUTES = ["forgot-password", "reset-password", "change-password", "guidelines"];
 
 function RouteGuard() {
   const { user, loading } = useAuth();

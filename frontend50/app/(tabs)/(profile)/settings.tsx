@@ -264,6 +264,14 @@ export default function Settings() {
           <Text style={label}>Terms of Service</Text>
           <Text style={{ color: "#345bff" }}>View →</Text>
         </TouchableOpacity>
+        <View style={divider} />
+        <TouchableOpacity
+          style={row}
+          onPress={() => router.push("/guidelines")}
+        >
+          <Text style={label}>Community Guidelines</Text>
+          <Text style={{ color: "#345bff" }}>View →</Text>
+        </TouchableOpacity>
       </View>
 
       {/* DELETE ACCOUNT */}
