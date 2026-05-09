@@ -4,6 +4,8 @@ import { VehicleProvider } from "@context/VehicleContext";
 import { Slot, useRouter, useSegments } from "expo-router";
 import { useEffect } from "react";
 
+const PUBLIC_ROUTES = ["forgot-password", "reset-password", "change-password"];
+
 function RouteGuard() {
   const { user, loading } = useAuth();
   const segments = useSegments();
@@ -13,8 +15,9 @@ function RouteGuard() {
     if (loading) return;
 
     const inAuthGroup = segments[0] === "(auth)";
+    const inPublicRoute = PUBLIC_ROUTES.includes(segments[0]);
 
-    if (!user && !inAuthGroup) {
+    if (!user && !inAuthGroup && !inPublicRoute) {
       router.replace("/(auth)/welcome");
     } else if (user && inAuthGroup) {
       router.replace("/(tabs)/feed");

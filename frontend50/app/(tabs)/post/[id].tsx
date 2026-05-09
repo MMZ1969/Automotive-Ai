@@ -6,6 +6,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Text,
@@ -88,13 +89,17 @@ export default function PostDetail() {
     );
   };
 
-  const submitReport = (reason: string) => {
-    // Future: wire up to a backend /api/reports endpoint
-    Alert.alert(
-      "Report Submitted",
-      "Thanks for letting us know. We'll review this post shortly.",
-      [{ text: "OK" }]
-    );
+  const submitReport = async (reason: string) => {
+    try {
+      await api.post(`/api/posts/${id}/report`, { reason });
+      Alert.alert("✅ Reported", "Thank you. We'll review this post within 24 hours.");
+    } catch (err: any) {
+      if (err?.response?.status === 400) {
+        Alert.alert("Already Reported", "You've already reported this post.");
+      } else {
+        Alert.alert("Error", "Could not submit report. Try again.");
+      }
+    }
   };
 
   if (loading) {
@@ -127,12 +132,9 @@ export default function PostDetail() {
           <TouchableOpacity onPress={() => router.push("/(tabs)/feed")}>
             <Text style={{ color: "#345bff", fontSize: 16 }}>← Back</Text>
           </TouchableOpacity>
-          <Text style={{ color: "white", fontSize: 20, fontWeight: "900" }}>
-            Post
-          </Text>
+          <Text style={{ color: "white", fontSize: 20, fontWeight: "900" }}>Post</Text>
         </View>
 
-        {/* DELETE — only for post owner / REPORT — only for others */}
         {isMyPost ? (
           <TouchableOpacity
             onPress={handleDelete}
@@ -145,9 +147,7 @@ export default function PostDetail() {
               borderColor: "#ef444444",
             }}
           >
-            <Text style={{ color: "#ef4444", fontSize: 13, fontWeight: "700" }}>
-              🗑️ Delete
-            </Text>
+            <Text style={{ color: "#ef4444", fontSize: 13, fontWeight: "700" }}>🗑️ Delete</Text>
           </TouchableOpacity>
         ) : (
           <TouchableOpacity
@@ -161,9 +161,7 @@ export default function PostDetail() {
               borderColor: "#252838",
             }}
           >
-            <Text style={{ color: "#9ca3af", fontSize: 13, fontWeight: "700" }}>
-              🚩 Report
-            </Text>
+            <Text style={{ color: "#9ca3af", fontSize: 13, fontWeight: "700" }}>🚩 Report</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -173,7 +171,7 @@ export default function PostDetail() {
         keyExtractor={(item) => item.id.toString()}
         ListHeaderComponent={
           <View>
-            {/* POST CONTENT */}
+            {/* FULL POST CARD */}
             <View style={{
               backgroundColor: "#11131a",
               margin: 16,
@@ -182,24 +180,46 @@ export default function PostDetail() {
               borderColor: "#252838",
               padding: 16,
             }}>
-              {/* TAPPABLE POST AUTHOR */}
+              {/* POST TYPE BADGE */}
+              <View style={{
+                alignSelf: "flex-start",
+                backgroundColor: post?.postType === "QUESTION" ? "#1e3a8a" : "#064e3b",
+                paddingHorizontal: 10,
+                paddingVertical: 3,
+                borderRadius: 10,
+                marginBottom: 12,
+              }}>
+                <Text style={{ color: "white", fontSize: 11, fontWeight: "600" }}>
+                  {post?.postType === "QUESTION" ? "🔧 Question" : "🚗 Vanity"}
+                </Text>
+              </View>
+
+              {/* POST AUTHOR */}
               <TouchableOpacity
                 onPress={() => router.push(`/(tabs)/user/${post?.user?.id}`)}
                 style={{ flexDirection: "row", alignItems: "center", marginBottom: 12, gap: 10 }}
               >
                 <View style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 18,
+                  width: 44,
+                  height: 44,
+                  borderRadius: 22,
                   backgroundColor: "#252838",
                   justifyContent: "center",
                   alignItems: "center",
                   borderWidth: 2,
                   borderColor: post?.user?.role === "MECHANIC" ? "#345bff" : "#10b981",
+                  overflow: "hidden",
                 }}>
-                  <Text style={{ color: "white", fontWeight: "700" }}>
-                    {post?.user?.name?.[0]?.toUpperCase() || "?"}
-                  </Text>
+                  {post?.user?.profilePhoto ? (
+                    <Image
+                      source={{ uri: post.user.profilePhoto }}
+                      style={{ width: 44, height: 44, borderRadius: 22 }}
+                    />
+                  ) : (
+                    <Text style={{ color: "white", fontWeight: "700", fontSize: 18 }}>
+                      {post?.user?.name?.[0]?.toUpperCase() || "?"}
+                    </Text>
+                  )}
                 </View>
                 <View>
                   <Text style={{ color: "white", fontWeight: "700", fontSize: 15 }}>
@@ -209,11 +229,42 @@ export default function PostDetail() {
                     {post?.user?.role === "MECHANIC" ? "🏁 Mechanic" : "🔧 DIYer"}
                   </Text>
                 </View>
+                <Text style={{ color: "#6b7280", fontSize: 12, marginLeft: "auto" }}>
+                  {new Date(post?.createdAt).toLocaleDateString()}
+                </Text>
               </TouchableOpacity>
 
-              <Text style={{ color: "#e5e7eb", fontSize: 15, lineHeight: 22 }}>
+              {/* POST CONTENT */}
+              <Text style={{ color: "#e5e7eb", fontSize: 16, lineHeight: 24, marginBottom: 12 }}>
                 {post?.content}
               </Text>
+
+              {/* POST IMAGE */}
+              {post?.imageUrl && (
+                <Image
+                  source={{ uri: post.imageUrl }}
+                  style={{ width: "100%", height: 250, borderRadius: 12, marginBottom: 12 }}
+                  resizeMode="cover"
+                />
+              )}
+
+              {/* LIKES */}
+              <View style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 6,
+                paddingTop: 12,
+                borderTopWidth: 1,
+                borderTopColor: "#252838",
+              }}>
+                <Text style={{ fontSize: 16 }}>❤️</Text>
+                <Text style={{ color: "#9ca3af", fontSize: 14 }}>
+                  {post?.likes?.length || 0} likes
+                </Text>
+                <Text style={{ color: "#9ca3af", fontSize: 14, marginLeft: 12 }}>
+                  💬 {post?.comments?.length || 0} comments
+                </Text>
+              </View>
             </View>
 
             {/* COMMENTS HEADER */}
@@ -237,7 +288,6 @@ export default function PostDetail() {
             borderColor: "#252838",
             padding: 14,
           }}>
-            {/* TAPPABLE COMMENT AUTHOR */}
             <TouchableOpacity
               onPress={() => router.push(`/(tabs)/user/${item.user?.id}`)}
               style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 }}
@@ -258,6 +308,9 @@ export default function PostDetail() {
               </View>
               <Text style={{ color: "#345bff", fontWeight: "700" }}>
                 {item.user?.name || "Anonymous"}
+              </Text>
+              <Text style={{ color: "#6b7280", fontSize: 11, marginLeft: "auto" }}>
+                {new Date(item.createdAt).toLocaleDateString()}
               </Text>
             </TouchableOpacity>
 
