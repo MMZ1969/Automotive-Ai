@@ -1,5 +1,7 @@
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import jwt from "jsonwebtoken";
+import nodemailer from "nodemailer";
 import prisma from "../lib/prisma.js";
 
 // Simple profanity filter — no external package needed
@@ -15,17 +17,24 @@ const isProfane = (text) => {
   return BANNED_WORDS.some(word => lower.includes(word));
 };
 
+// EMAIL TRANSPORTER
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_PASS,
+  },
+});
+
 // REGISTER
 export const register = async (req, res) => {
   try {
     const { email, password, name, role } = req.body;
 
-    // Check for inappropriate username
     if (isProfane(name)) {
       return res.status(400).json({ message: "Username contains inappropriate language. Please choose a different name." });
     }
 
-    // Username length check
     if (!name || name.trim().length < 2 || name.trim().length > 30) {
       return res.status(400).json({ message: "Username must be between 2 and 30 characters." });
     }
@@ -150,6 +159,115 @@ export const deleteAccount = async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     console.error("DELETE ACCOUNT ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// FORGOT PASSWORD
+export const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      // Don't reveal if email exists or not
+      return res.json({ message: "If that email exists, a reset link has been sent." });
+    }
+
+    const token = crypto.randomBytes(32).toString("hex");
+    const expiry = new Date(Date.now() + 1000 * 60 * 60); // 1 hour
+
+    await prisma.user.update({
+      where: { email },
+      data: {
+        resetToken: token,
+        resetTokenExpiry: expiry,
+      },
+    });
+
+    const resetLink = `autoai://reset-password?token=${token}`;
+
+    await transporter.sendMail({
+      from: `"AutoAI" <${process.env.GMAIL_USER}>`,
+      to: email,
+      subject: "Reset Your AutoAI Password 🔧",
+      html: `
+        <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; background: #050509; color: white; padding: 32px; border-radius: 16px;">
+          <h2 style="color: #345bff;">AutoAI™</h2>
+          <p>You requested a password reset. Tap the button below to set a new password.</p>
+          <p>This link expires in <strong>1 hour</strong>.</p>
+          <a href="${resetLink}" style="display: inline-block; background: #345bff; color: white; padding: 14px 28px; border-radius: 12px; text-decoration: none; font-weight: bold; margin: 20px 0;">
+            Reset My Password
+          </a>
+          <p style="color: #6b7280; font-size: 13px;">If you didn't request this, ignore this email. Your password won't change.</p>
+        </div>
+      `,
+    });
+
+    res.json({ message: "If that email exists, a reset link has been sent." });
+  } catch (err) {
+    console.error("FORGOT PASSWORD ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// RESET PASSWORD
+export const resetPassword = async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+
+    const user = await prisma.user.findFirst({
+      where: {
+        resetToken: token,
+        resetTokenExpiry: { gt: new Date() },
+      },
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: "Invalid or expired reset link." });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password: hashedPassword,
+        resetToken: null,
+        resetTokenExpiry: null,
+      },
+    });
+
+    res.json({ message: "Password reset successfully!" });
+  } catch (err) {
+    console.error("RESET PASSWORD ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// CHANGE PASSWORD (logged in)
+export const changePassword = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { currentPassword, newPassword } = req.body;
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: "Current password is incorrect." });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { password: hashedPassword },
+    });
+
+    res.json({ message: "Password changed successfully!" });
+  } catch (err) {
+    console.error("CHANGE PASSWORD ERROR:", err);
     res.status(500).json({ message: "Server error" });
   }
 };
