@@ -181,18 +181,18 @@ export default function PostDetail() {
               padding: 16,
             }}>
               {/* POST TYPE BADGE */}
-              <View style={{
-                alignSelf: "flex-start",
-                backgroundColor: post?.postType === "QUESTION" ? "#1e3a8a" : "#064e3b",
-                paddingHorizontal: 10,
-                paddingVertical: 3,
-                borderRadius: 10,
-                marginBottom: 12,
-              }}>
-                <Text style={{ color: "white", fontSize: 11, fontWeight: "600" }}>
-                  {post?.postType === "QUESTION" ? "🔧 Question" : "🚗 Vanity"}
-                </Text>
-              </View>
+            <View style={{
+              alignSelf: "flex-start",
+              backgroundColor: post?.postType === "QUESTION" ? "#1e3a8a" : post?.postType === "SERVICE" ? "#78350f" : "#064e3b",
+              paddingHorizontal: 10,
+              paddingVertical: 3,
+              borderRadius: 10,
+              marginBottom: 12,
+            }}>
+              <Text style={{ color: "white", fontSize: 11, fontWeight: "600" }}>
+                {post?.postType === "QUESTION" ? "🔧 Question" : post?.postType === "SERVICE" ? "🏁 Service" : "🚗 Vanity"}
+              </Text>
+            </View>
 
               {/* POST AUTHOR */}
               <TouchableOpacity
