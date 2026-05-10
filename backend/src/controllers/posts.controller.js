@@ -45,6 +45,8 @@ export const getPostById = async (req, res) => {
 // CREATE a post
 export const createPost = async (req, res) => {
   try {
+    console.log("CREATE POST BODY:", req.body);
+    console.log("POST TYPE RECEIVED:", req.body.postType);
     const { content, imageUrl, postType, servicePrice, serviceLocation } = req.body;
     const userId = req.user.id;
     if (!content || content.trim() === "") {
