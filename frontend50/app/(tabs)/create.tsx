@@ -19,7 +19,7 @@ import {
 import { storage } from "../../firebaseConfig";
 
 export default function CreatePostScreen() {
-  const { user } = useAuth();
+  const { user, isMechanic } = useAuth();
   const router = useRouter();
   const [content, setContent] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -27,7 +27,9 @@ export default function CreatePostScreen() {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [postType, setPostType] = useState<"VANITY" | "QUESTION">("VANITY");
+  const [postType, setPostType] = useState<"VANITY" | "QUESTION" | "SERVICE">("VANITY");
+  const [servicePrice, setServicePrice] = useState("");
+  const [serviceLocation, setServiceLocation] = useState("");
 
   const handlePickPhoto = async () => {
     try {
@@ -95,11 +97,19 @@ export default function CreatePostScreen() {
     try {
       setSubmitting(true);
       console.log("POSTING WITH TYPE:", postType);
-      await api.post("/api/posts", { content, imageUrl, postType });
+      await api.post("/api/posts", {
+        content,
+        imageUrl,
+        postType,
+        servicePrice: postType === "SERVICE" ? servicePrice : null,
+        serviceLocation: postType === "SERVICE" ? serviceLocation : null,
+      });
       setContent("");
       setImageUri(null);
       setImageUrl(null);
       setPostType("VANITY");
+      setServicePrice("");
+      setServiceLocation("");
       Alert.alert("Posted! 🚗", "Your post is live!", [
         { text: "View Feed", onPress: () => router.push("/(tabs)/feed") },
         { text: "Stay here" },
@@ -196,7 +206,7 @@ export default function CreatePostScreen() {
         flexDirection: "row",
         paddingHorizontal: 20,
         paddingTop: 16,
-        gap: 10,
+        gap: 8,
       }}>
         <TouchableOpacity
           onPress={() => setPostType("VANITY")}
@@ -249,15 +259,95 @@ export default function CreatePostScreen() {
             marginTop: 2,
           }}>Ask the community</Text>
         </TouchableOpacity>
+
+        {isMechanic && (
+          <TouchableOpacity
+            onPress={() => setPostType("SERVICE")}
+            style={{
+              flex: 1,
+              paddingVertical: 10,
+              borderRadius: 12,
+              alignItems: "center",
+              backgroundColor: postType === "SERVICE" ? "#f59e0b" : "#11131a",
+              borderWidth: 1,
+              borderColor: postType === "SERVICE" ? "#f59e0b" : "#252838",
+            }}
+          >
+            <Text style={{ fontSize: 16 }}>🏁</Text>
+            <Text style={{
+              color: postType === "SERVICE" ? "white" : "#6b7280",
+              fontWeight: "700",
+              fontSize: 12,
+              marginTop: 4,
+            }}>Service</Text>
+            <Text style={{
+              color: postType === "SERVICE" ? "#fef3c7" : "#4b5563",
+              fontSize: 10,
+              marginTop: 2,
+            }}>Offer your services</Text>
+          </TouchableOpacity>
+        )}
       </View>
+
+      {/* SERVICE FIELDS */}
+      {postType === "SERVICE" && (
+        <View style={{ paddingHorizontal: 20, paddingTop: 16, gap: 12 }}>
+          <View>
+            <Text style={{ color: "#9ca3af", fontSize: 13, marginBottom: 8 }}>
+              Service Location
+            </Text>
+            <TextInput
+              value={serviceLocation}
+              onChangeText={setServiceLocation}
+              placeholder="e.g. South Jersey, NJ"
+              placeholderTextColor="#4b5563"
+              style={{
+                backgroundColor: "#11131a",
+                color: "white",
+                paddingHorizontal: 16,
+                paddingVertical: 12,
+                borderRadius: 12,
+                borderWidth: 1,
+                borderColor: "#252838",
+                fontSize: 15,
+              }}
+            />
+          </View>
+          <View>
+            <Text style={{ color: "#9ca3af", fontSize: 13, marginBottom: 8 }}>
+              Price / Rate
+            </Text>
+            <TextInput
+              value={servicePrice}
+              onChangeText={setServicePrice}
+              placeholder="e.g. $75/hr or Call for quote"
+              placeholderTextColor="#4b5563"
+              style={{
+                backgroundColor: "#11131a",
+                color: "white",
+                paddingHorizontal: 16,
+                paddingVertical: 12,
+                borderRadius: 12,
+                borderWidth: 1,
+                borderColor: "#252838",
+                fontSize: 15,
+              }}
+            />
+          </View>
+        </View>
+      )}
 
       {/* TEXT INPUT */}
       <TextInput
         value={content}
         onChangeText={setContent}
-        placeholder={postType === "QUESTION"
-          ? "Ask the community a car question..."
-          : "Share a build, mod, or car moment..."}
+        placeholder={
+          postType === "QUESTION"
+            ? "Ask the community a car question..."
+            : postType === "SERVICE"
+            ? "Describe the service you're offering..."
+            : "Share a build, mod, or car moment..."
+        }
         placeholderTextColor="#4b5563"
         multiline
         autoFocus
