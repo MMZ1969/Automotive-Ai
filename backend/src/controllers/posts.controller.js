@@ -45,15 +45,22 @@ export const getPostById = async (req, res) => {
 // CREATE a post
 export const createPost = async (req, res) => {
   try {
-    const { content, imageUrl, postType } = req.body;
+    const { content, imageUrl, postType, servicePrice, serviceLocation } = req.body;
     const userId = req.user.id;
     if (!content || content.trim() === "") {
       return res.status(400).json({ error: "Post content cannot be empty" });
     }
-    const validTypes = ["VANITY", "QUESTION"];
+    const validTypes = ["VANITY", "QUESTION", "SERVICE"];
     const type = validTypes.includes(postType) ? postType : "VANITY";
     const post = await prisma.post.create({
-      data: { content, userId, imageUrl, postType: type },
+      data: { 
+        content, 
+        userId, 
+        imageUrl, 
+        postType: type,
+        servicePrice: servicePrice || null,
+        serviceLocation: serviceLocation || null,
+      },
     });
     res.json(post);
   } catch (err) {
