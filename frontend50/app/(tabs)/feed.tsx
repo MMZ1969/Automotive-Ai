@@ -471,6 +471,37 @@ export default function Feed() {
               </Text>
             </View>
 
+            {/* SERVICE DETAILS */}
+{item.postType === "SERVICE" && (item.serviceLocation || item.servicePrice) && (
+  <View style={{
+    backgroundColor: "#1a1200",
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#f59e0b33",
+    padding: 12,
+    marginBottom: 10,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  }}>
+    {item.serviceLocation && (
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+        <Text style={{ fontSize: 14 }}>📍</Text>
+        <Text style={{ color: "#fcd34d", fontSize: 13, fontWeight: "600" }}>
+          {item.serviceLocation}
+        </Text>
+      </View>
+    )}
+    {item.servicePrice && (
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+        <Text style={{ fontSize: 14 }}>💰</Text>
+        <Text style={{ color: "#10b981", fontSize: 13, fontWeight: "700" }}>
+          {item.servicePrice}
+        </Text>
+      </View>
+    )}
+  </View>
+)}
             {/* POST CONTENT + IMAGE */}
             <TouchableOpacity
               onPress={() => router.push(`/(tabs)/post/${item.id}`)}
