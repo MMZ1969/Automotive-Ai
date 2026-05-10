@@ -38,7 +38,8 @@ export async function updateProfile(req, res) {
     const data = {};
 
     if (name) data.name = name;
-    if (req.body.phone !== undefined) data.phone = req.body.phone;  // ADD THIS
+    if (req.body.phone !== undefined) data.phone = req.body.phone;
+    if (req.body.profilePhoto !== undefined) data.profilePhoto = req.body.profilePhoto;
 
 
     if (email) {
@@ -63,7 +64,8 @@ export async function updateProfile(req, res) {
       name: true,
       role: true,
       profilePhoto: true,
-      phone: true,  
+      phone: true,
+      repPoints: true,  
       createdAt: true,
 },
     });
