@@ -44,6 +44,7 @@ export default function AddPartScreen() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
+  const [contactPreference, setContactPreference] = useState("EMAIL");
 
   const handlePickPhoto = async () => {
   Alert.alert(
@@ -174,13 +175,14 @@ export default function AddPartScreen() {
     try {
       setSubmitting(true);
       await api.post("/api/parts", {
-        title,
-        description,
-        category,
-        condition,
-        priceType,
-        price: priceType !== "TRADE" && priceType !== "FREE" && price ? parseFloat(price) : null,
-        imageUrl,
+      title,
+      description,
+      category,
+      condition,
+      priceType,
+      price: priceType !== "TRADE" && priceType !== "FREE" && price ? parseFloat(price) : null,
+      imageUrl,
+      contactPreference,
       });
       Alert.alert("🔩 Listed!", "Your part is now listed.", [
         { text: "View Listings", onPress: () => router.push("/(tabs)/(parts)") },
@@ -354,6 +356,29 @@ export default function AddPartScreen() {
             </TouchableOpacity>
           ))}
         </View>
+
+        {/* CONTACT PREFERENCE */}
+<Text style={label}>Contact Preference *</Text>
+<View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
+  {["EMAIL", "PHONE", "BOTH"].map((pref) => (
+    <TouchableOpacity
+      key={pref}
+      onPress={() => setContactPreference(pref)}
+      style={{
+        backgroundColor: contactPreference === pref ? "#345bff" : "#11131a",
+        paddingHorizontal: 14,
+        paddingVertical: 8,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: contactPreference === pref ? "#345bff" : "#252838",
+      }}
+    >
+      <Text style={{ color: contactPreference === pref ? "white" : "#9ca3af", fontWeight: "600", fontSize: 13 }}>
+        {pref === "EMAIL" ? "📧 Email" : pref === "PHONE" ? "📞 Phone" : "📧📞 Both"}
+      </Text>
+    </TouchableOpacity>
+  ))}
+</View>
 
         {/* PRICE TYPE */}
         <Text style={label}>Listing Type *</Text>

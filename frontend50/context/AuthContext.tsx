@@ -22,27 +22,29 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     const restoreSession = async () => {
+  try {
+    const token = await AsyncStorage.getItem("token");
+    const userData = await AsyncStorage.getItem("user");
+    if (token && userData) {
+      api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+      const parsed = JSON.parse(userData);
+      setUser(parsed);
+      // Refresh user from API to get latest data
       try {
-        console.log("AUTH RESTORE: starting restoreSession");
-        const token = await AsyncStorage.getItem("token");
-        const userData = await AsyncStorage.getItem("user");
-        console.log("AUTH RESTORE: token from storage =", token);
-        console.log("AUTH RESTORE: user from storage =", userData);
-        if (token && userData) {
-          api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-          const parsed = JSON.parse(userData);
-          console.log("AUTH RESTORE: parsed user =", parsed);
-          setUser(parsed);
-        } else {
-          console.log("AUTH RESTORE: no token or user found");
-        }
+        const res = await api.get("/api/users/me");
+        const freshUser = res.data;
+        await AsyncStorage.setItem("user", JSON.stringify(freshUser));
+        setUser(freshUser);
       } catch (err) {
-        console.error("AUTH RESTORE ERROR:", err);
-      } finally {
-        console.log("AUTH RESTORE: finished, setting loading = false");
-        setLoading(false);
+        console.error("AUTH RESTORE: could not refresh user", err);
       }
-    };
+    }
+  } catch (err) {
+    console.error("AUTH RESTORE ERROR:", err);
+  } finally {
+    setLoading(false);
+  }
+};
     restoreSession();
   }, []);
 
@@ -110,15 +112,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const updateProfilePhoto = async (url: string) => {
   try {
+    console.log("UPDATING PHOTO TO:", url);
     const res = await api.put("/api/users/me", { profilePhoto: url });
+    console.log("UPDATE RESPONSE:", res.data);
     const updatedUser = { ...user, ...res.data, profilePhoto: url };
+    console.log("UPDATED USER:", updatedUser);
     await AsyncStorage.setItem("user", JSON.stringify(updatedUser));
     setUser(updatedUser);
   } catch (err) {
     console.error("AUTH: failed to update profile photo", err);
     throw err;
   }
-};
+  };
 
   const updateName = async (name: string) => {
     try {
