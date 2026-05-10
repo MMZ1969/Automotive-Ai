@@ -255,4 +255,75 @@ export const completeJob = async (req, res) => {
     console.error("COMPLETE JOB ERROR:", err);
     res.status(500).json({ error: "Failed to complete job" });
   }
+  // STATUS UPDATE on a job (mechanic sends preset message to customer)
+export const sendStatusUpdate = async (req, res) => {
+  try {
+    const jobId = Number(req.params.id);
+    const mechanicId = req.user.id;
+    const { message } = req.body;
+
+    const job = await prisma.job.findUnique({
+      where: { id: jobId },
+      include: { poster: { select: { id: true, name: true } } },
+    });
+
+    if (!job) return res.status(404).json({ error: "Job not found" });
+
+    const mechanic = await prisma.user.findUnique({
+      where: { id: mechanicId },
+      select: { name: true },
+    });
+
+    await createAndSendNotification({
+      recipientId: job.userId,
+      actorId: mechanicId,
+      type: "job_update",
+      message: `🔧 ${mechanic?.name || "Your mechanic"}: ${message}`,
+    });
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("STATUS UPDATE ERROR:", err);
+    res.status(500).json({ error: "Failed to send status update" });
+  }
+};
+
+// QUICK ALERT — no job needed, mechanic sends alert to any user by ID
+export const sendQuickAlert = async (req, res) => {
+  try {
+    const mechanicId = req.user.id;
+    const { customerId, message } = req.body;
+
+    if (!customerId || !message) {
+      return res.status(400).json({ error: "Customer ID and message are required" });
+    }
+
+    const mechanic = await prisma.user.findUnique({
+      where: { id: mechanicId },
+      select: { name: true, role: true },
+    });
+
+    if (mechanic?.role !== "MECHANIC") {
+      return res.status(403).json({ error: "Only mechanics can send quick alerts" });
+    }
+
+    const customer = await prisma.user.findUnique({
+      where: { id: Number(customerId) },
+    });
+
+    if (!customer) return res.status(404).json({ error: "Customer not found" });
+
+    await createAndSendNotification({
+      recipientId: Number(customerId),
+      actorId: mechanicId,
+      type: "job_update",
+      message: `🔧 ${mechanic?.name || "Your mechanic"}: ${message}`,
+    });
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("QUICK ALERT ERROR:", err);
+    res.status(500).json({ error: "Failed to send quick alert" });
+  }
+};
 };
