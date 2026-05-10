@@ -24,7 +24,7 @@ export default function Feed() {
   const [followingCount, setFollowingCount] = useState(0);
   const [repPoints, setRepPoints] = useState(0);
   const [activeTab, setActiveTab] = useState<"forYou" | "following">("forYou");
-  const [postFilter, setPostFilter] = useState<"ALL" | "VANITY" | "QUESTION">("ALL");
+  const [postFilter, setPostFilter] = useState<"ALL" | "VANITY" | "QUESTION" | "SERVICE">("ALL");
   const [menuPost, setMenuPost] = useState<any>(null);
 
   const fetchPosts = async (tab = activeTab, filter = postFilter) => {
@@ -78,7 +78,7 @@ export default function Feed() {
     fetchPosts(tab, postFilter);
   };
 
-  const handleFilterChange = (filter: "ALL" | "VANITY" | "QUESTION") => {
+  const handleFilterChange = (filter: "ALL" | "VANITY" | "QUESTION" | "SERVICE") => {
     setPostFilter(filter);
     setLoading(true);
     fetchPosts(activeTab, filter);
@@ -320,6 +320,7 @@ export default function Feed() {
             { label: "All", value: "ALL" },
             { label: "🚗 Vanity", value: "VANITY" },
             { label: "🔧 Questions", value: "QUESTION" },
+            { label: "🏁 Services", value: "SERVICE" },
           ].map((f) => (
             <TouchableOpacity
               key={f.value}
@@ -373,18 +374,18 @@ export default function Feed() {
             padding: 16,
           }}>
             {/* POST TYPE BADGE */}
-            <View style={{
-              alignSelf: "flex-start",
-              backgroundColor: item.postType === "QUESTION" ? "#1e3a8a" : "#064e3b",
-              paddingHorizontal: 10,
-              paddingVertical: 3,
-              borderRadius: 10,
-              marginBottom: 10,
-            }}>
-              <Text style={{ color: "white", fontSize: 11, fontWeight: "600" }}>
-                {item.postType === "QUESTION" ? "🔧 Question" : "🚗 Vanity"}
-              </Text>
-            </View>
+          <View style={{
+            alignSelf: "flex-start",
+            backgroundColor: item.postType === "QUESTION" ? "#1e3a8a" : item.postType === "SERVICE" ? "#78350f" : "#064e3b",
+            paddingHorizontal: 10,
+            paddingVertical: 3,
+            borderRadius: 10,
+            marginBottom: 10,
+       }}>
+            <Text style={{ color: "white", fontSize: 11, fontWeight: "600" }}>
+             {item.postType === "QUESTION" ? "🔧 Question" : item.postType === "SERVICE" ? "🏁 Service" : "🚗 Vanity"}
+            </Text>
+          </View>
 
             {/* POST HEADER */}
             <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
