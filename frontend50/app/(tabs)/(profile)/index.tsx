@@ -1,8 +1,9 @@
 import { useAuth } from "@context/AuthContext";
+import api from "@lib/api";
 import * as ImagePicker from "expo-image-picker";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { getDownloadURL, ref, uploadBytesResumable } from "firebase/storage";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -10,7 +11,7 @@ import {
   ScrollView,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 import { storage } from "../../../firebaseConfig";
 
@@ -19,6 +20,27 @@ export default function Profile() {
   const router = useRouter();
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [vanityPosts, setVanityPosts] = useState<any[]>([]);
+  const [loadingPosts, setLoadingPosts] = useState(true);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchVanityPosts();
+    }, [])
+  );
+
+  const fetchVanityPosts = async () => {
+    try {
+      setLoadingPosts(true);
+      const res = await api.get(`/api/posts?type=VANITY`);
+      const myPosts = res.data.filter((p: any) => p.userId === user?.id);
+      setVanityPosts(myPosts);
+    } catch (err) {
+      console.error("FETCH VANITY POSTS ERROR:", err);
+    } finally {
+      setLoadingPosts(false);
+    }
+  };
 
   if (!user) {
     return (
@@ -84,13 +106,16 @@ export default function Profile() {
     }
   };
 
+  const GRID_SIZE = 3;
+  const itemSize = 80;
+
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: "#050509" }}
       contentContainerStyle={{ padding: 20 }}
     >
       {/* PROFILE PHOTO + USER HEADER */}
-      <View style={{ alignItems: "center", marginBottom: 30, marginTop: 20 }}>
+      <View style={{ alignItems: "center", marginBottom: 24, marginTop: 20 }}>
         <TouchableOpacity onPress={handlePickPhoto} disabled={uploading}>
           <View style={{
             width: 100,
@@ -141,6 +166,72 @@ export default function Profile() {
         </View>
       </View>
 
+      {/* RIDES & BUILDS GALLERY */}
+      <View style={{
+        backgroundColor: "#11131a",
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: "#252838",
+        padding: 16,
+        marginBottom: 20,
+      }}>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+          <Text style={{ color: "white", fontSize: 18, fontWeight: "800" }}>
+            🚗 Rides & Builds
+          </Text>
+          <TouchableOpacity onPress={() => router.push("/(tabs)/create")}>
+            <Text style={{ color: "#345bff", fontSize: 13 }}>+ Add</Text>
+          </TouchableOpacity>
+        </View>
+
+        {loadingPosts ? (
+          <ActivityIndicator color="#345bff" />
+        ) : vanityPosts.length === 0 ? (
+          <View style={{ alignItems: "center", paddingVertical: 24 }}>
+            <Text style={{ fontSize: 36, marginBottom: 8 }}>📸</Text>
+            <Text style={{ color: "#9ca3af", fontSize: 14, textAlign: "center" }}>
+              No builds posted yet.{"\n"}Share your first ride!
+            </Text>
+          </View>
+        ) : (
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 4 }}>
+            {vanityPosts.map((post) => (
+              <TouchableOpacity
+                key={post.id}
+                onPress={() => router.push(`/(tabs)/post/${post.id}`)}
+                style={{
+                  width: itemSize,
+                  height: itemSize,
+                  borderRadius: 10,
+                  overflow: "hidden",
+                  backgroundColor: "#252838",
+                }}
+              >
+                {post.imageUrl ? (
+                  <Image
+                    source={{ uri: post.imageUrl }}
+                    style={{ width: itemSize, height: itemSize }}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <View style={{
+                    flex: 1,
+                    justifyContent: "center",
+                    alignItems: "center",
+                    padding: 8,
+                  }}>
+                    <Text style={{ fontSize: 20, marginBottom: 4 }}>🚗</Text>
+                    <Text style={{ color: "#9ca3af", fontSize: 10, textAlign: "center" }} numberOfLines={3}>
+                      {post.content}
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+      </View>
+
       {/* MECHANIC DASHBOARD LINK */}
       {isMechanic && (
         <TouchableOpacity
@@ -152,7 +243,7 @@ export default function Profile() {
         </TouchableOpacity>
       )}
 
-      {/* JOBS — DIYer posts jobs, Mechanic browses jobs */}
+      {/* JOBS */}
       <TouchableOpacity
         onPress={() => router.push("/(tabs)/mechanic/jobs")}
         style={[actionCard, { borderColor: "#345bff44", backgroundColor: "#0f1628" }]}
