@@ -299,3 +299,32 @@ export const getSimilarPosts = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch similar posts" });
   }
 };
+// PIN / UNPIN a post (admin only)
+export const togglePinPost = async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const userId = req.user.id;
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { isAdmin: true },
+    });
+
+    if (!user?.isAdmin) {
+      return res.status(403).json({ error: "Not authorized" });
+    }
+
+    const post = await prisma.post.findUnique({ where: { id } });
+    if (!post) return res.status(404).json({ error: "Post not found" });
+
+    const updated = await prisma.post.update({
+      where: { id },
+      data: { pinned: !post.pinned },
+    });
+
+    res.json({ pinned: updated.pinned });
+  } catch (err) {
+    console.error("TOGGLE PIN ERROR:", err);
+    res.status(500).json({ error: "Failed to toggle pin" });
+  }
+};

@@ -17,5 +17,6 @@ router.delete("/:id", authMiddleware, postsController.deletePost);
 router.post("/:id/like", authMiddleware, postsController.toggleLike);
 router.post("/:id/comments", authMiddleware, postsController.addComment);
 router.post("/:id/report", authMiddleware, reportPost);
+router.post("/:id/pin", authMiddleware, postsController.togglePinPost);
 
 export default router;
