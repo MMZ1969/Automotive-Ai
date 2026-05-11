@@ -72,10 +72,21 @@ export default function Jobs() {
   };
 
   const handleCreateJob = async () => {
-    if (!title.trim() || !description.trim() || !vehicle.trim()) {
-      Alert.alert("Missing fields", "Title, description and vehicle are required.");
-      return;
-    }
+  if (!user?.phone) {
+    Alert.alert(
+      "📞 Phone Number Required",
+      "Mechanics need a way to contact you. Please add your phone number in Settings before posting a job.",
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Go to Settings", onPress: () => router.push("/(tabs)/(profile)/settings") },
+      ]
+    );
+    return;
+  }
+  if (!title.trim() || !description.trim() || !vehicle.trim()) {
+    Alert.alert("Missing fields", "Title, description and vehicle are required.");
+    return;
+  }
     try {
       setCreating(true);
       await api.post("/api/jobs", { title, description, vehicle, budget, location });
