@@ -271,6 +271,7 @@ export const searchPosts = async (req, res) => {
     console.error("SEARCH POSTS ERROR:", err);
     res.status(500).json({ error: "Failed to search posts" });
   }
+};
   // GET SIMILAR POSTS
 export const getSimilarPosts = async (req, res) => {
   try {
@@ -297,5 +298,4 @@ export const getSimilarPosts = async (req, res) => {
     console.error("GET SIMILAR POSTS ERROR:", err);
     res.status(500).json({ error: "Failed to fetch similar posts" });
   }
-};
 };
