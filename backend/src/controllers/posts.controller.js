@@ -8,7 +8,10 @@ export const getAllPosts = async (req, res) => {
     const where = type && type !== "ALL" ? { postType: type } : {};
     const posts = await prisma.post.findMany({
       where,
-      orderBy: { createdAt: "desc" },
+      orderBy: [
+        {pinned: "desc"},
+       { createdAt: "desc" },
+      ],
       include: {
         user: true,
         comments: { include: { user: true }, orderBy: { createdAt: "asc" } },
@@ -201,7 +204,10 @@ export const getFollowingPosts = async (req, res) => {
     };
     const posts = await prisma.post.findMany({
       where,
-      orderBy: { createdAt: "desc" },
+      orderBy: [
+  { pinned: "desc" },
+  { createdAt: "desc" },
+  ],
       include: {
         user: true,
         comments: { include: { user: true }, orderBy: { createdAt: "asc" } },
