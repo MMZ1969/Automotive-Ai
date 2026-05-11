@@ -11,6 +11,7 @@ router.get("/following", authMiddleware, postsController.getFollowingPosts);
 router.get("/search", authMiddleware, postsController.searchPosts);
 router.post("/", authMiddleware, postsController.createPost);
 router.get("/:id", postsController.getPostById);
+router.get("/:id/similar", authMiddleware, postsController.getSimilarPosts);
 router.put("/:id", authMiddleware, postsController.updatePost);
 router.delete("/:id", authMiddleware, postsController.deletePost);
 router.post("/:id/like", authMiddleware, postsController.toggleLike);
