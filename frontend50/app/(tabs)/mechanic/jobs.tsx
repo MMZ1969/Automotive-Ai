@@ -27,6 +27,7 @@ export default function Jobs() {
   const [showBidModal, setShowBidModal] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
+  const [mechanicView, setMechanicView] = useState<"browse" | "mine">("browse");
   const [selectedJob, setSelectedJob] = useState<any>(null);
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState("");
@@ -46,7 +47,9 @@ export default function Jobs() {
   const fetchJobs = async () => {
     try {
       const res = isMechanic
-        ? await api.get("/api/jobs")
+        ? mechanicView === "browse"
+          ? await api.get("/api/jobs")
+          : await api.get("/api/jobs/my-bids")
         : await api.get("/api/jobs/mine");
       setJobs(res.data);
     } catch (err) {
@@ -60,7 +63,7 @@ export default function Jobs() {
   useFocusEffect(
     useCallback(() => {
       fetchJobs();
-    }, [])
+    }, [mechanicView])
   );
 
   const onRefresh = () => {
@@ -306,74 +309,119 @@ export default function Jobs() {
           </ScrollView>
         </KeyboardAvoidingView>
       </Modal>
+
       {/* STATUS UPDATE MODAL */}
-<Modal visible={showStatusModal} animationType="slide" transparent>
-  <TouchableOpacity
-    style={{ flex: 1, backgroundColor: "#00000088", justifyContent: "flex-end" }}
-    onPress={() => setShowStatusModal(false)}
-  >
-    <View style={{ backgroundColor: "#11131a", borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20 }}>
-      <Text style={{ color: "white", fontSize: 22, fontWeight: "900", marginBottom: 4 }}>📢 Send Update</Text>
-      <Text style={{ color: "#9ca3af", fontSize: 13, marginBottom: 20 }}>{selectedJob?.title}</Text>
-      {[
-        "🚗 Your vehicle is ready for pickup!",
-        "🔧 Work is in progress on your vehicle",
-        "🔍 Still diagnosing the issue",
-        "💰 Estimate is ready — please call us",
-        "⏳ Waiting on parts to arrive",
-        "✅ Job is complete!",
-      ].map((msg) => (
+      <Modal visible={showStatusModal} animationType="slide" transparent>
         <TouchableOpacity
-          key={msg}
-          onPress={async () => {
-            try {
-              await api.post(`/api/jobs/${selectedJob.id}/status-update`, { message: msg });
-              setShowStatusModal(false);
-              Alert.alert("✅ Sent!", "Customer has been notified.");
-            } catch (err) {
-              Alert.alert("Error", "Could not send update. Try again.");
-            }
-          }}
-          style={{
-            backgroundColor: "#11131a",
-            borderWidth: 1,
-            borderColor: "#252838",
-            padding: 14,
-            borderRadius: 12,
-            marginBottom: 10,
-          }}
+          style={{ flex: 1, backgroundColor: "#00000088", justifyContent: "flex-end" }}
+          onPress={() => setShowStatusModal(false)}
         >
-          <Text style={{ color: "white", fontSize: 15 }}>{msg}</Text>
+          <View style={{ backgroundColor: "#11131a", borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20 }}>
+            <Text style={{ color: "white", fontSize: 22, fontWeight: "900", marginBottom: 4 }}>📢 Send Update</Text>
+            <Text style={{ color: "#9ca3af", fontSize: 13, marginBottom: 20 }}>{selectedJob?.title}</Text>
+            {[
+              "🚗 Your vehicle is ready for pickup!",
+              "🔧 Work is in progress on your vehicle",
+              "🔍 Still diagnosing the issue",
+              "💰 Estimate is ready — please call us",
+              "⏳ Waiting on parts to arrive",
+              "✅ Job is complete!",
+            ].map((msg) => (
+              <TouchableOpacity
+                key={msg}
+                onPress={async () => {
+                  try {
+                    await api.post(`/api/jobs/${selectedJob.id}/status-update`, { message: msg });
+                    setShowStatusModal(false);
+                    Alert.alert("✅ Sent!", "Customer has been notified.");
+                  } catch (err) {
+                    Alert.alert("Error", "Could not send update. Try again.");
+                  }
+                }}
+                style={{
+                  backgroundColor: "#050509",
+                  borderWidth: 1,
+                  borderColor: "#252838",
+                  padding: 14,
+                  borderRadius: 12,
+                  marginBottom: 10,
+                }}
+              >
+                <Text style={{ color: "white", fontSize: 15 }}>{msg}</Text>
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity
+              onPress={() => setShowStatusModal(false)}
+              style={{ backgroundColor: "#252838", padding: 14, borderRadius: 12, alignItems: "center", marginTop: 4, marginBottom: 20 }}
+            >
+              <Text style={{ color: "white", fontWeight: "700" }}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
         </TouchableOpacity>
-      ))}
-      <TouchableOpacity
-        onPress={() => setShowStatusModal(false)}
-        style={{ backgroundColor: "#252838", padding: 14, borderRadius: 12, alignItems: "center", marginTop: 4, marginBottom: 20 }}
-      >
-        <Text style={{ color: "white", fontWeight: "700" }}>Cancel</Text>
-      </TouchableOpacity>
-    </View>
-  </TouchableOpacity>
       </Modal>
 
       {/* HEADER */}
       <View style={{
         paddingTop: 60, paddingHorizontal: 20, paddingBottom: 16,
         borderBottomWidth: 1, borderBottomColor: "#252838",
-        flexDirection: "row", alignItems: "center", justifyContent: "space-between",
       }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-          <TouchableOpacity onPress={() => router.back()}>
-            <Text style={{ color: "#345bff", fontSize: 16 }}>← Back</Text>
-          </TouchableOpacity>
-          <Text style={{ color: "white", fontSize: 22, fontWeight: "900" }}>
-            {isMechanic ? "🔧 Open Jobs" : "💼 My Jobs"}
-          </Text>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+            <TouchableOpacity onPress={() => router.back()}>
+              <Text style={{ color: "#345bff", fontSize: 16 }}>← Back</Text>
+            </TouchableOpacity>
+            <Text style={{ color: "white", fontSize: 22, fontWeight: "900" }}>
+              {isMechanic ? "🔧 Jobs" : "💼 My Jobs"}
+            </Text>
+          </View>
+          {!isMechanic && (
+            <TouchableOpacity onPress={() => setShowCreateModal(true)} style={{ backgroundColor: "#345bff", paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10 }}>
+              <Text style={{ color: "white", fontWeight: "700" }}>+ Post Job</Text>
+            </TouchableOpacity>
+          )}
         </View>
-        {!isMechanic && (
-          <TouchableOpacity onPress={() => setShowCreateModal(true)} style={{ backgroundColor: "#345bff", paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10 }}>
-            <Text style={{ color: "white", fontWeight: "700" }}>+ Post Job</Text>
-          </TouchableOpacity>
+
+        {/* MECHANIC VIEW TOGGLE */}
+        {isMechanic && (
+          <View style={{
+            flexDirection: "row",
+            backgroundColor: "#11131a",
+            borderRadius: 12,
+            padding: 4,
+          }}>
+            <TouchableOpacity
+              onPress={() => setMechanicView("browse")}
+              style={{
+                flex: 1,
+                paddingVertical: 8,
+                borderRadius: 10,
+                alignItems: "center",
+                backgroundColor: mechanicView === "browse" ? "#345bff" : "transparent",
+              }}
+            >
+              <Text style={{
+                color: mechanicView === "browse" ? "white" : "#6b7280",
+                fontWeight: "700",
+                fontSize: 14,
+              }}>🔍 Browse Jobs</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setMechanicView("mine")}
+              style={{
+                flex: 1,
+                paddingVertical: 8,
+                borderRadius: 10,
+                alignItems: "center",
+                backgroundColor: mechanicView === "mine" ? "#345bff" : "transparent",
+              }}
+            >
+              <Text style={{
+                color: mechanicView === "mine" ? "white" : "#6b7280",
+                fontWeight: "700",
+                fontSize: 14,
+              }}>🔧 My Jobs</Text>
+            </TouchableOpacity>
+          </View>
         )}
       </View>
 
@@ -386,10 +434,10 @@ export default function Jobs() {
           <View style={{ alignItems: "center", marginTop: 60 }}>
             <Text style={{ fontSize: 48 }}>💼</Text>
             <Text style={{ color: "white", fontSize: 18, fontWeight: "700", marginTop: 16 }}>
-              {isMechanic ? "No open jobs yet" : "No jobs posted yet"}
+              {isMechanic ? mechanicView === "browse" ? "No open jobs yet" : "No active jobs yet" : "No jobs posted yet"}
             </Text>
             <Text style={{ color: "#9ca3af", marginTop: 8, textAlign: "center" }}>
-              {isMechanic ? "Check back soon — DIYers will post jobs here" : "Post a job and mechanics will bid on it!"}
+              {isMechanic ? mechanicView === "browse" ? "Check back soon — DIYers will post jobs here" : "Jobs where your bid was accepted will appear here" : "Post a job and mechanics will bid on it!"}
             </Text>
             {!isMechanic && (
               <TouchableOpacity onPress={() => setShowCreateModal(true)} style={{ backgroundColor: "#345bff", padding: 14, borderRadius: 12, marginTop: 20, paddingHorizontal: 30 }}>
@@ -401,21 +449,21 @@ export default function Jobs() {
         renderItem={({ item }) => (
           <View style={{ backgroundColor: "#11131a", borderRadius: 16, borderWidth: 1, borderColor: "#252838", padding: 16, marginBottom: 14 }}>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
-              <Text style={{ color: "white", fontSize: 17, fontWeight: "700", flex: 1 }}>{item.title}</Text>
-              <View style={{ backgroundColor: statusColor(item.status) + "22", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10, borderWidth: 1, borderColor: statusColor(item.status), marginLeft: 8 }}>
-                <Text style={{ color: statusColor(item.status), fontSize: 11, fontWeight: "700" }}>{item.status}</Text>
+              <Text style={{ color: "white", fontSize: 17, fontWeight: "700", flex: 1 }}>{item.title || item.job?.title}</Text>
+              <View style={{ backgroundColor: statusColor(item.status || item.job?.status) + "22", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10, borderWidth: 1, borderColor: statusColor(item.status || item.job?.status), marginLeft: 8 }}>
+                <Text style={{ color: statusColor(item.status || item.job?.status), fontSize: 11, fontWeight: "700" }}>{item.status || item.job?.status}</Text>
               </View>
             </View>
-            <Text style={{ color: "#9ca3af", fontSize: 13, marginBottom: 8 }}>🚗 {item.vehicle}</Text>
-            <Text style={{ color: "#e5e7eb", fontSize: 14, lineHeight: 20, marginBottom: 8 }}>{item.description}</Text>
+            <Text style={{ color: "#9ca3af", fontSize: 13, marginBottom: 8 }}>🚗 {item.vehicle || item.job?.vehicle}</Text>
+            <Text style={{ color: "#e5e7eb", fontSize: 14, lineHeight: 20, marginBottom: 8 }}>{item.description || item.job?.description}</Text>
             <View style={{ flexDirection: "row", gap: 16, marginBottom: 12 }}>
-              {item.budget && <Text style={{ color: "#10b981", fontSize: 13, fontWeight: "700" }}>💰 Budget: ${item.budget}</Text>}
-              {item.location && <Text style={{ color: "#9ca3af", fontSize: 13 }}>📍 {item.location}</Text>}
+              {(item.budget || item.job?.budget) && <Text style={{ color: "#10b981", fontSize: 13, fontWeight: "700" }}>💰 Budget: ${item.budget || item.job?.budget}</Text>}
+              {(item.location || item.job?.location) && <Text style={{ color: "#9ca3af", fontSize: 13 }}>📍 {item.location || item.job?.location}</Text>}
             </View>
-            {isMechanic && item.poster && (
+            {isMechanic && mechanicView === "browse" && item.poster && (
               <Text style={{ color: "#6b7280", fontSize: 12, marginBottom: 12 }}>Posted by {item.poster.name || "Anonymous"}</Text>
             )}
-            {item.bids?.length > 0 && (
+            {mechanicView === "browse" && item.bids?.length > 0 && (
               <View style={{ backgroundColor: "#050509", borderRadius: 10, padding: 12, marginBottom: 12 }}>
                 <Text style={{ color: "#9ca3af", fontSize: 13, fontWeight: "700", marginBottom: 8 }}>
                   {item.bids.length} Bid{item.bids.length !== 1 ? "s" : ""}
@@ -442,14 +490,14 @@ export default function Jobs() {
               </View>
             )}
             <View style={{ flexDirection: "row", gap: 10 }}>
-              {isMechanic && item.status === "OPEN" && (
+              {isMechanic && mechanicView === "browse" && item.status === "OPEN" && (
                 <TouchableOpacity onPress={() => { setSelectedJob(item); setShowBidModal(true); }} style={{ flex: 1, backgroundColor: "#345bff", padding: 12, borderRadius: 10, alignItems: "center" }}>
                   <Text style={{ color: "white", fontWeight: "700" }}>🔧 Place Bid</Text>
                 </TouchableOpacity>
               )}
-              {isMechanic && item.status === "IN_PROGRESS" && (
+              {isMechanic && (item.status === "IN_PROGRESS" || item.job?.status === "IN_PROGRESS") && (
                 <TouchableOpacity
-                  onPress={() => { setSelectedJob(item); setShowStatusModal(true); }}
+                  onPress={() => { setSelectedJob(item.job || item); setShowStatusModal(true); }}
                   style={{ flex: 1, backgroundColor: "#f59e0b", padding: 12, borderRadius: 10, alignItems: "center" }}
                 >
                   <Text style={{ color: "white", fontWeight: "700" }}>📢 Send Update</Text>
