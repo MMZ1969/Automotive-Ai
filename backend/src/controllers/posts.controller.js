@@ -271,4 +271,31 @@ export const searchPosts = async (req, res) => {
     console.error("SEARCH POSTS ERROR:", err);
     res.status(500).json({ error: "Failed to search posts" });
   }
+  // GET SIMILAR POSTS
+export const getSimilarPosts = async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const post = await prisma.post.findUnique({ where: { id } });
+    if (!post) return res.status(404).json({ error: "Post not found" });
+
+    const similar = await prisma.post.findMany({
+      where: {
+        postType: post.postType,
+        id: { not: id },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 10,
+      include: {
+        user: { select: { id: true, name: true, profilePhoto: true, role: true } },
+        likes: true,
+        comments: true,
+      },
+    });
+
+    res.json(similar);
+  } catch (err) {
+    console.error("GET SIMILAR POSTS ERROR:", err);
+    res.status(500).json({ error: "Failed to fetch similar posts" });
+  }
+};
 };
