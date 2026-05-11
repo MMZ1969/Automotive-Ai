@@ -3,14 +3,14 @@ import api from "@lib/api";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    Image,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Image,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 const PRESET_MESSAGES = [
@@ -132,17 +132,10 @@ export default function QuickAlertScreen() {
                 }
                 renderItem={({ item }) => (
                   <TouchableOpacity
-                    onPress={() => setSelectedCustomer(item)}
-                    style={{
-                      backgroundColor: "#11131a",
-                      borderRadius: 12,
-                      borderWidth: 1,
-                      borderColor: "#252838",
-                      padding: 14,
-                      flexDirection: "row",
-                      alignItems: "center",
-                      gap: 12,
-                      marginBottom: 10,
+                    onPress={() => {
+                      setSelectedCustomer(item);
+                      setResults([]);
+                      setQuery("");
                     }}
                   >
                     <View style={{
