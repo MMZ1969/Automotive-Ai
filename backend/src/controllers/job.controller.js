@@ -209,6 +209,12 @@ export const acceptBid = async (req, res) => {
       data: { status: "ACCEPTED" },
     });
 
+    // Get all the losing bids BEFORE we reject them so we have their mechanic IDs
+    const losingBids = await prisma.bid.findMany({
+      where: { jobId: bid.jobId, id: { not: bidId } },
+      select: { mechanicId: true },
+    });
+
     await prisma.bid.updateMany({
       where: { jobId: bid.jobId, id: { not: bidId } },
       data: { status: "REJECTED" },
@@ -219,12 +225,25 @@ export const acceptBid = async (req, res) => {
       select: { name: true, email: true, phone: true },
     });
 
+    // Notify the WINNING mechanic
     await createAndSendNotification({
       recipientId: bid.mechanicId,
       actorId: userId,
       type: "bid_accepted",
       message: `${poster?.name || "Someone"} accepted your bid! 🎉 Contact them at ${poster?.phone || poster?.email} to get started.`,
     });
+
+    // Notify all the LOSING mechanics
+    await Promise.all(
+      losingBids.map(losingBid =>
+        createAndSendNotification({
+          recipientId: losingBid.mechanicId,
+          actorId: userId,
+          type: "bid_rejected",
+          message: `Another mechanic was selected for this job. Keep bidding — your next job is out there! 🔧`,
+        })
+      )
+    );
 
     res.json({ success: true });
   } catch (err) {
