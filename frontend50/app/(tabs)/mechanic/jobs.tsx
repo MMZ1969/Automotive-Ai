@@ -26,6 +26,7 @@ export default function Jobs() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showBidModal, setShowBidModal] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
+  const [showStatusModal, setShowStatusModal] = useState(false);
   const [selectedJob, setSelectedJob] = useState<any>(null);
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState("");
@@ -305,6 +306,55 @@ export default function Jobs() {
           </ScrollView>
         </KeyboardAvoidingView>
       </Modal>
+      {/* STATUS UPDATE MODAL */}
+<Modal visible={showStatusModal} animationType="slide" transparent>
+  <TouchableOpacity
+    style={{ flex: 1, backgroundColor: "#00000088", justifyContent: "flex-end" }}
+    onPress={() => setShowStatusModal(false)}
+  >
+    <View style={{ backgroundColor: "#11131a", borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20 }}>
+      <Text style={{ color: "white", fontSize: 22, fontWeight: "900", marginBottom: 4 }}>📢 Send Update</Text>
+      <Text style={{ color: "#9ca3af", fontSize: 13, marginBottom: 20 }}>{selectedJob?.title}</Text>
+      {[
+        "🚗 Your vehicle is ready for pickup!",
+        "🔧 Work is in progress on your vehicle",
+        "🔍 Still diagnosing the issue",
+        "💰 Estimate is ready — please call us",
+        "⏳ Waiting on parts to arrive",
+        "✅ Job is complete!",
+      ].map((msg) => (
+        <TouchableOpacity
+          key={msg}
+          onPress={async () => {
+            try {
+              await api.post(`/api/jobs/${selectedJob.id}/status-update`, { message: msg });
+              setShowStatusModal(false);
+              Alert.alert("✅ Sent!", "Customer has been notified.");
+            } catch (err) {
+              Alert.alert("Error", "Could not send update. Try again.");
+            }
+          }}
+          style={{
+            backgroundColor: "#11131a",
+            borderWidth: 1,
+            borderColor: "#252838",
+            padding: 14,
+            borderRadius: 12,
+            marginBottom: 10,
+          }}
+        >
+          <Text style={{ color: "white", fontSize: 15 }}>{msg}</Text>
+        </TouchableOpacity>
+      ))}
+      <TouchableOpacity
+        onPress={() => setShowStatusModal(false)}
+        style={{ backgroundColor: "#252838", padding: 14, borderRadius: 12, alignItems: "center", marginTop: 4, marginBottom: 20 }}
+      >
+        <Text style={{ color: "white", fontWeight: "700" }}>Cancel</Text>
+      </TouchableOpacity>
+    </View>
+  </TouchableOpacity>
+      </Modal>
 
       {/* HEADER */}
       <View style={{
@@ -395,6 +445,14 @@ export default function Jobs() {
               {isMechanic && item.status === "OPEN" && (
                 <TouchableOpacity onPress={() => { setSelectedJob(item); setShowBidModal(true); }} style={{ flex: 1, backgroundColor: "#345bff", padding: 12, borderRadius: 10, alignItems: "center" }}>
                   <Text style={{ color: "white", fontWeight: "700" }}>🔧 Place Bid</Text>
+                </TouchableOpacity>
+              )}
+              {isMechanic && item.status === "IN_PROGRESS" && (
+                <TouchableOpacity
+                  onPress={() => { setSelectedJob(item); setShowStatusModal(true); }}
+                  style={{ flex: 1, backgroundColor: "#f59e0b", padding: 12, borderRadius: 10, alignItems: "center" }}
+                >
+                  <Text style={{ color: "white", fontWeight: "700" }}>📢 Send Update</Text>
                 </TouchableOpacity>
               )}
               {!isMechanic && item.status === "IN_PROGRESS" && (
