@@ -254,7 +254,7 @@ export const completeJob = async (req, res) => {
   } catch (err) {
     console.error("COMPLETE JOB ERROR:", err);
     res.status(500).json({ error: "Failed to complete job" });
-  }
+  };
   // STATUS UPDATE on a job (mechanic sends preset message to customer)
 export const sendStatusUpdate = async (req, res) => {
   try {
