@@ -134,6 +134,17 @@ export default function Feed() {
     );
   };
 
+  const handlePinPost = async (postId: number) => {
+    try {
+      await api.post(`/api/posts/${postId}/pin`);
+      setMenuPost(null);
+      fetchPosts(activeTab, postFilter);
+    } catch (err) {
+      console.error("PIN ERROR:", err);
+      Alert.alert("Error", "Could not pin post. Try again.");
+    }
+  };
+
   const submitReport = async (postId: number, reason: string) => {
     try {
       await api.post(`/api/posts/${postId}/report`, { reason });
@@ -177,6 +188,25 @@ export default function Feed() {
             padding: 20,
             gap: 12,
           }}>
+            {/* ADMIN PIN BUTTON — only visible to you */}
+            {user?.id === 1 && (
+              <TouchableOpacity
+                onPress={() => handlePinPost(menuPost?.id)}
+                style={{
+                  backgroundColor: "#1a1a2e",
+                  padding: 16,
+                  borderRadius: 12,
+                  alignItems: "center",
+                  borderWidth: 1,
+                  borderColor: "#345bff",
+                }}
+              >
+                <Text style={{ color: "#345bff", fontWeight: "700", fontSize: 16 }}>
+                  {menuPost?.pinned ? "📌 Unpin Post" : "📌 Pin Post"}
+                </Text>
+              </TouchableOpacity>
+            )}
+
             {menuPost?.userId === user?.id ? (
               <TouchableOpacity
                 onPress={() => handleDeletePost(menuPost.id)}
@@ -311,11 +341,7 @@ export default function Feed() {
         </View>
 
         {/* POST TYPE FILTER */}
-        <View style={{
-          flexDirection: "row",
-          marginTop: 10,
-          gap: 8,
-        }}>
+        <View style={{ flexDirection: "row", marginTop: 10, gap: 8 }}>
           {[
             { label: "All", value: "ALL" },
             { label: "🚗 Vanity", value: "VANITY" },
@@ -324,7 +350,7 @@ export default function Feed() {
           ].map((f) => (
             <TouchableOpacity
               key={f.value}
-              onPress={() => handleFilterChange(f.value as "ALL" | "VANITY" | "QUESTION")}
+              onPress={() => handleFilterChange(f.value as "ALL" | "VANITY" | "QUESTION" | "SERVICE")}
               style={{
                 paddingHorizontal: 14,
                 paddingVertical: 6,
@@ -370,22 +396,37 @@ export default function Feed() {
             marginTop: 16,
             borderRadius: 16,
             borderWidth: 1,
-            borderColor: "#252838",
+            borderColor: item.pinned ? "#345bff" : "#252838",
             padding: 16,
           }}>
+            {/* PINNED BADGE */}
+            {item.pinned && (
+              <View style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 6,
+                marginBottom: 10,
+              }}>
+                <Text style={{ fontSize: 13 }}>📌</Text>
+                <Text style={{ color: "#345bff", fontSize: 12, fontWeight: "700", letterSpacing: 0.5 }}>
+                  PINNED POST
+                </Text>
+              </View>
+            )}
+
             {/* POST TYPE BADGE */}
-          <View style={{
-            alignSelf: "flex-start",
-            backgroundColor: item.postType === "QUESTION" ? "#1e3a8a" : item.postType === "SERVICE" ? "#78350f" : "#064e3b",
-            paddingHorizontal: 10,
-            paddingVertical: 3,
-            borderRadius: 10,
-            marginBottom: 10,
-       }}>
-            <Text style={{ color: "white", fontSize: 11, fontWeight: "600" }}>
-             {item.postType === "QUESTION" ? "🔧 Question" : item.postType === "SERVICE" ? "🏁 Service" : "🚗 Vanity"}
-            </Text>
-          </View>
+            <View style={{
+              alignSelf: "flex-start",
+              backgroundColor: item.postType === "QUESTION" ? "#1e3a8a" : item.postType === "SERVICE" ? "#78350f" : "#064e3b",
+              paddingHorizontal: 10,
+              paddingVertical: 3,
+              borderRadius: 10,
+              marginBottom: 10,
+            }}>
+              <Text style={{ color: "white", fontSize: 11, fontWeight: "600" }}>
+                {item.postType === "QUESTION" ? "🔧 Question" : item.postType === "SERVICE" ? "🏁 Service" : "🚗 Vanity"}
+              </Text>
+            </View>
 
             {/* POST HEADER */}
             <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
@@ -472,36 +513,37 @@ export default function Feed() {
             </View>
 
             {/* SERVICE DETAILS */}
-{item.postType === "SERVICE" && (item.serviceLocation || item.servicePrice) && (
-  <View style={{
-    backgroundColor: "#1a1200",
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#f59e0b33",
-    padding: 12,
-    marginBottom: 10,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  }}>
-    {item.serviceLocation && (
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-        <Text style={{ fontSize: 14 }}>📍</Text>
-        <Text style={{ color: "#fcd34d", fontSize: 13, fontWeight: "600" }}>
-          {item.serviceLocation}
-        </Text>
-      </View>
-    )}
-    {item.servicePrice && (
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-        <Text style={{ fontSize: 14 }}>💰</Text>
-        <Text style={{ color: "#10b981", fontSize: 13, fontWeight: "700" }}>
-          {item.servicePrice}
-        </Text>
-      </View>
-    )}
-  </View>
-)}
+            {item.postType === "SERVICE" && (item.serviceLocation || item.servicePrice) && (
+              <View style={{
+                backgroundColor: "#1a1200",
+                borderRadius: 10,
+                borderWidth: 1,
+                borderColor: "#f59e0b33",
+                padding: 12,
+                marginBottom: 10,
+                flexDirection: "row",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}>
+                {item.serviceLocation && (
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                    <Text style={{ fontSize: 14 }}>📍</Text>
+                    <Text style={{ color: "#fcd34d", fontSize: 13, fontWeight: "600" }}>
+                      {item.serviceLocation}
+                    </Text>
+                  </View>
+                )}
+                {item.servicePrice && (
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                    <Text style={{ fontSize: 14 }}>💰</Text>
+                    <Text style={{ color: "#10b981", fontSize: 13, fontWeight: "700" }}>
+                      {item.servicePrice}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
+
             {/* POST CONTENT + IMAGE */}
             <TouchableOpacity
               onPress={() => router.push(`/(tabs)/post/${item.id}`)}
