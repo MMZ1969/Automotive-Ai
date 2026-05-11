@@ -242,6 +242,15 @@ export default function Profile() {
           <Text style={actionCardSub}>Jobs • Reviews • Earnings</Text>
         </TouchableOpacity>
       )}
+      {isMechanic && (
+        <TouchableOpacity
+          onPress={() => router.push("/quick-alert")}
+          style={[actionCard, { borderColor: "#f59e0b44", backgroundColor: "#1a1200" }]}
+        >
+          <Text style={actionCardTitle}>⚡ Quick Alert</Text>
+          <Text style={actionCardSub}>Send a customer a vehicle status update</Text>
+        </TouchableOpacity>
+      )}
 
       {/* JOBS */}
       <TouchableOpacity
