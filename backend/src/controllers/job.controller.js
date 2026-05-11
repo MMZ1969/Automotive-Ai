@@ -90,7 +90,6 @@ export const createJob = async (req, res) => {
       },
     });
 
-    // Notify all mechanics about new job
     try {
       const mechanics = await prisma.user.findMany({
         where: { role: "MECHANIC" },
@@ -111,7 +110,6 @@ export const createJob = async (req, res) => {
       );
     } catch (notifErr) {
       console.error("NOTIFY MECHANICS ERROR:", notifErr);
-      // silently fail — don't block job creation
     }
 
     res.json(job);
@@ -218,15 +216,15 @@ export const acceptBid = async (req, res) => {
 
     const poster = await prisma.user.findUnique({
       where: { id: userId },
-      select: { name: true, email: true, phone: true  },
+      select: { name: true, email: true, phone: true },
     });
 
     await createAndSendNotification({
-  recipientId: bid.mechanicId,
-  actorId: userId,
-  type: "bid_accepted",
-  message: `${poster?.name || "Someone"} accepted your bid! 🎉 Contact them at ${poster?.phone || poster?.email} to get started.`,
-});
+      recipientId: bid.mechanicId,
+      actorId: userId,
+      type: "bid_accepted",
+      message: `${poster?.name || "Someone"} accepted your bid! 🎉 Contact them at ${poster?.phone || poster?.email} to get started.`,
+    });
 
     res.json({ success: true });
   } catch (err) {
@@ -254,8 +252,10 @@ export const completeJob = async (req, res) => {
   } catch (err) {
     console.error("COMPLETE JOB ERROR:", err);
     res.status(500).json({ error: "Failed to complete job" });
-  };
-  // STATUS UPDATE on a job (mechanic sends preset message to customer)
+  }
+};
+
+// STATUS UPDATE on a job (mechanic sends preset message to customer)
 export const sendStatusUpdate = async (req, res) => {
   try {
     const jobId = Number(req.params.id);
@@ -325,5 +325,4 @@ export const sendQuickAlert = async (req, res) => {
     console.error("QUICK ALERT ERROR:", err);
     res.status(500).json({ error: "Failed to send quick alert" });
   }
-};
 };
