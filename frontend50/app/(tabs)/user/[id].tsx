@@ -25,6 +25,7 @@ export default function UserProfile() {
   const [refreshing, setRefreshing] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
   const [blockLoading, setBlockLoading] = useState(false);
+  const [mechanicStats, setMechanicStats] = useState<any>(null);
 
   const fetchProfile = async () => {
     try {
@@ -36,6 +37,12 @@ export default function UserProfile() {
       setProfile(userRes.data);
       setPosts(postsRes.data.filter((p: any) => p.userId === Number(id)));
       setIsFollowing(followRes.data.following);
+
+      // Fetch mechanic stats if this is a mechanic
+      if (userRes.data.role === "MECHANIC") {
+        const statsRes = await api.get(`/api/users/${id}/mechanic-stats`);
+        setMechanicStats(statsRes.data);
+      }
     } catch (err) {
       console.error("FETCH PROFILE ERROR:", err);
     } finally {
@@ -56,11 +63,8 @@ export default function UserProfile() {
   };
 
   const handleFollow = async () => {
-    // Optimistic update — flip instantly, no waiting for server
     const newFollowing = !isFollowing;
     setIsFollowing(newFollowing);
-
-    // Also update follower count instantly
     setProfile((prev: any) => ({
       ...prev,
       _count: {
@@ -75,7 +79,6 @@ export default function UserProfile() {
       setFollowLoading(true);
       await api.post(`/api/users/${id}/follow`);
     } catch (err) {
-      // If it fails, roll back
       console.error("FOLLOW ERROR:", err);
       setIsFollowing(!newFollowing);
       setProfile((prev: any) => ({
@@ -192,6 +195,48 @@ export default function UserProfile() {
                   {isMechanic ? "🏁 MECHANIC" : "🔧 DIYER"}
                 </Text>
               </View>
+
+              {/* MECHANIC STATS CARD */}
+              {isMechanic && mechanicStats && (
+                <View style={{
+                  marginTop: 16,
+                  backgroundColor: "#0d1117",
+                  borderRadius: 16,
+                  borderWidth: 1,
+                  borderColor: "#345bff33",
+                  padding: 16,
+                  width: "100%",
+                  flexDirection: "row",
+                  justifyContent: "space-around",
+                }}>
+                  <View style={{ alignItems: "center" }}>
+                    <Text style={{ color: "#facc15", fontSize: 22, fontWeight: "900" }}>
+                      {mechanicStats.avgRating ? `⭐ ${mechanicStats.avgRating}` : "—"}
+                    </Text>
+                    <Text style={{ color: "#9ca3af", fontSize: 11, marginTop: 4 }}>
+                      {mechanicStats.totalReviews} Reviews
+                    </Text>
+                  </View>
+                  <View style={{ width: 1, backgroundColor: "#252838" }} />
+                  <View style={{ alignItems: "center" }}>
+                    <Text style={{ color: "#10b981", fontSize: 22, fontWeight: "900" }}>
+                      ✅ {mechanicStats.completedJobs}
+                    </Text>
+                    <Text style={{ color: "#9ca3af", fontSize: 11, marginTop: 4 }}>
+                      Jobs Done
+                    </Text>
+                  </View>
+                  <View style={{ width: 1, backgroundColor: "#252838" }} />
+                  <View style={{ alignItems: "center" }}>
+                    <Text style={{ color: "#345bff", fontSize: 22, fontWeight: "900" }}>
+                      {mechanicStats.winRate}%
+                    </Text>
+                    <Text style={{ color: "#9ca3af", fontSize: 11, marginTop: 4 }}>
+                      Win Rate
+                    </Text>
+                  </View>
+                </View>
+              )}
 
               {/* STATS ROW */}
               <View style={{ flexDirection: "row", gap: 16, marginTop: 20 }}>
