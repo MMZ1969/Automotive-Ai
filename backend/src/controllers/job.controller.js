@@ -258,14 +258,52 @@ export const completeJob = async (req, res) => {
     const id = Number(req.params.id);
     const userId = req.user.id;
 
-    const job = await prisma.job.findUnique({ where: { id } });
+    const job = await prisma.job.findUnique({
+      where: { id },
+      include: {
+        bids: {
+          where: { status: "ACCEPTED" },
+          include: { mechanic: { select: { id: true, name: true } } },
+        },
+        poster: { select: { id: true, name: true } },
+      },
+    });
+
     if (!job) return res.status(404).json({ error: "Job not found" });
-    if (job.userId !== userId) return res.status(403).json({ error: "Not authorized" });
+
+    // Allow either the DIYer (job poster) OR the accepted mechanic to complete
+    const acceptedBid = job.bids[0];
+    const isMechanic = acceptedBid?.mechanic?.id === userId;
+    const isDIYer = job.userId === userId;
+
+    if (!isMechanic && !isDIYer) {
+      return res.status(403).json({ error: "Not authorized" });
+    }
 
     await prisma.job.update({
       where: { id },
       data: { status: "COMPLETED" },
     });
+
+    // If mechanic completed it, notify the DIYer
+    if (isMechanic && acceptedBid) {
+      await createAndSendNotification({
+        recipientId: job.userId,
+        actorId: userId,
+        type: "job_update",
+        message: `🏁 ${acceptedBid.mechanic.name} marked your job "${job.title}" as complete! Please leave a review.`,
+      });
+    }
+
+    // If DIYer completed it, notify the mechanic
+    if (isDIYer && acceptedBid) {
+      await createAndSendNotification({
+        recipientId: acceptedBid.mechanic.id,
+        actorId: userId,
+        type: "job_update",
+        message: `🏁 ${job.poster.name} marked "${job.title}" as complete!`,
+      });
+    }
 
     res.json({ success: true });
   } catch (err) {
