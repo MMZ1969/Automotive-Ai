@@ -1,21 +1,19 @@
 import prisma from "../lib/prisma.js";
 
 // Helper function to send push notification
-async function sendPushNotification(pushToken, title, body) {
+async function sendPushNotification(pushToken, title, body, badgeCount = 1) {
   if (!pushToken || !pushToken.startsWith("ExponentPushToken")) return;
 
   try {
     await fetch("https://exp.host/--/api/v2/push/send", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         to: pushToken,
         title,
         body,
         sound: "default",
-        badge: 1,
+        badge: badgeCount,
       }),
     });
   } catch (err) {
@@ -86,7 +84,6 @@ export async function markAllRead(req, res) {
 // Helper exported for use in other controllers
 export async function createAndSendNotification({ recipientId, actorId, type, postId, message }) {
   try {
-    // Create notification in database
     await prisma.notification.create({
       data: {
         recipientId,
@@ -97,17 +94,22 @@ export async function createAndSendNotification({ recipientId, actorId, type, po
       },
     });
 
-    // Get recipient's push token
     const recipient = await prisma.user.findUnique({
       where: { id: recipientId },
-      select: { pushToken: true, name: true },
+      select: { pushToken: true },
     });
 
     if (recipient?.pushToken) {
+      // Get actual unread count for the badge
+      const unreadCount = await prisma.notification.count({
+        where: { recipientId, read: false },
+      });
+
       await sendPushNotification(
         recipient.pushToken,
         "AutoAI 🚗",
-        message
+        message,
+        unreadCount
       );
     }
   } catch (err) {
