@@ -247,3 +247,53 @@ export async function getBlockedUsers(req, res) {
     res.status(500).json({ error: "Failed to fetch blocked users" });
   }
 }
+// GET /users/:id/mechanic-stats
+export async function getMechanicStats(req, res) {
+  try {
+    const id = Number(req.params.id);
+
+    const completedJobs = await prisma.job.count({
+      where: {
+        acceptedBidId: { not: null },
+        status: "COMPLETED",
+        bids: {
+          some: {
+            mechanicId: id,
+            status: "ACCEPTED",
+          },
+        },
+      },
+    });
+
+    const reviews = await prisma.review.findMany({
+      where: { mechanicId: id },
+      select: { rating: true },
+    });
+
+    const avgRating = reviews.length
+      ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
+      : null;
+
+    const totalBids = await prisma.bid.count({
+      where: { mechanicId: id },
+    });
+
+    const acceptedBids = await prisma.bid.count({
+      where: { mechanicId: id, status: "ACCEPTED" },
+    });
+
+    const winRate = totalBids > 0
+      ? Math.round((acceptedBids / totalBids) * 100)
+      : 0;
+
+    res.json({
+      completedJobs,
+      avgRating,
+      totalReviews: reviews.length,
+      winRate,
+    });
+  } catch (err) {
+    console.error("GET MECHANIC STATS ERROR:", err);
+    res.status(500).json({ error: "Failed to fetch mechanic stats" });
+  }
+}

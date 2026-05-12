@@ -1,5 +1,5 @@
 import express from "express";
-import { blockUser, getBlockedUsers, getLeaderboard, getMe, getUserProfile, savePushToken, searchUsers, updateProfile } from "../controllers/user.controller.js";
+import { blockUser, getBlockedUsers, getLeaderboard, getMe, getMechanicStats, getUserProfile, savePushToken, searchUsers, updateProfile } from "../controllers/user.controller.js";
 import authMiddleware from "../middleware/authMiddleware.js";
 
 const router = express.Router();
@@ -10,6 +10,7 @@ router.put("/me", authMiddleware, updateProfile);
 router.get("/search", authMiddleware, searchUsers);
 router.get("/blocked", authMiddleware, getBlockedUsers);
 router.get("/:id/profile", authMiddleware, getUserProfile);
+router.get("/:id/mechanic-stats", authMiddleware, getMechanicStats);
 router.post("/push-token", authMiddleware, savePushToken);
 router.post("/:id/block", authMiddleware, blockUser);
 
