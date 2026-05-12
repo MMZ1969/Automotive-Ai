@@ -72,21 +72,21 @@ export default function Jobs() {
   };
 
   const handleCreateJob = async () => {
-  if (!user?.phone) {
-    Alert.alert(
-      "📞 Phone Number Required",
-      "Mechanics need a way to contact you. Please add your phone number in Settings before posting a job.",
-      [
-        { text: "Cancel", style: "cancel" },
-        { text: "Go to Settings", onPress: () => router.push("/(tabs)/(profile)/settings") },
-      ]
-    );
-    return;
-  }
-  if (!title.trim() || !description.trim() || !vehicle.trim()) {
-    Alert.alert("Missing fields", "Title, description and vehicle are required.");
-    return;
-  }
+    if (!user?.phone) {
+      Alert.alert(
+        "📞 Phone Number Required",
+        "Mechanics need a way to contact you. Please add your phone number in Settings before posting a job.",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Go to Settings", onPress: () => router.push("/(tabs)/(profile)/settings") },
+        ]
+      );
+      return;
+    }
+    if (!title.trim() || !description.trim() || !vehicle.trim()) {
+      Alert.alert("Missing fields", "Title, description and vehicle are required.");
+      return;
+    }
     try {
       setCreating(true);
       await api.post("/api/jobs", { title, description, vehicle, budget, location });
@@ -175,6 +175,24 @@ export default function Jobs() {
             fetchJobs();
             setSelectedJob(job);
             setShowReviewModal(true);
+          } catch (err) {
+            Alert.alert("Error", "Could not complete job. Try again.");
+          }
+        },
+      },
+    ]);
+  };
+
+  const handleMechanicCompleteJob = async (job: any) => {
+    Alert.alert("Complete Job", "Mark this job as complete? The customer will be notified.", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Complete",
+        onPress: async () => {
+          try {
+            await api.post(`/api/jobs/${job.id}/complete`);
+            fetchJobs();
+            Alert.alert("🏁 Job Complete!", "The customer has been notified and will leave a review.");
           } catch (err) {
             Alert.alert("Error", "Could not complete job. Try again.");
           }
@@ -410,11 +428,7 @@ export default function Jobs() {
                 backgroundColor: mechanicView === "browse" ? "#345bff" : "transparent",
               }}
             >
-              <Text style={{
-                color: mechanicView === "browse" ? "white" : "#6b7280",
-                fontWeight: "700",
-                fontSize: 14,
-              }}>🔍 Browse Jobs</Text>
+              <Text style={{ color: mechanicView === "browse" ? "white" : "#6b7280", fontWeight: "700", fontSize: 14 }}>🔍 Browse Jobs</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => setMechanicView("mine")}
@@ -426,11 +440,7 @@ export default function Jobs() {
                 backgroundColor: mechanicView === "mine" ? "#345bff" : "transparent",
               }}
             >
-              <Text style={{
-                color: mechanicView === "mine" ? "white" : "#6b7280",
-                fontWeight: "700",
-                fontSize: 14,
-              }}>🔧 My Jobs</Text>
+              <Text style={{ color: mechanicView === "mine" ? "white" : "#6b7280", fontWeight: "700", fontSize: 14 }}>🔧 My Jobs</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -500,27 +510,55 @@ export default function Jobs() {
                 ))}
               </View>
             )}
+
+            {/* ACTION BUTTONS */}
             <View style={{ flexDirection: "row", gap: 10 }}>
+              {/* MECHANIC BROWSE - place bid */}
               {isMechanic && mechanicView === "browse" && item.status === "OPEN" && (
-                <TouchableOpacity onPress={() => { setSelectedJob(item); setShowBidModal(true); }} style={{ flex: 1, backgroundColor: "#345bff", padding: 12, borderRadius: 10, alignItems: "center" }}>
+                <TouchableOpacity
+                  onPress={() => { setSelectedJob(item); setShowBidModal(true); }}
+                  style={{ flex: 1, backgroundColor: "#345bff", padding: 12, borderRadius: 10, alignItems: "center" }}
+                >
                   <Text style={{ color: "white", fontWeight: "700" }}>🔧 Place Bid</Text>
                 </TouchableOpacity>
               )}
-              {isMechanic && (item.status === "IN_PROGRESS" || item.job?.status === "IN_PROGRESS") && (
+
+              {/* MECHANIC MY JOBS - send update */}
+              {isMechanic && mechanicView === "mine" && item.job?.status === "IN_PROGRESS" && (
                 <TouchableOpacity
-                  onPress={() => { setSelectedJob(item.job || item); setShowStatusModal(true); }}
+                  onPress={() => { setSelectedJob(item.job); setShowStatusModal(true); }}
                   style={{ flex: 1, backgroundColor: "#f59e0b", padding: 12, borderRadius: 10, alignItems: "center" }}
                 >
                   <Text style={{ color: "white", fontWeight: "700" }}>📢 Send Update</Text>
                 </TouchableOpacity>
               )}
+
+              {/* MECHANIC MY JOBS - complete job */}
+              {isMechanic && mechanicView === "mine" && item.job?.status === "IN_PROGRESS" && (
+                <TouchableOpacity
+                  onPress={() => handleMechanicCompleteJob(item.job)}
+                  style={{ flex: 1, backgroundColor: "#10b981", padding: 12, borderRadius: 10, alignItems: "center" }}
+                >
+                  <Text style={{ color: "white", fontWeight: "700" }}>🏁 Complete</Text>
+                </TouchableOpacity>
+              )}
+
+              {/* DIYER - mark complete */}
               {!isMechanic && item.status === "IN_PROGRESS" && (
-                <TouchableOpacity onPress={() => handleCompleteJob(item)} style={{ flex: 1, backgroundColor: "#10b981", padding: 12, borderRadius: 10, alignItems: "center" }}>
+                <TouchableOpacity
+                  onPress={() => handleCompleteJob(item)}
+                  style={{ flex: 1, backgroundColor: "#10b981", padding: 12, borderRadius: 10, alignItems: "center" }}
+                >
                   <Text style={{ color: "white", fontWeight: "700" }}>🏁 Mark Complete</Text>
                 </TouchableOpacity>
               )}
+
+              {/* DIYER - delete job */}
               {!isMechanic && item.status === "OPEN" && (
-                <TouchableOpacity onPress={() => handleDeleteJob(item.id)} style={{ backgroundColor: "#1a0a0a", padding: 12, borderRadius: 10, alignItems: "center", borderWidth: 1, borderColor: "#ef444444" }}>
+                <TouchableOpacity
+                  onPress={() => handleDeleteJob(item.id)}
+                  style={{ backgroundColor: "#1a0a0a", padding: 12, borderRadius: 10, alignItems: "center", borderWidth: 1, borderColor: "#ef444444" }}
+                >
                   <Text style={{ color: "#ef4444", fontWeight: "700" }}>🗑️</Text>
                 </TouchableOpacity>
               )}
