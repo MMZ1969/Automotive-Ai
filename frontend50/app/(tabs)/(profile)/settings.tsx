@@ -13,7 +13,7 @@ import {
 } from "react-native";
 
 export default function Settings() {
-  const { user, logout, isMechanic, updateName } = useAuth();
+  const { user, logout, isMechanic, updateName, switchRole } = useAuth();
   const router = useRouter();
   const [editingName, setEditingName] = useState(false);
   const [newName, setNewName] = useState(user?.name || "");
@@ -150,9 +150,7 @@ export default function Settings() {
     <TouchableOpacity
       onPress={async () => {
         try {
-          const newRole = isMechanic ? "DIYER" : "MECHANIC";
-          await api.put("/api/users/me", { role: newRole });
-          Alert.alert("✅ Role Switched!", `You are now a ${newRole === "MECHANIC" ? "🏁 Mechanic" : "🔧 DIYer"}. Please log out and back in.`);
+          await switchRole();
         } catch (err) {
           Alert.alert("Error", "Could not switch role. Try again.");
         }
@@ -172,12 +170,12 @@ export default function Settings() {
       <Text style={{ color: "white", fontSize: 13, fontWeight: "700" }}>
         {isMechanic ? "🏁 Mechanic" : "🔧 DIYer"}
       </Text>
-      <Text style={{ color: "#9ca3af", fontSize: 11 }}>Switch →</Text>
+      <Text style={{ color: "#9ca3af", fontSize: 11 }}>⇄ Switch</Text>
     </TouchableOpacity>
-  ) : (
+         ) : (
     <Text style={value}>{isMechanic ? "🏁 Mechanic" : "🔧 DIYer"}</Text>
   )}
-</View>
+        </View>
         <View style={divider} />
         <TouchableOpacity style={row} onPress={() => router.push("/change-password")}>
           <Text style={label}>Password</Text>
