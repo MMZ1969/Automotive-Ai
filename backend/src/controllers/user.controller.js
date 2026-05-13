@@ -39,6 +39,7 @@ export async function updateProfile(req, res) {
 
     if (name) data.name = name;
     if (req.body.phone !== undefined) data.phone = req.body.phone;
+    if (req.body.role !== undefined) data.role = req.body.role;
     if (req.body.profilePhoto !== undefined) data.profilePhoto = req.body.profilePhoto;
 
 
