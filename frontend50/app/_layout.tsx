@@ -31,7 +31,7 @@ function RouteGuard() {
     const inOnboarding = segments[0] === "onboarding";
 
     // First time user — show onboarding
-    if (!hasSeenOnboarding && !inOnboarding && !user) {
+    if (!hasSeenOnboarding && !inOnboarding && !inAuthGroup && !user) {
       router.replace("/onboarding");
       return;
     }
