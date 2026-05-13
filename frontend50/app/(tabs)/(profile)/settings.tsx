@@ -144,10 +144,40 @@ export default function Settings() {
           <Text style={value}>{user?.email || "—"}</Text>
         </View>
         <View style={divider} />
-        <View style={row}>
-          <Text style={label}>Role</Text>
-          <Text style={value}>{isMechanic ? "🏁 Mechanic" : "🔧 DIYer"}</Text>
-        </View>
+<View style={row}>
+  <Text style={label}>Role</Text>
+  {user?.id === 1 ? (
+    <TouchableOpacity
+      onPress={async () => {
+        try {
+          const newRole = isMechanic ? "DIYER" : "MECHANIC";
+          await api.put("/api/users/me", { role: newRole });
+          Alert.alert("✅ Role Switched!", `You are now a ${newRole === "MECHANIC" ? "🏁 Mechanic" : "🔧 DIYer"}. Please log out and back in.`);
+        } catch (err) {
+          Alert.alert("Error", "Could not switch role. Try again.");
+        }
+      }}
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+        backgroundColor: isMechanic ? "#1e3a8a" : "#064e3b",
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: isMechanic ? "#345bff" : "#10b981",
+      }}
+    >
+      <Text style={{ color: "white", fontSize: 13, fontWeight: "700" }}>
+        {isMechanic ? "🏁 Mechanic" : "🔧 DIYer"}
+      </Text>
+      <Text style={{ color: "#9ca3af", fontSize: 11 }}>Switch →</Text>
+    </TouchableOpacity>
+  ) : (
+    <Text style={value}>{isMechanic ? "🏁 Mechanic" : "🔧 DIYer"}</Text>
+  )}
+</View>
         <View style={divider} />
         <TouchableOpacity style={row} onPress={() => router.push("/change-password")}>
           <Text style={label}>Password</Text>
