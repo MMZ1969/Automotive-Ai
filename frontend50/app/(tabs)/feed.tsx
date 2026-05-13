@@ -9,6 +9,7 @@ import {
   Image,
   Modal,
   RefreshControl,
+  ScrollView,
   Text,
   TouchableOpacity,
   View,
@@ -341,7 +342,7 @@ export default function Feed() {
         </View>
 
         {/* POST TYPE FILTER */}
-        <View style={{ flexDirection: "row", marginTop: 10, gap: 8 }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 10 }} contentContainerStyle={{ gap: 8, paddingRight: 8 }}>
           {[
             { label: "All", value: "ALL" },
             { label: "🚗 Vanity", value: "VANITY" },
@@ -367,7 +368,7 @@ export default function Feed() {
               }}>{f.label}</Text>
             </TouchableOpacity>
           ))}
-        </View>
+        </ScrollView>
       </View>
 
       <FlatList
