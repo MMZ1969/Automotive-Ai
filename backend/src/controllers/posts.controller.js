@@ -91,7 +91,13 @@ export const updatePost = async (req, res) => {
 export const deletePost = async (req, res) => {
   try {
     const id = Number(req.params.id);
+
+    // Delete related records first
+    await prisma.like.deleteMany({ where: { postId: id } });
+    await prisma.comment.deleteMany({ where: { postId: id } });
+    await prisma.report.deleteMany({ where: { postId: id } });
     await prisma.post.delete({ where: { id } });
+
     res.json({ message: "Post deleted" });
   } catch (err) {
     console.error("DELETE POST ERROR:", err);
