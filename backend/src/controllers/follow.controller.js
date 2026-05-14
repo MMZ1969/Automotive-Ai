@@ -24,14 +24,14 @@ export const toggleFollow = async (req, res) => {
       });
       await prisma.user.update({
         where: { id: followingId },
-        data: { repPoints: { decrement: 5 } },
+        data: { repPoints: { decrement: 3 } },
       });
       return res.json({ following: false });
     } else {
       await prisma.follow.create({ data: { followerId, followingId } });
       await prisma.user.update({
         where: { id: followingId },
-        data: { repPoints: { increment: 5 } },
+        data: { repPoints: { increment: 3 } },
       });
 
       const actor = await prisma.user.findUnique({ where: { id: followerId }, select: { name: true } });
