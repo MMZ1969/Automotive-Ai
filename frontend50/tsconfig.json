@@ -9,7 +9,8 @@
       "@lib/*": ["lib/*"],
       "@context/*": ["context/*"],
       "@constants/*": ["constants/*"],
-      "@components/*": ["components/*"]
+      "@components/*": ["components/*"],
+      "@utils/*": ["utils/*"]
     }
   }
 }
