@@ -67,6 +67,15 @@ export const createPost = async (req, res) => {
         serviceLocation: serviceLocation || null,
       },
     });
+
+    // Award rep for posting
+    const repToAward = type === "QUESTION" ? 2 : 1;
+    await prisma.user.update({
+      where: { id: userId },
+      data: { repPoints: { increment: repToAward } },
+    });
+
+res.json(post);
     res.json(post);
   } catch (err) {
     console.error("CREATE POST ERROR:", err);

@@ -3,6 +3,9 @@ import cors from "cors";
 import dotenv from "dotenv";
 import express from "express";
 
+import prisma from "./lib/prisma.js";
+import authMiddleware from "./middleware/authMiddleware.js";
+
 import authRoutes from "./auth/auth.routes.js";
 import followRoutes from "./routes/follow.routes.js";
 import jobRoutes from "./routes/job.routes.js";
@@ -36,7 +39,7 @@ app.use("/api/parts", partsRoutes);
 app.use("/api/reviews", reviewRoutes);
 
 // AI Diagnosis route
-app.post("/api/diagnose", async (req, res) => {
+app.post("/api/diagnose", authMiddleware, async (req, res) => {
   try {
     const { query } = req.body;
 
@@ -91,6 +94,17 @@ Respond in JSON format only, no markdown, like this:
       return res.status(500).json({ error: "Invalid AI response" });
     }
     const parsed = JSON.parse(jsonMatch[0]);
+
+    // Award +5 rep for running a diagnosis
+    try {
+      await prisma.user.update({
+        where: { id: req.user.id },
+        data: { repPoints: { increment: 5 } },
+      });
+    } catch (repErr) {
+      console.error("REP AWARD ERROR:", repErr);
+    }
+
     res.json(parsed);
   } catch (err) {
     console.error("DIAGNOSE ERROR:", err);
@@ -165,7 +179,7 @@ Respond in JSON format only, no markdown, like this:
 });
 
 // AI Image Diagnosis route — photo → diagnosis
-app.post("/api/analyze-image-diagnosis", async (req, res) => {
+app.post("/api/analyze-image-diagnosis", authMiddleware, async (req, res) => {
   try {
     const { imageBase64, mediaType } = req.body;
 
@@ -232,6 +246,17 @@ If the image is not automotive related, return:
       return res.status(500).json({ error: "Invalid AI response" });
     }
     const parsed = JSON.parse(jsonMatch[0]);
+
+    // Award +5 rep for image diagnosis too
+    try {
+      await prisma.user.update({
+        where: { id: req.user.id },
+        data: { repPoints: { increment: 5 } },
+      });
+    } catch (repErr) {
+      console.error("REP AWARD ERROR:", repErr);
+    }
+
     res.json(parsed);
   } catch (err) {
     console.error("ANALYZE IMAGE DIAGNOSIS ERROR:", err);
