@@ -1,5 +1,6 @@
 import { useAuth } from "@context/AuthContext";
 import api from "@lib/api";
+import { getBadge } from "@utils/badges";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import {
@@ -184,17 +185,32 @@ export default function UserProfile() {
               </Text>
 
               {/* ROLE BADGE */}
-              <View style={{
-                marginTop: 8,
-                backgroundColor: isMechanic ? "#345bff" : "#10b981",
-                paddingVertical: 4,
-                paddingHorizontal: 14,
-                borderRadius: 20,
-              }}>
-                <Text style={{ color: "white", fontWeight: "700", fontSize: 13 }}>
-                  {isMechanic ? "🏁 MECHANIC" : "🔧 DIYER"}
-                </Text>
-              </View>
+                <View style={{
+                  marginTop: 8,
+                  backgroundColor: isMechanic ? "#345bff" : "#10b981",
+                  paddingVertical: 4,
+                  paddingHorizontal: 14,
+                  borderRadius: 20,
+                }}>
+                  <Text style={{ color: "white", fontWeight: "700", fontSize: 13 }}>
+                    {isMechanic ? "🏁 MECHANIC" : "🔧 DIYER"}
+                  </Text>
+                </View>
+
+                {/* REP BADGE */}
+                <View style={{
+                  marginTop: 8,
+                  backgroundColor: getBadge(profile?.repPoints || 0).color + "22",
+                  paddingVertical: 4,
+                  paddingHorizontal: 14,
+                  borderRadius: 20,
+                  borderWidth: 1,
+                  borderColor: getBadge(profile?.repPoints || 0).color,
+                }}>
+                  <Text style={{ fontWeight: "700", fontSize: 13, color: getBadge(profile?.repPoints || 0).color }}>
+                    {getBadge(profile?.repPoints || 0).emoji} {getBadge(profile?.repPoints || 0).label}
+                  </Text>
+                </View>
 
               {/* MECHANIC STATS CARD */}
               {isMechanic && mechanicStats && (

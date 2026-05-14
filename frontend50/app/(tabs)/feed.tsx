@@ -1,5 +1,6 @@
 import { useAuth } from "@context/AuthContext";
 import api from "@lib/api";
+import { getBadge } from "@utils/badges";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import {
@@ -459,9 +460,23 @@ export default function Feed() {
                   )}
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ color: "white", fontWeight: "700", fontSize: 15 }}>
-                    {item.user?.name || "Anonymous"}
-                  </Text>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+  <Text style={{ color: "white", fontWeight: "700", fontSize: 15 }}>
+    {item.user?.name || "Anonymous"}
+  </Text>
+  <View style={{
+    backgroundColor: getBadge(item.user?.repPoints || 0).color + "22",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: getBadge(item.user?.repPoints || 0).color,
+  }}>
+    <Text style={{ fontSize: 10, fontWeight: "700", color: getBadge(item.user?.repPoints || 0).color }}>
+      {getBadge(item.user?.repPoints || 0).emoji} {getBadge(item.user?.repPoints || 0).label}
+    </Text>
+  </View>
+</View>
                   <View style={{
                     backgroundColor: item.user?.role === "MECHANIC" ? "#1e3a8a" : "#064e3b",
                     paddingHorizontal: 8,

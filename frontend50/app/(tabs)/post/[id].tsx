@@ -1,5 +1,6 @@
 import { useAuth } from "@context/AuthContext";
 import api from "@lib/api";
+import { getBadge } from "@utils/badges";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
@@ -222,9 +223,23 @@ export default function PostDetail() {
                   )}
                 </View>
                 <View>
-                  <Text style={{ color: "white", fontWeight: "700", fontSize: 15 }}>
-                    {post?.user?.name || "Anonymous"}
-                  </Text>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                    <Text style={{ color: "white", fontWeight: "700", fontSize: 15 }}>
+                      {post?.user?.name || "Anonymous"}
+                    </Text>
+                    <View style={{
+                      backgroundColor: getBadge(post?.user?.repPoints || 0).color + "22",
+                      paddingHorizontal: 6,
+                      paddingVertical: 2,
+                      borderRadius: 8,
+                      borderWidth: 1,
+                      borderColor: getBadge(post?.user?.repPoints || 0).color,
+                    }}>
+                      <Text style={{ fontSize: 10, fontWeight: "700", color: getBadge(post?.user?.repPoints || 0).color }}>
+                        {getBadge(post?.user?.repPoints || 0).emoji} {getBadge(post?.user?.repPoints || 0).label}
+                      </Text>
+                    </View>
+                  </View>
                   <Text style={{ color: "#9ca3af", fontSize: 12 }}>
                     {post?.user?.role === "MECHANIC" ? "🏁 Mechanic" : "🔧 DIYer"}
                   </Text>
