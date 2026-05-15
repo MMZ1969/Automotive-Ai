@@ -265,7 +265,7 @@ export default function UserProfile() {
                   </Text>
                   <Text style={{ color: "#9ca3af", fontSize: 11 }}>Followers</Text>
                 </TouchableOpacity>
-               <TouchableOpacity
+                <TouchableOpacity
                   style={statPill}
                   onPress={() => router.push({ pathname: "/(tabs)/followers", params: { id, type: "following" } })}
                 >
@@ -282,15 +282,9 @@ export default function UserProfile() {
                 </View>
                 <View style={statPill}>
                   <Text style={{ color: "white", fontWeight: "900", fontSize: 18 }}>
-                    {profile?._count?.followers || 0}
+                    {profile?.repPoints || 0}
                   </Text>
-                  <Text style={{ color: "#9ca3af", fontSize: 11 }}>Followers</Text>
-                </View>
-                <View style={statPill}>
-                  <Text style={{ color: "white", fontWeight: "900", fontSize: 18 }}>
-                    {profile?._count?.following || 0}
-                  </Text>
-                  <Text style={{ color: "#9ca3af", fontSize: 11 }}>Following</Text>
+                  <Text style={{ color: "#9ca3af", fontSize: 11 }}>Rep</Text>
                 </View>
               </View>
 
