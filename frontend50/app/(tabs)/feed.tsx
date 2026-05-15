@@ -190,7 +190,6 @@ export default function Feed() {
             padding: 20,
             gap: 12,
           }}>
-            {/* ADMIN PIN BUTTON — only visible to you */}
             {user?.id === 1 && (
               <TouchableOpacity
                 onPress={() => handlePinPost(menuPost?.id)}
@@ -284,19 +283,26 @@ export default function Feed() {
           </TouchableOpacity>
         </View>
 
+        {/* STAT PILLS */}
         <View style={{ flexDirection: "row", gap: 12, marginTop: 12 }}>
           <View style={statPill}>
             <Text style={{ color: "#9ca3af", fontSize: 11 }}>Rep</Text>
             <Text style={{ color: "white", fontWeight: "700" }}>{repPoints}</Text>
           </View>
-          <View style={statPill}>
+          <TouchableOpacity
+            style={statPill}
+            onPress={() => router.push({ pathname: "/(tabs)/followers", params: { id: user?.id, type: "followers" } })}
+          >
             <Text style={{ color: "#9ca3af", fontSize: 11 }}>Followers</Text>
             <Text style={{ color: "white", fontWeight: "700" }}>{followerCount}</Text>
-          </View>
-          <View style={statPill}>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={statPill}
+            onPress={() => router.push({ pathname: "/(tabs)/followers", params: { id: user?.id, type: "following" } })}
+          >
             <Text style={{ color: "#9ca3af", fontSize: 11 }}>Following</Text>
             <Text style={{ color: "white", fontWeight: "700" }}>{followingCount}</Text>
-          </View>
+          </TouchableOpacity>
         </View>
 
         {/* FOR YOU / FOLLOWING TABS */}
@@ -461,22 +467,22 @@ export default function Feed() {
                 </View>
                 <View style={{ flex: 1 }}>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-  <Text style={{ color: "white", fontWeight: "700", fontSize: 15 }}>
-    {item.user?.name || "Anonymous"}
-  </Text>
-  <View style={{
-    backgroundColor: getBadge(item.user?.repPoints || 0).color + "22",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: getBadge(item.user?.repPoints || 0).color,
-  }}>
-    <Text style={{ fontSize: 10, fontWeight: "700", color: getBadge(item.user?.repPoints || 0).color }}>
-      {getBadge(item.user?.repPoints || 0).emoji} {getBadge(item.user?.repPoints || 0).label}
-    </Text>
-  </View>
-</View>
+                    <Text style={{ color: "white", fontWeight: "700", fontSize: 15 }}>
+                      {item.user?.name || "Anonymous"}
+                    </Text>
+                    <View style={{
+                      backgroundColor: getBadge(item.user?.repPoints || 0).color + "22",
+                      paddingHorizontal: 6,
+                      paddingVertical: 2,
+                      borderRadius: 8,
+                      borderWidth: 1,
+                      borderColor: getBadge(item.user?.repPoints || 0).color,
+                    }}>
+                      <Text style={{ fontSize: 10, fontWeight: "700", color: getBadge(item.user?.repPoints || 0).color }}>
+                        {getBadge(item.user?.repPoints || 0).emoji} {getBadge(item.user?.repPoints || 0).label}
+                      </Text>
+                    </View>
+                  </View>
                   <View style={{
                     backgroundColor: item.user?.role === "MECHANIC" ? "#1e3a8a" : "#064e3b",
                     paddingHorizontal: 8,
