@@ -3,6 +3,7 @@ import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
+  Image,
   Text,
   TextInput,
   TouchableOpacity,
@@ -39,13 +40,14 @@ export default function LoginScreen() {
       alignItems: "center",
       paddingHorizontal: 30,
     }}>
-      <Text style={{ fontSize: 48, marginBottom: 8 }}>🚗</Text>
-      <Text style={{ color: "white", fontSize: 32, fontWeight: "900", marginBottom: 8 }}>
-        AutoAI™
-      </Text>
-      <Text style={{ color: "#9ca3af", fontSize: 14, marginBottom: 32 }}>
-        The social platform for car enthusiasts
-      </Text>
+      <Image
+  source={require("../../assets/autoai_icon_1024_tm.png")}
+  style={{ width: 200, height: 200, marginBottom: 8 }}
+  resizeMode="contain"
+/>
+<Text style={{ color: "#9ca3af", fontSize: 14, marginBottom: 32 }}>
+  The social platform for car enthusiasts
+</Text>
 
       <TextInput
         value={email}
