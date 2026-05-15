@@ -298,3 +298,40 @@ export async function getMechanicStats(req, res) {
     res.status(500).json({ error: "Failed to fetch mechanic stats" });
   }
 }
+// GET /users/:id/followers
+export async function getFollowers(req, res) {
+  try {
+    const id = Number(req.params.id);
+    const follows = await prisma.follow.findMany({
+      where: { followingId: id },
+      include: {
+        follower: {
+          select: { id: true, name: true, role: true, profilePhoto: true },
+        },
+      },
+    });
+    res.json(follows.map((f) => f.follower));
+  } catch (err) {
+    console.error("GET FOLLOWERS ERROR:", err);
+    res.status(500).json({ error: "Failed to fetch followers" });
+  }
+}
+
+// GET /users/:id/following
+export async function getFollowing(req, res) {
+  try {
+    const id = Number(req.params.id);
+    const follows = await prisma.follow.findMany({
+      where: { followerId: id },
+      include: {
+        following: {
+          select: { id: true, name: true, role: true, profilePhoto: true },
+        },
+      },
+    });
+    res.json(follows.map((f) => f.following));
+  } catch (err) {
+    console.error("GET FOLLOWING ERROR:", err);
+    res.status(500).json({ error: "Failed to fetch following" });
+  }
+}
