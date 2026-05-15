@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { Text, TouchableOpacity, View } from "react-native";
+import { Image, Text, TouchableOpacity, View } from "react-native";
 
 export default function Welcome() {
   return (
@@ -12,10 +12,13 @@ export default function Welcome() {
         paddingHorizontal: 30,
       }}
     >
-      {/* Logo / Title */}
-      <Text style={{ fontSize: 42, fontWeight: "900", color: "#345bff", marginBottom: 8 }}>
-        🚗 AutoAI
-      </Text>
+      {/* LOGO */}
+      <Image
+        source={require("../../assets/autoai_icon_1024_tm.png")}
+        style={{ width: 220, height: 220, marginBottom: 16 }}
+        resizeMode="contain"
+      />
+
       <Text style={{ fontSize: 16, color: "#9ca3af", marginBottom: 60, textAlign: "center" }}>
         The social platform for car enthusiasts and mechanics
       </Text>
@@ -55,7 +58,7 @@ export default function Welcome() {
         </Text>
       </TouchableOpacity>
 
-      <Text style={{ color: "#4b5563", marginTop: 40, fontSize: 12 }}>
+      <Text style={{ color: "#4b5563", marginTop: 40, fontSize: 12, textAlign: "center" }}>
         For DIYers, Mechanics & Anyone who likes to get their hands dirty under the hood!
       </Text>
     </View>
