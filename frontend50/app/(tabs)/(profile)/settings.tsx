@@ -269,9 +269,38 @@ export default function Settings() {
         <View style={divider} />
         <View style={row}>
           <Text style={label}>Build</Text>
-          <Text style={value}>15</Text>
+          <Text style={value}>16</Text>
         </View>
       </View>
+
+      {/* RATE US SECTION */}
+<Text style={sectionTitle}>Feedback</Text>
+
+<View style={card}>
+  <TouchableOpacity
+    style={row}
+    onPress={() => Linking.openURL("https://apps.apple.com/app/autoai-auto-intelligence/id6764058138?action=write-review")}
+  >
+    <Text style={label}>⭐ Rate on App Store</Text>
+    <Text style={{ color: "#345bff" }}>Rate →</Text>
+  </TouchableOpacity>
+  <View style={divider} />
+  <TouchableOpacity
+    style={row}
+    onPress={() => Linking.openURL("https://play.google.com/store/apps/details?id=app.automotiveai&showAllReviews=true")}
+  >
+    <Text style={label}>⭐ Rate on Google Play</Text>
+    <Text style={{ color: "#345bff" }}>Rate →</Text>
+  </TouchableOpacity>
+  <View style={divider} />
+  <TouchableOpacity
+    style={row}
+    onPress={() => Linking.openURL("mailto:maz@amazmade.com?subject=AutoAI Feedback")}
+  >
+    <Text style={label}>💬 Send Feedback</Text>
+    <Text style={{ color: "#345bff" }}>Email →</Text>
+  </TouchableOpacity>
+</View>
 
       {/* LEGAL SECTION */}
       <Text style={sectionTitle}>Legal</Text>
