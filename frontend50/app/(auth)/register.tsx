@@ -11,6 +11,7 @@ export default function Register() {
   const [role, setRole] = useState<"DIYER" | "MECHANIC">("DIYER");
   const [loading, setLoading] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleRegister = async () => {
     if (!name || !email || !password) {
@@ -58,14 +59,33 @@ export default function Register() {
         keyboardType="email-address"
       />
 
-      <TextInput
-        placeholder="Password"
-        placeholderTextColor="#888"
-        secureTextEntry
-        style={styles.input}
-        value={password}
-        onChangeText={setPassword}
-      />
+      {/* PASSWORD WITH EYE ICON */}
+      <View style={{
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "#11131a",
+        borderRadius: 8,
+        marginBottom: 12,
+        borderWidth: 1,
+        borderColor: "#252838",
+      }}>
+        <TextInput
+          placeholder="Password"
+          placeholderTextColor="#888"
+          secureTextEntry={!showPassword}
+          style={{ flex: 1, color: "white", padding: 12 }}
+          value={password}
+          onChangeText={setPassword}
+        />
+        <TouchableOpacity
+          onPress={() => setShowPassword(!showPassword)}
+          style={{ paddingHorizontal: 14 }}
+        >
+          <Text style={{ fontSize: 18 }}>
+            {showPassword ? "🙈" : "👁️"}
+          </Text>
+        </TouchableOpacity>
+      </View>
 
       {/* Role Picker */}
       <Text style={styles.roleLabel}>I am a...</Text>
