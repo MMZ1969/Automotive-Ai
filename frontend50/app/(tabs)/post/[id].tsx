@@ -9,6 +9,7 @@ import {
   FlatList,
   Image,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Text,
   TextInput,
@@ -24,6 +25,9 @@ export default function PostDetail() {
   const [comment, setComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editContent, setEditContent] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const fetchPost = async () => {
     try {
@@ -77,6 +81,27 @@ export default function PostDetail() {
     );
   };
 
+  const handleEdit = () => {
+    setEditContent(post?.content || "");
+    setEditModalVisible(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editContent.trim()) return;
+    try {
+      setSaving(true);
+      await api.put(`/api/posts/${id}`, { content: editContent });
+      setEditModalVisible(false);
+      fetchPost();
+      Alert.alert("✅ Post updated!");
+    } catch (err) {
+      console.error("EDIT ERROR:", err);
+      Alert.alert("Error", "Could not update post. Try again.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleReport = () => {
     Alert.alert(
       "Report Post",
@@ -118,6 +143,81 @@ export default function PostDetail() {
       style={{ flex: 1, backgroundColor: "#050509" }}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
+      {/* EDIT MODAL */}
+      <Modal
+        visible={editModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setEditModalVisible(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={{ flex: 1, backgroundColor: "#00000088", justifyContent: "flex-end" }}
+        >
+          <View style={{
+            backgroundColor: "#11131a",
+            borderTopLeftRadius: 20,
+            borderTopRightRadius: 20,
+            padding: 20,
+          }}>
+            <Text style={{ color: "white", fontSize: 20, fontWeight: "900", marginBottom: 16 }}>
+              ✏️ Edit Post
+            </Text>
+            <TextInput
+              value={editContent}
+              onChangeText={setEditContent}
+              multiline
+              autoFocus
+              placeholder="What's on your mind?"
+              placeholderTextColor="#4b5563"
+              style={{
+                backgroundColor: "#050509",
+                color: "white",
+                paddingHorizontal: 16,
+                paddingVertical: 12,
+                borderRadius: 12,
+                borderWidth: 1,
+                borderColor: "#345bff",
+                fontSize: 15,
+                lineHeight: 22,
+                minHeight: 120,
+                textAlignVertical: "top",
+                marginBottom: 16,
+              }}
+            />
+            <View style={{ flexDirection: "row", gap: 10, marginBottom: 30 }}>
+              <TouchableOpacity
+                onPress={() => setEditModalVisible(false)}
+                style={{
+                  flex: 1,
+                  backgroundColor: "#252838",
+                  padding: 14,
+                  borderRadius: 12,
+                  alignItems: "center",
+                }}
+              >
+                <Text style={{ color: "white", fontWeight: "700" }}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleSaveEdit}
+                disabled={saving || !editContent.trim()}
+                style={{
+                  flex: 1,
+                  backgroundColor: saving || !editContent.trim() ? "#1f2937" : "#345bff",
+                  padding: 14,
+                  borderRadius: 12,
+                  alignItems: "center",
+                }}
+              >
+                <Text style={{ color: "white", fontWeight: "700" }}>
+                  {saving ? "Saving..." : "Save"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
       {/* HEADER */}
       <View style={{
         paddingTop: 60,
@@ -137,19 +237,34 @@ export default function PostDetail() {
         </View>
 
         {isMyPost ? (
-          <TouchableOpacity
-            onPress={handleDelete}
-            style={{
-              backgroundColor: "#1a0a0a",
-              paddingHorizontal: 12,
-              paddingVertical: 6,
-              borderRadius: 10,
-              borderWidth: 1,
-              borderColor: "#ef444444",
-            }}
-          >
-            <Text style={{ color: "#ef4444", fontSize: 13, fontWeight: "700" }}>🗑️ Delete</Text>
-          </TouchableOpacity>
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            <TouchableOpacity
+              onPress={handleEdit}
+              style={{
+                backgroundColor: "#0f1628",
+                paddingHorizontal: 12,
+                paddingVertical: 6,
+                borderRadius: 10,
+                borderWidth: 1,
+                borderColor: "#345bff44",
+              }}
+            >
+              <Text style={{ color: "#345bff", fontSize: 13, fontWeight: "700" }}>✏️ Edit</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleDelete}
+              style={{
+                backgroundColor: "#1a0a0a",
+                paddingHorizontal: 12,
+                paddingVertical: 6,
+                borderRadius: 10,
+                borderWidth: 1,
+                borderColor: "#ef444444",
+              }}
+            >
+              <Text style={{ color: "#ef4444", fontSize: 13, fontWeight: "700" }}>🗑️ Delete</Text>
+            </TouchableOpacity>
+          </View>
         ) : (
           <TouchableOpacity
             onPress={handleReport}
@@ -182,18 +297,18 @@ export default function PostDetail() {
               padding: 16,
             }}>
               {/* POST TYPE BADGE */}
-            <View style={{
-              alignSelf: "flex-start",
-              backgroundColor: post?.postType === "QUESTION" ? "#1e3a8a" : post?.postType === "SERVICE" ? "#78350f" : "#064e3b",
-              paddingHorizontal: 10,
-              paddingVertical: 3,
-              borderRadius: 10,
-              marginBottom: 12,
-            }}>
-              <Text style={{ color: "white", fontSize: 11, fontWeight: "600" }}>
-                {post?.postType === "QUESTION" ? "🔧 Question" : post?.postType === "SERVICE" ? "🏁 Service" : "🚗 Vanity"}
-              </Text>
-            </View>
+              <View style={{
+                alignSelf: "flex-start",
+                backgroundColor: post?.postType === "QUESTION" ? "#1e3a8a" : post?.postType === "SERVICE" ? "#78350f" : "#064e3b",
+                paddingHorizontal: 10,
+                paddingVertical: 3,
+                borderRadius: 10,
+                marginBottom: 12,
+              }}>
+                <Text style={{ color: "white", fontSize: 11, fontWeight: "600" }}>
+                  {post?.postType === "QUESTION" ? "🔧 Question" : post?.postType === "SERVICE" ? "🏁 Service" : "🚗 Vanity"}
+                </Text>
+              </View>
 
               {/* POST AUTHOR */}
               <TouchableOpacity
