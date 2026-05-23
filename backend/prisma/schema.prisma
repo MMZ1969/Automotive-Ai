@@ -49,6 +49,8 @@ model Post {
   postType        String    @default("VANITY")
   servicePrice    String?
   serviceLocation String?
+  beforeImageUrl  String?
+  afterImageUrl   String?
   pinned          Boolean   @default(false)   // 👈 ADD THIS
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
@@ -59,13 +61,16 @@ model Post {
 }
 
 model Comment {
-  id        Int      @id @default(autoincrement())
+  id        Int       @id @default(autoincrement())
   postId    Int
   userId    Int
   content   String
-  createdAt DateTime @default(now())
-  post      Post     @relation(fields: [postId], references: [id])
-  user      User     @relation(fields: [userId], references: [id])
+  parentId  Int?
+  createdAt DateTime  @default(now())
+  post      Post      @relation(fields: [postId], references: [id])
+  user      User      @relation(fields: [userId], references: [id])
+  parent    Comment?  @relation("CommentReplies", fields: [parentId], references: [id])
+  replies   Comment[] @relation("CommentReplies")
 }
 
 model Like {

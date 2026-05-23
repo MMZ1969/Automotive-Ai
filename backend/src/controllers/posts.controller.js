@@ -50,23 +50,25 @@ export const createPost = async (req, res) => {
   try {
     console.log("CREATE POST BODY:", req.body);
     console.log("POST TYPE RECEIVED:", req.body.postType);
-    const { content, imageUrl, postType, servicePrice, serviceLocation } = req.body;
+    const { content, imageUrl, postType, servicePrice, serviceLocation, beforeImageUrl, afterImageUrl } = req.body;
     const userId = req.user.id;
     if (!content || content.trim() === "") {
       return res.status(400).json({ error: "Post content cannot be empty" });
     }
-    const validTypes = ["VANITY", "QUESTION", "SERVICE"];
+    const validTypes = ["VANITY", "QUESTION", "SERVICE", "BEFORE_AFTER"];
     const type = validTypes.includes(postType) ? postType : "VANITY";
     const post = await prisma.post.create({
-      data: { 
-        content, 
-        userId, 
-        imageUrl, 
-        postType: type,
-        servicePrice: servicePrice || null,
-        serviceLocation: serviceLocation || null,
-      },
-    });
+    data: { 
+    content, 
+    userId, 
+    imageUrl, 
+    postType: type,
+    servicePrice: servicePrice || null,
+    serviceLocation: serviceLocation || null,
+    beforeImageUrl: beforeImageUrl || null,
+    afterImageUrl: afterImageUrl || null,
+  },
+  });
 
     // Award rep for posting
     const repToAward = type === "QUESTION" ? 2 : 1;
@@ -347,5 +349,47 @@ export const togglePinPost = async (req, res) => {
   } catch (err) {
     console.error("TOGGLE PIN ERROR:", err);
     res.status(500).json({ error: "Failed to toggle pin" });
+  }
+};
+export const addReply = async (req, res) => {
+  try {
+    const postId = Number(req.params.id);
+    const parentId = Number(req.params.commentId);
+    const userId = req.user.id;
+    const { content } = req.body;
+
+    if (!content || content.trim() === "") {
+      return res.status(400).json({ error: "Reply cannot be empty" });
+    }
+
+    const reply = await prisma.comment.create({
+      data: { content, userId, postId, parentId },
+      include: { user: true },
+    });
+
+    // Notify the parent comment author (if not replying to yourself)
+    const parentComment = await prisma.comment.findUnique({
+      where: { id: parentId },
+      select: { userId: true },
+    });
+
+    if (parentComment && parentComment.userId !== userId) {
+      const actor = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { name: true },
+      });
+      await createAndSendNotification({
+        recipientId: parentComment.userId,
+        actorId: userId,
+        type: "comment",
+        postId,
+        message: `${actor?.name || "Someone"} replied to your comment 💬`,
+      });
+    }
+
+    res.json(reply);
+  } catch (err) {
+    console.error("ADD REPLY ERROR:", err);
+    res.status(500).json({ error: "Failed to add reply" });
   }
 };

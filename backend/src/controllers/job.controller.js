@@ -321,7 +321,11 @@ export const sendStatusUpdate = async (req, res) => {
 
     const job = await prisma.job.findUnique({
       where: { id: jobId },
-      include: { poster: { select: { id: true, name: true } } },
+      include: {
+        poster: {
+          select: { id: true, name: true, pushToken: true },
+        },
+      },
     });
 
     if (!job) return res.status(404).json({ error: "Job not found" });
@@ -331,11 +335,21 @@ export const sendStatusUpdate = async (req, res) => {
       select: { name: true },
     });
 
+    const fullMessage = `🔧 ${mechanic?.name || "Your mechanic"}: ${message}`;
+
+    // 1. Save in-app notification (existing behavior)
     await createAndSendNotification({
       recipientId: job.userId,
       actorId: mechanicId,
       type: "job_update",
-      message: `🔧 ${mechanic?.name || "Your mechanic"}: ${message}`,
+      message: fullMessage,
+    });
+
+    // 2. Fire real push notification to customer's device
+    await sendPushNotification({
+      pushToken: job.poster.pushToken,
+      title: "🔧 Job Update",
+      body: message,
     });
 
     res.json({ success: true });

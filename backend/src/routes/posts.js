@@ -16,6 +16,7 @@ router.put("/:id", authMiddleware, postsController.updatePost);
 router.delete("/:id", authMiddleware, postsController.deletePost);
 router.post("/:id/like", authMiddleware, postsController.toggleLike);
 router.post("/:id/comments", authMiddleware, postsController.addComment);
+router.post("/:id/comments/:commentId/reply", authMiddleware, postsController.addReply);
 router.post("/:id/report", authMiddleware, reportPost);
 router.post("/:id/pin", authMiddleware, postsController.togglePinPost);
 
