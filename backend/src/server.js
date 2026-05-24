@@ -2,6 +2,7 @@
 import cors from "cors";
 import dotenv from "dotenv";
 import express from "express";
+import rateLimit from "express-rate-limit";
 
 import prisma from "./lib/prisma.js";
 import authMiddleware from "./middleware/authMiddleware.js";
@@ -24,6 +25,35 @@ const app = express();
 
 app.use(cors());
 app.use(express.json({ limit: "10mb" }));
+
+// ─── RATE LIMITING ────────────────────────────────────────────────────────────
+
+// General API limit — 100 requests per minute
+const generalLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000,
+  max: 100,
+  message: { error: "Too many requests, please slow down." },
+});
+
+// Auth limit — 10 attempts per 15 minutes (stops brute force)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { error: "Too many attempts. Please try again in 15 minutes." },
+});
+
+// Register limit — 5 signups per hour per IP (stops bot signups)
+const registerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  message: { error: "Too many accounts created. Please try again later." },
+});
+
+app.use("/api", generalLimiter);
+app.use("/api/auth/login", authLimiter);
+app.use("/api/auth/register", registerLimiter);
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 // Routes
 app.use("/api/auth", authRoutes);
