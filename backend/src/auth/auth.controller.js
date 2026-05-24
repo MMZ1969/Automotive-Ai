@@ -39,31 +39,40 @@ export const register = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    const verificationToken = crypto.randomBytes(32).toString("hex");
+
     const user = await prisma.user.create({
       data: {
         email,
         password: hashedPassword,
         name,
         role: role || "DIYER",
+        emailVerified: false,
+        verificationToken,
       },
     });
 
-    const token = jwt.sign(
-      { userId: user.id, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: "7d" }
-    );
+    // Send verification email
+    const verifyLink = `automotiveai://verify-email?token=${verificationToken}`;
+    await sgMail.send({
+      to: email,
+      from: "maz@amazmade.com",
+      subject: "Verify Your AutoAI Account 🚗",
+      html: `
+        <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; background: #050509; color: white; padding: 32px; border-radius: 16px;">
+          <h2 style="color: #345bff;">AutoAI™</h2>
+          <p>Welcome to Automotive AI! One last step — verify your email to activate your account.</p>
+          <a href="${verifyLink}" style="display: inline-block; background: #345bff; color: white; padding: 14px 28px; border-radius: 12px; text-decoration: none; font-weight: bold; margin: 20px 0;">
+            Verify My Email
+          </a>
+          <p style="color: #6b7280; font-size: 13px;">If you didn't create an account, ignore this email.</p>
+        </div>
+      `,
+    });
 
     res.json({
-      token,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-        profilePhoto: user.profilePhoto,
-        repPoints: user.repPoints,
-      },
+      message: "Account created! Please check your email to verify your account.",
+      needsVerification: true,
     });
   } catch (err) {
     console.error("REGISTER ERROR:", err);
@@ -81,9 +90,16 @@ export const login = async (req, res) => {
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    const isMatch = await bcrypt.compare(password, user.password);
+const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(400).json({ message: "Invalid credentials" });
+    }
+
+    if (!user.emailVerified) {
+      return res.status(403).json({ 
+        message: "Please verify your email before logging in. Check your inbox!",
+        needsVerification: true,
+      });
     }
 
     const token = jwt.sign(
@@ -260,6 +276,96 @@ export const changePassword = async (req, res) => {
     res.json({ message: "Password changed successfully!" });
   } catch (err) {
     console.error("CHANGE PASSWORD ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// VERIFY EMAIL
+export const verifyEmail = async (req, res) => {
+  try {
+    const { token } = req.query;
+
+    const user = await prisma.user.findFirst({
+      where: { verificationToken: token },
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: "Invalid or expired verification link." });
+    }
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        emailVerified: true,
+        verificationToken: null,
+      },
+    });
+
+    // Return token so they get logged in automatically after verifying
+    const jwtToken = jwt.sign(
+      { userId: user.id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    res.json({ 
+      message: "Email verified! Welcome to AutoAI 🚗",
+      token: jwtToken,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        profilePhoto: user.profilePhoto,
+        repPoints: user.repPoints,
+      },
+    });
+  } catch (err) {
+    console.error("VERIFY EMAIL ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// RESEND VERIFICATION EMAIL
+export const resendVerification = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      return res.json({ message: "If that email exists, a verification link has been sent." });
+    }
+
+    if (user.emailVerified) {
+      return res.status(400).json({ message: "Email already verified!" });
+    }
+
+    const verificationToken = crypto.randomBytes(32).toString("hex");
+    await prisma.user.update({
+      where: { email },
+      data: { verificationToken },
+    });
+
+    const verifyLink = `automotiveai://verify-email?token=${verificationToken}`;
+    await sgMail.send({
+      to: email,
+      from: "maz@amazmade.com",
+      subject: "Verify Your AutoAI Account 🚗",
+      html: `
+        <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; background: #050509; color: white; padding: 32px; border-radius: 16px;">
+          <h2 style="color: #345bff;">AutoAI™</h2>
+          <p>Here's your new verification link. Tap below to activate your account.</p>
+          <a href="${verifyLink}" style="display: inline-block; background: #345bff; color: white; padding: 14px 28px; border-radius: 12px; text-decoration: none; font-weight: bold; margin: 20px 0;">
+            Verify My Email
+          </a>
+          <p style="color: #6b7280; font-size: 13px;">If you didn't create an account, ignore this email.</p>
+        </div>
+      `,
+    });
+
+    res.json({ message: "Verification email sent!" });
+  } catch (err) {
+    console.error("RESEND VERIFICATION ERROR:", err);
     res.status(500).json({ message: "Server error" });
   }
 };
