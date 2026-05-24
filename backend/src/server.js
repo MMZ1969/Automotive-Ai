@@ -3,6 +3,8 @@ import cors from "cors";
 import dotenv from "dotenv";
 import express from "express";
 import rateLimit from "express-rate-limit";
+import helmet from "helmet";
+import xss from "xss";
 
 import prisma from "./lib/prisma.js";
 import authMiddleware from "./middleware/authMiddleware.js";
@@ -23,8 +25,28 @@ dotenv.config();
 
 const app = express();
 
+
+app.use(helmet());
 app.use(cors());
 app.use(express.json({ limit: "10mb" }));
+
+// ─── INPUT SANITIZATION ───────────────────────────────────────────────────────
+app.use((req, res, next) => {
+  if (req.body && typeof req.body === "object") {
+    const sanitize = (obj) => {
+      for (const key in obj) {
+        if (typeof obj[key] === "string") {
+          obj[key] = xss(obj[key]);
+        } else if (typeof obj[key] === "object" && obj[key] !== null) {
+          sanitize(obj[key]);
+        }
+      }
+    };
+    sanitize(req.body);
+  }
+  next();
+});
+// ──────────────────────────────────────────────────────────────────────────────
 
 // ─── RATE LIMITING ────────────────────────────────────────────────────────────
 
