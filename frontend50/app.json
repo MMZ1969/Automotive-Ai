@@ -2,7 +2,7 @@
   "expo": {
     "name": "AutoAI",
     "slug": "frontend50",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "orientation": "portrait",
     "icon": "./assets/autoai_icon_1024_tm.png",
     "userInterfaceStyle": "light",
@@ -10,7 +10,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "app.automotiveai",
-      "buildNumber": "16",
+      "buildNumber": "17",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSAppTransportSecurity": {
@@ -19,19 +19,30 @@
         "NSSpeechRecognitionUsageDescription": "AutoAI uses speech recognition to let you describe car problems hands-free.",
         "NSMicrophoneUsageDescription": "AutoAI uses your microphone to listen for car problem descriptions.",
         "NSPhotoLibraryUsageDescription": "AutoAI uses your photo library so you can upload photos of your vehicle or car problems to share with the community in posts and to set your profile photo.",
-        "NSCameraUsageDescription": "AutoAI uses your camera so you can take photos of parts you want to list for sale."
+        "NSCameraUsageDescription": "AutoAI uses your camera so you can take photos of parts you want to list for sale.",
+        "NSLocationWhenInUseUsageDescription": "AutoAI uses your location to show mechanics near you."
+      },
+      "config": {
+        "googleMapsApiKey": "AIzaSyA5NX5k11wIZ_DCJGC_EuzBwjeEfEHPZLo"
       }
     },
     "android": {
       "adaptiveIcon": {
-    "foregroundImage": "./assets/autoai_icon_1024_tm.png",
+        "foregroundImage": "./assets/autoai_icon_1024_tm.png",
         "backgroundColor": "#050509"
       },
       "package": "app.automotiveai",
-      "versionCode": 2,
+      "versionCode": 3,
       "permissions": [
-        "android.permission.RECORD_AUDIO"
+        "android.permission.RECORD_AUDIO",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION"
       ],
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyA5NX5k11wIZ_DCJGC_EuzBwjeEfEHPZLo"
+        }
+      },
       "intentFilters": [
         {
           "action": "VIEW",
@@ -51,7 +62,13 @@
     "plugins": [
       "expo-router",
       "expo-speech-recognition",
-      "expo-notifications"
+      "expo-notifications",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "AutoAI uses your location to show mechanics near you."
+        }
+      ]
     ],
     "scheme": "automotiveai",
     "extra": {

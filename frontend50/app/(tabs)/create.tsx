@@ -11,6 +11,7 @@ import {
   Keyboard,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
   Text,
   TextInput,
   TouchableOpacity,
@@ -27,9 +28,19 @@ export default function CreatePostScreen() {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [postType, setPostType] = useState<"VANITY" | "QUESTION" | "SERVICE">("VANITY");
+  const [postType, setPostType] = useState<"VANITY" | "QUESTION" | "SERVICE" | "BEFORE_AFTER">("VANITY");
   const [servicePrice, setServicePrice] = useState("");
   const [serviceLocation, setServiceLocation] = useState("");
+
+  // Before/After state
+  const [beforeUri, setBeforeUri] = useState<string | null>(null);
+  const [beforeUrl, setBeforeUrl] = useState<string | null>(null);
+  const [afterUri, setAfterUri] = useState<string | null>(null);
+  const [afterUrl, setAfterUrl] = useState<string | null>(null);
+  const [uploadingBefore, setUploadingBefore] = useState(false);
+  const [uploadingAfter, setUploadingAfter] = useState(false);
+  const [beforeProgress, setBeforeProgress] = useState(0);
+  const [afterProgress, setAfterProgress] = useState(0);
 
   const handlePickPhoto = async () => {
     try {
@@ -46,81 +57,121 @@ export default function CreatePostScreen() {
       if (result.canceled) return;
       const uri = result.assets[0].uri;
       setImageUri(uri);
-      await uploadToFirebase(uri);
+      await uploadToFirebase(uri, "main");
     } catch (err) {
-      console.error("PHOTO PICK ERROR:", err);
       Alert.alert("Error", "Could not open photo library.");
     }
   };
 
-  const uploadToFirebase = async (uri: string) => {
+  const handlePickBeforeAfter = async (slot: "before" | "after") => {
     try {
-      setUploading(true);
-      setUploadProgress(0);
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert("Permission needed", "Please allow access to your photo library.");
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.7,
+      });
+      if (result.canceled) return;
+      const uri = result.assets[0].uri;
+      if (slot === "before") setBeforeUri(uri);
+      else setAfterUri(uri);
+      await uploadToFirebase(uri, slot);
+    } catch (err) {
+      Alert.alert("Error", "Could not open photo library.");
+    }
+  };
+
+  const uploadToFirebase = async (uri: string, slot: "main" | "before" | "after") => {
+    try {
+      if (slot === "before") { setUploadingBefore(true); setBeforeProgress(0); }
+      else if (slot === "after") { setUploadingAfter(true); setAfterProgress(0); }
+      else { setUploading(true); setUploadProgress(0); }
+
       const response = await fetch(uri);
       const blob = await response.blob();
-      const filename = `post-photos/${user?.id}/post_${Date.now()}.jpg`;
+      const filename = `post-photos/${user?.id}/${slot}_${Date.now()}.jpg`;
       const storageRef = ref(storage, filename);
       const uploadTask = uploadBytesResumable(storageRef, blob);
+
       uploadTask.on(
         "state_changed",
         (snapshot) => {
-          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-          setUploadProgress(Math.round(progress));
+          const progress = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
+          if (slot === "before") setBeforeProgress(progress);
+          else if (slot === "after") setAfterProgress(progress);
+          else setUploadProgress(progress);
         },
         (error) => {
-          console.error("UPLOAD ERROR:", error);
           Alert.alert("Upload failed", "Please try again.");
-          setUploading(false);
+          if (slot === "before") setUploadingBefore(false);
+          else if (slot === "after") setUploadingAfter(false);
+          else setUploading(false);
         },
         async () => {
           const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-          setImageUrl(downloadURL);
-          setUploading(false);
+          if (slot === "before") { setBeforeUrl(downloadURL); setUploadingBefore(false); }
+          else if (slot === "after") { setAfterUrl(downloadURL); setUploadingAfter(false); }
+          else { setImageUrl(downloadURL); setUploading(false); }
         }
       );
     } catch (err) {
-      console.error("UPLOAD ERROR:", err);
-      setUploading(false);
+      if (slot === "before") setUploadingBefore(false);
+      else if (slot === "after") setUploadingAfter(false);
+      else setUploading(false);
     }
   };
 
   const handlePost = async () => {
+  console.log("POST TYPE BEING SENT:", postType); // ADD THIS
+  console.log("BEFORE URL:", beforeUrl);          // ADD THIS
+  console.log("AFTER URL:", afterUrl);            // ADD THIS
+
     if (!content.trim()) {
       Alert.alert("Empty post", "Write something before posting!");
       return;
     }
-    if (uploading) {
-      Alert.alert("Please wait", "Photo is still uploading...");
+    if (postType === "BEFORE_AFTER" && (!beforeUrl || !afterUrl)) {
+      Alert.alert("Missing photos", "Please add both a Before and After photo!");
+      return;
+    }
+    if (uploading || uploadingBefore || uploadingAfter) {
+      Alert.alert("Please wait", "Photos are still uploading...");
       return;
     }
     try {
       setSubmitting(true);
-      console.log("POSTING WITH TYPE:", postType);
       await api.post("/api/posts", {
         content,
-        imageUrl,
+        imageUrl: postType === "BEFORE_AFTER" ? null : imageUrl,
         postType,
         servicePrice: postType === "SERVICE" ? servicePrice : null,
         serviceLocation: postType === "SERVICE" ? serviceLocation : null,
+        beforeImageUrl: postType === "BEFORE_AFTER" ? beforeUrl : null,
+        afterImageUrl: postType === "BEFORE_AFTER" ? afterUrl : null,
       });
       setContent("");
-      setImageUri(null);
-      setImageUrl(null);
+      setImageUri(null); setImageUrl(null);
+      setBeforeUri(null); setBeforeUrl(null);
+      setAfterUri(null); setAfterUrl(null);
       setPostType("VANITY");
-      setServicePrice("");
-      setServiceLocation("");
+      setServicePrice(""); setServiceLocation("");
       Alert.alert("Posted! 🚗", "Your post is live!", [
         { text: "View Feed", onPress: () => router.push("/(tabs)/feed") },
         { text: "Stay here" },
       ]);
     } catch (err) {
-      console.error("CREATE POST ERROR:", err);
       Alert.alert("Error", "Could not create post. Try again.");
     } finally {
       setSubmitting(false);
     }
   };
+
+  const isUploading = uploading || uploadingBefore || uploadingAfter;
 
   return (
     <KeyboardAvoidingView
@@ -128,318 +179,191 @@ export default function CreatePostScreen() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       {/* HEADER */}
-      <View style={{
-        paddingTop: 60,
-        paddingHorizontal: 20,
-        paddingBottom: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: "#252838",
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-      }}>
-        <TouchableOpacity onPress={() => {
-          Keyboard.dismiss();
-          setContent("");
-          setImageUri(null);
-          setImageUrl(null);
-          router.push("/(tabs)/feed");
-        }}>
+      <View style={{ paddingTop: 60, paddingHorizontal: 20, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: "#252838", flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+        <TouchableOpacity onPress={() => { Keyboard.dismiss(); setContent(""); setImageUri(null); setImageUrl(null); router.push("/(tabs)/feed"); }}>
           <Text style={{ color: "#9ca3af", fontSize: 16 }}>Cancel</Text>
         </TouchableOpacity>
-        <Text style={{ color: "white", fontSize: 22, fontWeight: "900" }}>
-          New Post
-        </Text>
+        <Text style={{ color: "white", fontSize: 22, fontWeight: "900" }}>New Post</Text>
         <TouchableOpacity
           onPress={handlePost}
-          disabled={submitting || !content.trim() || uploading}
-          style={{
-            backgroundColor: submitting || !content.trim() || uploading ? "#1f2937" : "#345bff",
-            paddingHorizontal: 20,
-            paddingVertical: 10,
-            borderRadius: 20,
-          }}
+          disabled={submitting || !content.trim() || isUploading}
+          style={{ backgroundColor: submitting || !content.trim() || isUploading ? "#1f2937" : "#345bff", paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20 }}
         >
-          {submitting ? (
-            <ActivityIndicator color="white" size="small" />
-          ) : (
-            <Text style={{ color: "white", fontWeight: "700", fontSize: 15 }}>Post</Text>
-          )}
+          {submitting ? <ActivityIndicator color="white" size="small" /> : <Text style={{ color: "white", fontWeight: "700", fontSize: 15 }}>Post</Text>}
         </TouchableOpacity>
       </View>
 
-      {/* ROLE BADGE */}
-      <View style={{ paddingHorizontal: 20, paddingTop: 16, flexDirection: "row", alignItems: "center", gap: 10 }}>
-        <View style={{
-          width: 44,
-          height: 44,
-          borderRadius: 22,
-          backgroundColor: "#1f2937",
-          justifyContent: "center",
-          alignItems: "center",
-          borderWidth: 2,
-          borderColor: user?.role === "MECHANIC" ? "#345bff" : "#10b981",
-        }}>
-          <Text style={{ color: "white", fontSize: 18, fontWeight: "bold" }}>
-            {user?.name?.[0]?.toUpperCase() || "?"}
-          </Text>
-        </View>
-        <View>
-          <Text style={{ color: "white", fontWeight: "700" }}>{user?.name || "You"}</Text>
-          <View style={{
-            backgroundColor: user?.role === "MECHANIC" ? "#1e3a8a" : "#064e3b",
-            paddingHorizontal: 8,
-            paddingVertical: 2,
-            borderRadius: 10,
-            alignSelf: "flex-start",
-            marginTop: 3,
-          }}>
-            <Text style={{ color: "white", fontSize: 11, fontWeight: "600" }}>
-              {user?.role === "MECHANIC" ? "🏁 Mechanic" : "🔧 DIYer"}
-            </Text>
-          </View>
-        </View>
-      </View>
-
-      {/* POST TYPE SELECTOR */}
-      <View style={{
-        flexDirection: "row",
-        paddingHorizontal: 20,
-        paddingTop: 16,
-        gap: 8,
-      }}>
-        <TouchableOpacity
-          onPress={() => setPostType("VANITY")}
-          style={{
-            flex: 1,
-            paddingVertical: 10,
-            borderRadius: 12,
-            alignItems: "center",
-            backgroundColor: postType === "VANITY" ? "#10b981" : "#11131a",
-            borderWidth: 1,
-            borderColor: postType === "VANITY" ? "#10b981" : "#252838",
-          }}
-        >
-          <Text style={{ fontSize: 16 }}>🚗</Text>
-          <Text style={{
-            color: postType === "VANITY" ? "white" : "#6b7280",
-            fontWeight: "700",
-            fontSize: 12,
-            marginTop: 4,
-          }}>Vanity</Text>
-          <Text style={{
-            color: postType === "VANITY" ? "#d1fae5" : "#4b5563",
-            fontSize: 10,
-            marginTop: 2,
-          }}>Show off your ride</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={() => setPostType("QUESTION")}
-          style={{
-            flex: 1,
-            paddingVertical: 10,
-            borderRadius: 12,
-            alignItems: "center",
-            backgroundColor: postType === "QUESTION" ? "#345bff" : "#11131a",
-            borderWidth: 1,
-            borderColor: postType === "QUESTION" ? "#345bff" : "#252838",
-          }}
-        >
-          <Text style={{ fontSize: 16 }}>🔧</Text>
-          <Text style={{
-            color: postType === "QUESTION" ? "white" : "#6b7280",
-            fontWeight: "700",
-            fontSize: 12,
-            marginTop: 4,
-          }}>Question</Text>
-          <Text style={{
-            color: postType === "QUESTION" ? "#dbeafe" : "#4b5563",
-            fontSize: 10,
-            marginTop: 2,
-          }}>Ask the community</Text>
-        </TouchableOpacity>
-
-        {isMechanic && (
-          <TouchableOpacity
-            onPress={() => setPostType("SERVICE")}
-            style={{
-              flex: 1,
-              paddingVertical: 10,
-              borderRadius: 12,
-              alignItems: "center",
-              backgroundColor: postType === "SERVICE" ? "#f59e0b" : "#11131a",
-              borderWidth: 1,
-              borderColor: postType === "SERVICE" ? "#f59e0b" : "#252838",
-            }}
-          >
-            <Text style={{ fontSize: 16 }}>🏁</Text>
-            <Text style={{
-              color: postType === "SERVICE" ? "white" : "#6b7280",
-              fontWeight: "700",
-              fontSize: 12,
-              marginTop: 4,
-            }}>Service</Text>
-            <Text style={{
-              color: postType === "SERVICE" ? "#fef3c7" : "#4b5563",
-              fontSize: 10,
-              marginTop: 2,
-            }}>Offer your services</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-
-      {/* SERVICE FIELDS */}
-      {postType === "SERVICE" && (
-        <View style={{ paddingHorizontal: 20, paddingTop: 16, gap: 12 }}>
-          <View>
-            <Text style={{ color: "#9ca3af", fontSize: 13, marginBottom: 8 }}>
-              Service Location
-            </Text>
-            <TextInput
-              value={serviceLocation}
-              onChangeText={setServiceLocation}
-              placeholder="e.g. South Jersey, NJ"
-              placeholderTextColor="#4b5563"
-              style={{
-                backgroundColor: "#11131a",
-                color: "white",
-                paddingHorizontal: 16,
-                paddingVertical: 12,
-                borderRadius: 12,
-                borderWidth: 1,
-                borderColor: "#252838",
-                fontSize: 15,
-              }}
-            />
+      <ScrollView keyboardShouldPersistTaps="handled">
+        {/* ROLE BADGE */}
+        <View style={{ paddingHorizontal: 20, paddingTop: 16, flexDirection: "row", alignItems: "center", gap: 10 }}>
+          <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: "#1f2937", justifyContent: "center", alignItems: "center", borderWidth: 2, borderColor: user?.role === "MECHANIC" ? "#345bff" : "#10b981" }}>
+            <Text style={{ color: "white", fontSize: 18, fontWeight: "bold" }}>{user?.name?.[0]?.toUpperCase() || "?"}</Text>
           </View>
           <View>
-            <Text style={{ color: "#9ca3af", fontSize: 13, marginBottom: 8 }}>
-              Price / Rate
-            </Text>
-            <TextInput
-              value={servicePrice}
-              onChangeText={setServicePrice}
-              placeholder="e.g. $75/hr or Call for quote"
-              placeholderTextColor="#4b5563"
-              style={{
-                backgroundColor: "#11131a",
-                color: "white",
-                paddingHorizontal: 16,
-                paddingVertical: 12,
-                borderRadius: 12,
-                borderWidth: 1,
-                borderColor: "#252838",
-                fontSize: 15,
-              }}
-            />
-          </View>
-        </View>
-      )}
-
-      {/* TEXT INPUT */}
-      <TextInput
-        value={content}
-        onChangeText={setContent}
-        placeholder={
-          postType === "QUESTION"
-            ? "Ask the community a car question..."
-            : postType === "SERVICE"
-            ? "Describe the service you're offering..."
-            : "Share a build, mod, or car moment..."
-        }
-        placeholderTextColor="#4b5563"
-        multiline
-        autoFocus
-        style={{
-          color: "white",
-          fontSize: 18,
-          lineHeight: 26,
-          paddingHorizontal: 20,
-          paddingTop: 20,
-          minHeight: 120,
-          textAlignVertical: "top",
-        }}
-      />
-
-      {/* IMAGE PREVIEW */}
-      {imageUri && (
-        <View style={{ paddingHorizontal: 20, marginTop: 10 }}>
-          <Image
-            source={{ uri: imageUri }}
-            style={{ width: "100%", height: 200, borderRadius: 12 }}
-            resizeMode="cover"
-          />
-          {uploading && (
-            <View style={{
-              position: "absolute",
-              top: 0, left: 20, right: 0, bottom: 0,
-              backgroundColor: "rgba(0,0,0,0.6)",
-              borderRadius: 12,
-              justifyContent: "center",
-              alignItems: "center",
-            }}>
-              <ActivityIndicator color="white" />
-              <Text style={{ color: "white", marginTop: 8 }}>{uploadProgress}%</Text>
+            <Text style={{ color: "white", fontWeight: "700" }}>{user?.name || "You"}</Text>
+            <View style={{ backgroundColor: user?.role === "MECHANIC" ? "#1e3a8a" : "#064e3b", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10, alignSelf: "flex-start", marginTop: 3 }}>
+              <Text style={{ color: "white", fontSize: 11, fontWeight: "600" }}>{user?.role === "MECHANIC" ? "🏁 Mechanic" : "🔧 DIYer"}</Text>
             </View>
-          )}
-          {!uploading && (
+          </View>
+        </View>
+
+        {/* POST TYPE SELECTOR */}
+        <View style={{ paddingHorizontal: 20, paddingTop: 16, gap: 8, display: "flex", flexDirection: "row", flexWrap: "wrap" }}>
+          {[
+            { type: "VANITY", emoji: "🚗", label: "Vanity", sub: "Show off your ride", color: "#7c3aed" },
+            { type: "QUESTION", emoji: "🔧", label: "Question", sub: "Ask the community", color: "#345bff" },
+            { type: "BEFORE_AFTER", emoji: "📸", label: "Before/After", sub: "Show the transformation", color: "#ef4444" },
+            ...(isMechanic ? [{ type: "SERVICE", emoji: "🏁", label: "Service", sub: "Offer your services", color: "#f59e0b" }] : []),
+          ].map((item) => (
             <TouchableOpacity
-              onPress={() => { setImageUri(null); setImageUrl(null); }}
+              key={item.type}
+              onPress={() => setPostType(item.type as any)}
               style={{
-                position: "absolute",
-                top: 8, right: 8,
-                backgroundColor: "rgba(0,0,0,0.7)",
+                flex: 1,
+                minWidth: "47%",
+                paddingVertical: 10,
                 borderRadius: 12,
-                paddingHorizontal: 10,
-                paddingVertical: 4,
+                alignItems: "center",
+                backgroundColor: postType === item.type ? item.color : "#11131a",
+                borderWidth: 1,
+                borderColor: postType === item.type ? item.color : "#252838",
+                marginBottom: 4,
               }}
             >
-              <Text style={{ color: "white", fontSize: 12 }}>✕ Remove</Text>
+              <Text style={{ fontSize: 16 }}>{item.emoji}</Text>
+              <Text style={{ color: postType === item.type ? "white" : "#6b7280", fontWeight: "700", fontSize: 12, marginTop: 4 }}>{item.label}</Text>
+              <Text style={{ color: postType === item.type ? "rgba(255,255,255,0.7)" : "#4b5563", fontSize: 10, marginTop: 2 }}>{item.sub}</Text>
             </TouchableOpacity>
-          )}
+          ))}
         </View>
-      )}
 
-      {/* BOTTOM TOOLBAR */}
-      <View style={{
-        flexDirection: "row",
-        alignItems: "center",
-        paddingHorizontal: 20,
-        paddingVertical: 12,
-        borderTopWidth: 1,
-        borderTopColor: "#252838",
-        marginTop: "auto",
-      }}>
-        <TouchableOpacity
-          onPress={handlePickPhoto}
-          disabled={uploading}
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 6,
-            backgroundColor: "#11131a",
-            paddingHorizontal: 14,
-            paddingVertical: 8,
-            borderRadius: 20,
-            borderWidth: 1,
-            borderColor: "#252838",
-          }}
-        >
-          <Text style={{ fontSize: 16 }}>📷</Text>
-          <Text style={{ color: "#9ca3af", fontSize: 13 }}>
-            {uploading ? `Uploading ${uploadProgress}%` : "Add Photo"}
-          </Text>
-        </TouchableOpacity>
+        {/* SERVICE FIELDS */}
+        {postType === "SERVICE" && (
+          <View style={{ paddingHorizontal: 20, paddingTop: 16, gap: 12 }}>
+            <TextInput value={serviceLocation} onChangeText={setServiceLocation} placeholder="Service Location (e.g. South Jersey, NJ)" placeholderTextColor="#4b5563" style={{ backgroundColor: "#11131a", color: "white", paddingHorizontal: 16, paddingVertical: 12, borderRadius: 12, borderWidth: 1, borderColor: "#252838", fontSize: 15 }} />
+            <TextInput value={servicePrice} onChangeText={setServicePrice} placeholder="Price / Rate (e.g. $75/hr)" placeholderTextColor="#4b5563" style={{ backgroundColor: "#11131a", color: "white", paddingHorizontal: 16, paddingVertical: 12, borderRadius: 12, borderWidth: 1, borderColor: "#252838", fontSize: 15 }} />
+          </View>
+        )}
 
-        <Text style={{
-          color: content.length > 400 ? "#f87171" : "#6b7280",
-          fontSize: 13,
-          marginLeft: "auto",
-        }}>
-          {content.length}/500
-        </Text>
-      </View>
+        {/* BEFORE/AFTER PHOTO PICKERS */}
+        {postType === "BEFORE_AFTER" && (
+          <View style={{ paddingHorizontal: 20, paddingTop: 16 }}>
+            <Text style={{ color: "#9ca3af", fontSize: 13, marginBottom: 12 }}>Add your before and after photos</Text>
+            <View style={{ flexDirection: "row", gap: 12 }}>
+
+              {/* BEFORE */}
+              <TouchableOpacity
+                onPress={() => handlePickBeforeAfter("before")}
+                style={{ flex: 1, height: 140, borderRadius: 12, backgroundColor: "#11131a", borderWidth: 1.5, borderColor: beforeUri ? "#ef4444" : "#252838", borderStyle: beforeUri ? "solid" : "dashed", justifyContent: "center", alignItems: "center", overflow: "hidden" }}
+              >
+                {beforeUri ? (
+                  <View style={{ width: "100%", height: "100%" }}>
+                    <Image source={{ uri: beforeUri }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
+                    {uploadingBefore && (
+                      <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center" }}>
+                        <ActivityIndicator color="white" />
+                        <Text style={{ color: "white", fontSize: 12, marginTop: 4 }}>{beforeProgress}%</Text>
+                      </View>
+                    )}
+                    <View style={{ position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: "rgba(0,0,0,0.6)", padding: 6, alignItems: "center" }}>
+                      <Text style={{ color: "white", fontSize: 11, fontWeight: "700" }}>BEFORE</Text>
+                    </View>
+                  </View>
+                ) : (
+                  <View style={{ alignItems: "center" }}>
+                    <Text style={{ fontSize: 28 }}>📷</Text>
+                    <Text style={{ color: "#ef4444", fontWeight: "700", fontSize: 13, marginTop: 6 }}>BEFORE</Text>
+                    <Text style={{ color: "#6b7280", fontSize: 11, marginTop: 2 }}>Tap to add</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+
+              {/* ARROW */}
+              <View style={{ justifyContent: "center", alignItems: "center" }}>
+                <Text style={{ color: "#ef4444", fontSize: 22 }}>→</Text>
+              </View>
+
+              {/* AFTER */}
+              <TouchableOpacity
+                onPress={() => handlePickBeforeAfter("after")}
+                style={{ flex: 1, height: 140, borderRadius: 12, backgroundColor: "#11131a", borderWidth: 1.5, borderColor: afterUri ? "#10b981" : "#252838", borderStyle: afterUri ? "solid" : "dashed", justifyContent: "center", alignItems: "center", overflow: "hidden" }}
+              >
+                {afterUri ? (
+                  <View style={{ width: "100%", height: "100%" }}>
+                    <Image source={{ uri: afterUri }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
+                    {uploadingAfter && (
+                      <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center" }}>
+                        <ActivityIndicator color="white" />
+                        <Text style={{ color: "white", fontSize: 12, marginTop: 4 }}>{afterProgress}%</Text>
+                      </View>
+                    )}
+                    <View style={{ position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: "rgba(0,0,0,0.6)", padding: 6, alignItems: "center" }}>
+                      <Text style={{ color: "white", fontSize: 11, fontWeight: "700" }}>AFTER</Text>
+                    </View>
+                  </View>
+                ) : (
+                  <View style={{ alignItems: "center" }}>
+                    <Text style={{ fontSize: 28 }}>📷</Text>
+                    <Text style={{ color: "#10b981", fontWeight: "700", fontSize: 13, marginTop: 6 }}>AFTER</Text>
+                    <Text style={{ color: "#6b7280", fontSize: 11, marginTop: 2 }}>Tap to add</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+
+            </View>
+          </View>
+        )}
+
+        {/* TEXT INPUT */}
+        <TextInput
+          value={content}
+          onChangeText={setContent}
+          placeholder={
+            postType === "QUESTION" ? "Ask the community a car question..."
+            : postType === "SERVICE" ? "Describe the service you're offering..."
+            : postType === "BEFORE_AFTER" ? "Describe the transformation..."
+            : "Share a build, mod, or car moment..."
+          }
+          placeholderTextColor="#4b5563"
+          multiline
+          style={{ color: "white", fontSize: 18, lineHeight: 26, paddingHorizontal: 20, paddingTop: 20, minHeight: 120, textAlignVertical: "top" }}
+        />
+
+        {/* MAIN IMAGE PREVIEW (non before/after) */}
+        {imageUri && postType !== "BEFORE_AFTER" && (
+          <View style={{ paddingHorizontal: 20, marginTop: 10 }}>
+            <Image source={{ uri: imageUri }} style={{ width: "100%", height: 200, borderRadius: 12 }} resizeMode="cover" />
+            {uploading && (
+              <View style={{ position: "absolute", top: 0, left: 20, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.6)", borderRadius: 12, justifyContent: "center", alignItems: "center" }}>
+                <ActivityIndicator color="white" />
+                <Text style={{ color: "white", marginTop: 8 }}>{uploadProgress}%</Text>
+              </View>
+            )}
+            {!uploading && (
+              <TouchableOpacity onPress={() => { setImageUri(null); setImageUrl(null); }} style={{ position: "absolute", top: 8, right: 8, backgroundColor: "rgba(0,0,0,0.7)", borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4 }}>
+                <Text style={{ color: "white", fontSize: 12 }}>✕ Remove</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+
+        {/* BOTTOM TOOLBAR */}
+        {postType !== "BEFORE_AFTER" && (
+          <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingVertical: 12, borderTopWidth: 1, borderTopColor: "#252838", marginTop: 12 }}>
+            <TouchableOpacity
+              onPress={handlePickPhoto}
+              disabled={uploading}
+              style={{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "#11131a", paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: "#252838" }}
+            >
+              <Text style={{ fontSize: 16 }}>📷</Text>
+              <Text style={{ color: "#9ca3af", fontSize: 13 }}>{uploading ? `Uploading ${uploadProgress}%` : "Add Photo"}</Text>
+            </TouchableOpacity>
+            <Text style={{ color: content.length > 400 ? "#f87171" : "#6b7280", fontSize: 13, marginLeft: "auto" }}>{content.length}/500</Text>
+          </View>
+        )}
+
+        <View style={{ height: 40 }} />
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }

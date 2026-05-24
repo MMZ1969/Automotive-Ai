@@ -22,11 +22,13 @@ export default function Profile() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [vanityPosts, setVanityPosts] = useState<any[]>([]);
   const [loadingPosts, setLoadingPosts] = useState(true);
+  const [followerCount, setFollowerCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
 
   useFocusEffect(
     useCallback(() => {
       fetchVanityPosts();
-    }, [])
+        }, [])
   );
 
   const fetchVanityPosts = async () => {
@@ -41,6 +43,17 @@ export default function Profile() {
       setLoadingPosts(false);
     }
   };
+
+  const fetchStats = async () => {
+  try {
+    const res = await api.get(`/api/users/${user?.id}/follow-status`);
+    setFollowerCount(res.data.followerCount || 0);
+    setFollowingCount(res.data.followingCount || 0);
+  } catch (err) {
+    console.error("FETCH STATS ERROR:", err);
+  }
+};
+fetchStats();
 
   if (!user) {
     return (
@@ -163,6 +176,28 @@ export default function Profile() {
           <Text style={{ color: "white", fontWeight: "700", fontSize: 13 }}>
             {isMechanic ? "🏁 MECHANIC" : "🔧 DIYER"}
           </Text>
+        </View>
+
+        {/* STATS ROW */}
+        <View style={{ flexDirection: "row", gap: 12, marginTop: 20 }}>
+          <View style={statPill}>
+            <Text style={{ color: "white", fontWeight: "700", fontSize: 18 }}>{user.repPoints || 0}</Text>
+            <Text style={{ color: "#9ca3af", fontSize: 11 }}>Rep</Text>
+          </View>
+          <TouchableOpacity
+            style={statPill}
+            onPress={() => router.push({ pathname: "/(tabs)/followers", params: { id: user.id, type: "followers" } })}
+          >
+            <Text style={{ color: "white", fontWeight: "700", fontSize: 18 }}>{followerCount}</Text>
+            <Text style={{ color: "#9ca3af", fontSize: 11 }}>Followers</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={statPill}
+            onPress={() => router.push({ pathname: "/(tabs)/followers", params: { id: user.id, type: "following" } })}
+          >
+            <Text style={{ color: "white", fontWeight: "700", fontSize: 18 }}>{followingCount}</Text>
+            <Text style={{ color: "#9ca3af", fontSize: 11 }}>Following</Text>
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -347,4 +382,15 @@ const actionCardSub = {
   color: "#9fa4c0",
   marginTop: 4,
   fontSize: 13,
+};
+
+const statPill = {
+  backgroundColor: "#11131a",
+  paddingHorizontal: 20,
+  paddingVertical: 12,
+  borderRadius: 16,
+  borderWidth: 1,
+  borderColor: "#252838",
+  alignItems: "center" as const,
+  minWidth: 80,
 };

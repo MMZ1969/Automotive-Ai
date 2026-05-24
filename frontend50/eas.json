@@ -7,5 +7,14 @@
       "distribution": "internal"
     },
     "production": {}
+  },
+  "submit": {
+    "production": {
+      "ios": {
+        "appleId": "mazziemoto@gmail.com",
+        "ascAppId": "6764058138",
+        "appleTeamId": "3UW3K4WZR7"
+      }
+    }
   }
 }
