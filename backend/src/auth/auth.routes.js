@@ -35,8 +35,6 @@ router.post("/reset-password", resetPassword);
 // CHANGE PASSWORD
 router.put("/change-password", authMiddleware, changePassword);
 
-export default router;
-
 // VERIFY EMAIL
 router.get("/verify-email", verifyEmail);
 
