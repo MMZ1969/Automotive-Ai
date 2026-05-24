@@ -23,7 +23,7 @@
         "NSLocationWhenInUseUsageDescription": "AutoAI uses your location to show mechanics near you."
       },
       "config": {
-        "googleMapsApiKey": "AIzaSyA5NX5k11wIZ_DCJGC_EuzBwjeEfEHPZLo"
+        "googleMapsApiKey": ""
       }
     },
     "android": {
@@ -40,7 +40,7 @@
       ],
       "config": {
         "googleMaps": {
-          "apiKey": "AIzaSyA5NX5k11wIZ_DCJGC_EuzBwjeEfEHPZLo"
+          "apiKey": ""
         }
       },
       "intentFilters": [
