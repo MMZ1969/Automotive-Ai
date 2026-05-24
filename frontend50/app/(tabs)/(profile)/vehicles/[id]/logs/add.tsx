@@ -14,6 +14,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import api from "@lib/api";
 import { createLog } from "@lib/logs";
 
 export default function AddLogScreen() {
@@ -51,51 +52,13 @@ export default function AddLogScreen() {
       setReceiptImage(result.assets[0].uri);
       setScanning(true);
 
-      // Send to Claude AI for extraction
-      const base64 = result.assets[0].base64;
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": process.env.EXPO_PUBLIC_ANTHROPIC_API_KEY || "",
-          "anthropic-version": "2023-06-01",
-        },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-5",
-          max_tokens: 500,
-          messages: [
-            {
-              role: "user",
-              content: [
-                {
-                  type: "image",
-                  source: {
-                    type: "base64",
-                    media_type: "image/jpeg",
-                    data: base64,
-                  },
-                },
-                {
-                  type: "text",
-                  text: `Extract information from this auto service receipt and respond ONLY with JSON, no markdown:
-{
-  "title": "service type (e.g. Oil Change, Brake Replacement)",
-  "date": "YYYY-MM-DD format or empty string",
-  "cost": "numeric amount only or empty string",
-  "mileage": "numeric mileage or empty string",
-  "description": "brief summary of services performed"
-}`,
-                },
-              ],
-            },
-          ],
-        }),
-      });
-
-      const data = await response.json();
-      console.log("CLAUDE RESPONSE:", JSON.stringify(data));
-      const text = data.content[0].text;
-      const parsed = JSON.parse(text.match(/\{[\s\S]*\}/)[0]);
+      // Send to backend for AI extraction
+        const base64 = result.assets[0].base64;
+        const res = await api.post("/api/scan-receipt", {
+          imageBase64: base64,
+          mediaType: "image/jpeg",
+        });
+        const parsed = res.data;
 
       if (parsed.title) setTitle(parsed.title);
       if (parsed.date) setPerformedAt(parsed.date);
