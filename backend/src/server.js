@@ -43,6 +43,35 @@ app.post("/api/diagnose", authMiddleware, async (req, res) => {
   try {
     const { query } = req.body;
 
+    // ─── DAILY LIMIT CHECK ───────────────────────────────────────────
+    const userId = req.user.id;
+    const userData = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { dailyDiagnoses: true, lastDiagnosisDate: true },
+    });
+
+    const today = new Date();
+    const lastDate = userData?.lastDiagnosisDate;
+    const isNewDay = !lastDate || 
+      lastDate.toDateString() !== today.toDateString();
+
+    if (isNewDay) {
+      await prisma.user.update({
+        where: { id: userId },
+        data: { dailyDiagnoses: 0, lastDiagnosisDate: today },
+      });
+    }
+
+    const currentCount = isNewDay ? 0 : (userData?.dailyDiagnoses || 0);
+
+    if (currentCount >= 5) {
+      return res.status(429).json({ 
+        error: "Daily limit reached. You get 5 free diagnoses per day. Come back tomorrow!",
+        limitReached: true,
+      });
+    }
+    // ─────────────────────────────────────────────────────────────────
+
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
@@ -98,9 +127,13 @@ Respond in JSON format only, no markdown, like this:
     // Award +5 rep for running a diagnosis
     try {
       await prisma.user.update({
-        where: { id: req.user.id },
-        data: { repPoints: { increment: 5 } },
-      });
+    where: { id: req.user.id },
+    data: { 
+    repPoints: { increment: 5 },
+    dailyDiagnoses: { increment: 1 },
+    lastDiagnosisDate: new Date(),
+  },
+});
     } catch (repErr) {
       console.error("REP AWARD ERROR:", repErr);
     }
