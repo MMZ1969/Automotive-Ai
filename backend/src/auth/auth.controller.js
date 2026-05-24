@@ -32,6 +32,16 @@ export const register = async (req, res) => {
       return res.status(400).json({ message: "Username must be between 2 and 30 characters." });
     }
 
+    if (!password || password.length < 8) {
+      return res.status(400).json({ message: "Password must be at least 8 characters." });
+    }
+    if (!/[0-9]/.test(password)) {
+      return res.status(400).json({ message: "Password must contain at least one number." });
+    }
+    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+      return res.status(400).json({ message: "Password must contain at least one special character (!@#$%^&* etc)." });
+    }
+
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
       return res.status(400).json({ message: "Email already in use" });
