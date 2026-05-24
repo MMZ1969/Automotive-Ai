@@ -26,6 +26,18 @@ export default function Register() {
       Alert.alert("Terms Required", "You must agree to the Terms of Service and Community Guidelines to create an account.");
       return;
     }
+    if (password.length < 8) {
+  Alert.alert("Weak Password", "Password must be at least 8 characters.");
+      return;
+    }
+    if (!/[0-9]/.test(password)) {
+      Alert.alert("Weak Password", "Password must contain at least one number.");
+      return;
+    }
+    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+      Alert.alert("Weak Password", "Password must contain at least one special character (!@#$%^&* etc).");
+      return;
+    }
     try {
       setLoading(true);
       await register({ name, email, password, role });
