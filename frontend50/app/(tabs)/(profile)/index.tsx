@@ -25,12 +25,6 @@ export default function Profile() {
   const [followerCount, setFollowerCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
 
-  useFocusEffect(
-    useCallback(() => {
-      fetchVanityPosts();
-        }, [])
-  );
-
   const fetchVanityPosts = async () => {
     try {
       setLoadingPosts(true);
@@ -44,16 +38,22 @@ export default function Profile() {
     }
   };
 
-  const fetchStats = async () => {
-  try {
-    const res = await api.get(`/api/users/${user?.id}/follow-status`);
-    setFollowerCount(res.data.followerCount || 0);
-    setFollowingCount(res.data.followingCount || 0);
-  } catch (err) {
-    console.error("FETCH STATS ERROR:", err);
-  }
-};
-fetchStats();
+  const fetchStats = useCallback(async () => {
+    try {
+      const res = await api.get(`/api/users/${user?.id}/follow-status`);
+      setFollowerCount(res.data.followerCount || 0);
+      setFollowingCount(res.data.followingCount || 0);
+    } catch (err) {
+      console.error("FETCH STATS ERROR:", err);
+    }
+  }, [user?.id]);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchVanityPosts();
+      fetchStats();
+    }, [fetchStats])
+  );
 
   if (!user) {
     return (
@@ -119,7 +119,6 @@ fetchStats();
     }
   };
 
-  const GRID_SIZE = 3;
   const itemSize = 80;
 
   return (
@@ -131,16 +130,11 @@ fetchStats();
       <View style={{ alignItems: "center", marginBottom: 24, marginTop: 20 }}>
         <TouchableOpacity onPress={handlePickPhoto} disabled={uploading}>
           <View style={{
-            width: 100,
-            height: 100,
-            borderRadius: 50,
-            backgroundColor: "#11131a",
-            borderWidth: 2,
+            width: 100, height: 100, borderRadius: 50,
+            backgroundColor: "#11131a", borderWidth: 2,
             borderColor: isMechanic ? "#345bff" : "#10b981",
-            justifyContent: "center",
-            alignItems: "center",
-            marginBottom: 12,
-            overflow: "hidden",
+            justifyContent: "center", alignItems: "center",
+            marginBottom: 12, overflow: "hidden",
           }}>
             {uploading ? (
               <View style={{ alignItems: "center" }}>
@@ -169,9 +163,7 @@ fetchStats();
         <View style={{
           marginTop: 10,
           backgroundColor: isMechanic ? "#345bff" : "#10b981",
-          paddingVertical: 6,
-          paddingHorizontal: 16,
-          borderRadius: 20,
+          paddingVertical: 6, paddingHorizontal: 16, borderRadius: 20,
         }}>
           <Text style={{ color: "white", fontWeight: "700", fontSize: 13 }}>
             {isMechanic ? "🏁 MECHANIC" : "🔧 DIYER"}
@@ -202,18 +194,9 @@ fetchStats();
       </View>
 
       {/* RIDES & BUILDS GALLERY */}
-      <View style={{
-        backgroundColor: "#11131a",
-        borderRadius: 16,
-        borderWidth: 1,
-        borderColor: "#252838",
-        padding: 16,
-        marginBottom: 20,
-      }}>
+      <View style={{ backgroundColor: "#11131a", borderRadius: 16, borderWidth: 1, borderColor: "#252838", padding: 16, marginBottom: 20 }}>
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-          <Text style={{ color: "white", fontSize: 18, fontWeight: "800" }}>
-            🚗 Rides & Builds
-          </Text>
+          <Text style={{ color: "white", fontSize: 18, fontWeight: "800" }}>🚗 Rides & Builds</Text>
           <TouchableOpacity onPress={() => router.push("/(tabs)/create")}>
             <Text style={{ color: "#345bff", fontSize: 13 }}>+ Add</Text>
           </TouchableOpacity>
@@ -234,31 +217,14 @@ fetchStats();
               <TouchableOpacity
                 key={post.id}
                 onPress={() => router.push(`/(tabs)/post/${post.id}`)}
-                style={{
-                  width: itemSize,
-                  height: itemSize,
-                  borderRadius: 10,
-                  overflow: "hidden",
-                  backgroundColor: "#252838",
-                }}
+                style={{ width: itemSize, height: itemSize, borderRadius: 10, overflow: "hidden", backgroundColor: "#252838" }}
               >
                 {post.imageUrl ? (
-                  <Image
-                    source={{ uri: post.imageUrl }}
-                    style={{ width: itemSize, height: itemSize }}
-                    resizeMode="cover"
-                  />
+                  <Image source={{ uri: post.imageUrl }} style={{ width: itemSize, height: itemSize }} resizeMode="cover" />
                 ) : (
-                  <View style={{
-                    flex: 1,
-                    justifyContent: "center",
-                    alignItems: "center",
-                    padding: 8,
-                  }}>
+                  <View style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: 8 }}>
                     <Text style={{ fontSize: 20, marginBottom: 4 }}>🚗</Text>
-                    <Text style={{ color: "#9ca3af", fontSize: 10, textAlign: "center" }} numberOfLines={3}>
-                      {post.content}
-                    </Text>
+                    <Text style={{ color: "#9ca3af", fontSize: 10, textAlign: "center" }} numberOfLines={3}>{post.content}</Text>
                   </View>
                 )}
               </TouchableOpacity>
@@ -269,67 +235,44 @@ fetchStats();
 
       {/* MECHANIC DASHBOARD LINK */}
       {isMechanic && (
-        <TouchableOpacity
-          onPress={() => router.push("/(tabs)/mechanic")}
-          style={actionCard}
-        >
+        <TouchableOpacity onPress={() => router.push("/(tabs)/mechanic")} style={actionCard}>
           <Text style={actionCardTitle}>🏁 Mechanic Dashboard</Text>
           <Text style={actionCardSub}>Jobs • Reviews • Earnings</Text>
         </TouchableOpacity>
       )}
       {isMechanic && (
-        <TouchableOpacity
-          onPress={() => router.push("/quick-alert")}
-          style={[actionCard, { borderColor: "#f59e0b44", backgroundColor: "#1a1200" }]}
-        >
+        <TouchableOpacity onPress={() => router.push("/quick-alert")} style={[actionCard, { borderColor: "#f59e0b44", backgroundColor: "#1a1200" }]}>
           <Text style={actionCardTitle}>⚡ Quick Alert</Text>
           <Text style={actionCardSub}>Send a customer a vehicle status update</Text>
         </TouchableOpacity>
       )}
 
       {/* JOBS */}
-      <TouchableOpacity
-        onPress={() => router.push("/(tabs)/mechanic/jobs")}
-        style={[actionCard, { borderColor: "#345bff44", backgroundColor: "#0f1628" }]}
-      >
+      <TouchableOpacity onPress={() => router.push("/(tabs)/mechanic/jobs")} style={[actionCard, { borderColor: "#345bff44", backgroundColor: "#0f1628" }]}>
         <Text style={actionCardTitle}>💼 {isMechanic ? "Browse Jobs" : "My Job Requests"}</Text>
-        <Text style={actionCardSub}>
-          {isMechanic ? "Find work and place bids" : "Post a job and find a mechanic"}
-        </Text>
+        <Text style={actionCardSub}>{isMechanic ? "Find work and place bids" : "Post a job and find a mechanic"}</Text>
       </TouchableOpacity>
 
       {/* SEARCH */}
-      <TouchableOpacity
-        onPress={() => router.push("/(tabs)/search")}
-        style={actionCard}
-      >
+      <TouchableOpacity onPress={() => router.push("/(tabs)/search")} style={actionCard}>
         <Text style={actionCardTitle}>🔍 Search Users</Text>
         <Text style={actionCardSub}>Find DIYers and Mechanics</Text>
       </TouchableOpacity>
 
       {/* LEADERBOARD */}
-      <TouchableOpacity
-        onPress={() => router.push("/(tabs)/leaderboard")}
-        style={actionCard}
-      >
+      <TouchableOpacity onPress={() => router.push("/(tabs)/leaderboard")} style={actionCard}>
         <Text style={actionCardTitle}>🏆 Leaderboard</Text>
         <Text style={actionCardSub}>Top earners by rep points</Text>
       </TouchableOpacity>
 
       {/* VEHICLES */}
-      <TouchableOpacity
-        onPress={() => router.push("/(tabs)/(profile)/vehicles")}
-        style={actionCard}
-      >
+      <TouchableOpacity onPress={() => router.push("/(tabs)/(profile)/vehicles")} style={actionCard}>
         <Text style={actionCardTitle}>🚗 Your Vehicles</Text>
         <Text style={actionCardSub}>View and manage your garage</Text>
       </TouchableOpacity>
 
       {/* LOGS */}
-      <TouchableOpacity
-        onPress={() => router.push("/(tabs)/(profile)/logs")}
-        style={actionCard}
-      >
+      <TouchableOpacity onPress={() => router.push("/(tabs)/(profile)/logs")} style={actionCard}>
         <Text style={actionCardTitle}>📋 Maintenance Logs</Text>
         <Text style={actionCardSub}>All logs across all vehicles</Text>
       </TouchableOpacity>
@@ -337,19 +280,16 @@ fetchStats();
       {/* ADMIN PANEL — only visible to admin */}
       {user?.isAdmin && (
         <TouchableOpacity
-    onPress={() => router.push("/(tabs)/(profile)/admin")}
-    style={[actionCard, { borderColor: "#f59e0b44", backgroundColor: "#1a1200" }]}
-       >
-       <Text style={actionCardTitle}>🛡️ Admin Panel</Text>
-      <Text style={actionCardSub}>Manage verification requests</Text>
-      </TouchableOpacity>
-        )}
+          onPress={() => router.push("/(tabs)/(profile)/admin")}
+          style={[actionCard, { borderColor: "#f59e0b44", backgroundColor: "#1a1200" }]}
+        >
+          <Text style={actionCardTitle}>🛡️ Admin Panel</Text>
+          <Text style={actionCardSub}>Manage verification requests</Text>
+        </TouchableOpacity>
+      )}
 
       {/* SETTINGS */}
-      <TouchableOpacity
-        onPress={() => router.push("/(tabs)/(profile)/settings")}
-        style={actionCard}
-      >
+      <TouchableOpacity onPress={() => router.push("/(tabs)/(profile)/settings")} style={actionCard}>
         <Text style={actionCardTitle}>⚙️ Settings</Text>
         <Text style={actionCardSub}>Account preferences & app settings</Text>
       </TouchableOpacity>
@@ -357,18 +297,9 @@ fetchStats();
       {/* LOGOUT */}
       <TouchableOpacity
         onPress={async () => await logout()}
-        style={{
-          backgroundColor: "#b91c1c",
-          padding: 16,
-          borderRadius: 14,
-          marginTop: 10,
-          marginBottom: 40,
-          alignItems: "center",
-        }}
+        style={{ backgroundColor: "#b91c1c", padding: 16, borderRadius: 14, marginTop: 10, marginBottom: 40, alignItems: "center" }}
       >
-        <Text style={{ color: "white", fontWeight: "700", fontSize: 18 }}>
-          Log Out
-        </Text>
+        <Text style={{ color: "white", fontWeight: "700", fontSize: 18 }}>Log Out</Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -383,18 +314,8 @@ const actionCard = {
   marginBottom: 12,
 };
 
-const actionCardTitle = {
-  color: "#f5f5f5",
-  fontSize: 18,
-  fontWeight: "700" as const,
-};
-
-const actionCardSub = {
-  color: "#9fa4c0",
-  marginTop: 4,
-  fontSize: 13,
-};
-
+const actionCardTitle = { color: "#f5f5f5", fontSize: 18, fontWeight: "700" as const };
+const actionCardSub = { color: "#9fa4c0", marginTop: 4, fontSize: 13 };
 const statPill = {
   backgroundColor: "#11131a",
   paddingHorizontal: 20,
