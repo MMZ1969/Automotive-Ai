@@ -165,6 +165,7 @@ export async function getUserProfile(req, res) {
         role: true,
         profilePhoto: true,
         repPoints: true,
+        isVerified: true,
         createdAt: true,
         _count: {
           select: {
@@ -333,5 +334,96 @@ export async function getFollowing(req, res) {
   } catch (err) {
     console.error("GET FOLLOWING ERROR:", err);
     res.status(500).json({ error: "Failed to fetch following" });
+  }
+}
+// POST /users/verification-request — mechanic submits verification request
+export async function requestVerification(req, res) {
+  try {
+    const userId = req.user.id;
+    const { licenseNumber, shopName, shopLocation, experience } = req.body;
+
+    if (!licenseNumber || !shopName) {
+      return res.status(400).json({ error: "License number and shop name are required." });
+    }
+
+    const verificationRequest = JSON.stringify({ licenseNumber, shopName, shopLocation, experience });
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { verificationRequest },
+    });
+
+    res.json({ success: true, message: "Verification request submitted!" });
+  } catch (err) {
+    console.error("VERIFICATION REQUEST ERROR:", err);
+    res.status(500).json({ error: "Failed to submit verification request" });
+  }
+}
+
+// POST /users/:id/verify — admin approves verification (admin only)
+export async function verifyMechanic(req, res) {
+  try {
+    const adminId = req.user.id;
+    const targetId = Number(req.params.id);
+    const { approved } = req.body;
+
+    const admin = await prisma.user.findUnique({
+      where: { id: adminId },
+      select: { isAdmin: true },
+    });
+
+    if (!admin?.isAdmin) {
+      return res.status(403).json({ error: "Not authorized" });
+    }
+
+    await prisma.user.update({
+      where: { id: targetId },
+      data: {
+        isVerified: approved,
+        verificationRequest: approved ? null : undefined,
+      },
+    });
+
+    res.json({ success: true, verified: approved });
+  } catch (err) {
+    console.error("VERIFY MECHANIC ERROR:", err);
+    res.status(500).json({ error: "Failed to verify mechanic" });
+  }
+}
+
+// GET /users/verification-requests — admin gets all pending requests
+export async function getVerificationRequests(req, res) {
+  try {
+    const adminId = req.user.id;
+
+    const admin = await prisma.user.findUnique({
+      where: { id: adminId },
+      select: { isAdmin: true },
+    });
+
+    if (!admin?.isAdmin) {
+      return res.status(403).json({ error: "Not authorized" });
+    }
+
+    const requests = await prisma.user.findMany({
+      where: {
+        verificationRequest: { not: null },
+        isVerified: false,
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        profilePhoto: true,
+        repPoints: true,
+        verificationRequest: true,
+        createdAt: true,
+      },
+    });
+
+    res.json(requests);
+  } catch (err) {
+    console.error("GET VERIFICATION REQUESTS ERROR:", err);
+    res.status(500).json({ error: "Failed to fetch verification requests" });
   }
 }

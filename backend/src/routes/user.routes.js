@@ -1,5 +1,5 @@
 import express from "express";
-import { blockUser, getBlockedUsers, getFollowers, getFollowing, getLeaderboard, getMe, getMechanicStats, getUserProfile, savePushToken, searchUsers, updateProfile } from "../controllers/user.controller.js";
+import { blockUser, getBlockedUsers, getFollowers, getFollowing, getLeaderboard, getMe, getMechanicStats, getUserProfile, getVerificationRequests, requestVerification, savePushToken, searchUsers, updateProfile, verifyMechanic } from "../controllers/user.controller.js";
 import authMiddleware from "../middleware/authMiddleware.js";
 
 const router = express.Router();
@@ -15,5 +15,8 @@ router.post("/push-token", authMiddleware, savePushToken);
 router.post("/:id/block", authMiddleware, blockUser);
 router.get("/:id/followers", authMiddleware, getFollowers);
 router.get("/:id/following", authMiddleware, getFollowing);
+router.post("/verification-request", authMiddleware, requestVerification);
+router.get("/verification-requests", authMiddleware, getVerificationRequests);
+router.post("/:id/verify", authMiddleware, verifyMechanic);
 
 export default router;
