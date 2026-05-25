@@ -265,13 +265,13 @@ export default function Profile() {
         </TouchableOpacity>
       )}
       {isMechanic && (
-        <TouchableOpacity onPress={() => router.push("/quick-alert")} style={[actionCard, { borderColor: "#f59e0b44", backgroundColor: "#1a1200" }]}>
+        <TouchableOpacity onPress={() => router.push("/quick-alert")} style={[actionCard, { borderColor: "#f59e0b44" }]}>
           <Text style={{ color: colors.text, fontSize: 18, fontWeight: "700" }}>⚡ Quick Alert</Text>
           <Text style={{ color: colors.textSecondary, marginTop: 4, fontSize: 13 }}>Send a customer a vehicle status update</Text>
         </TouchableOpacity>
       )}
 
-      <TouchableOpacity onPress={() => router.push("/(tabs)/mechanic/jobs")} style={[actionCard, { borderColor: "#345bff44", backgroundColor: "#0f1628" }]}>
+      <TouchableOpacity onPress={() => router.push("/(tabs)/mechanic/jobs")} style={[actionCard, { borderColor: "#345bff44" }]}>
         <Text style={{ color: colors.text, fontSize: 18, fontWeight: "700" }}>💼 {isMechanic ? "Browse Jobs" : "My Job Requests"}</Text>
         <Text style={{ color: colors.textSecondary, marginTop: 4, fontSize: 13 }}>{isMechanic ? "Find work and place bids" : "Post a job and find a mechanic"}</Text>
       </TouchableOpacity>
@@ -297,7 +297,7 @@ export default function Profile() {
       </TouchableOpacity>
 
       {user?.isAdmin && (
-        <TouchableOpacity onPress={() => router.push("/(tabs)/(profile)/admin")} style={[actionCard, { borderColor: "#f59e0b44", backgroundColor: "#1a1200" }]}>
+        <TouchableOpacity onPress={() => router.push("/(tabs)/(profile)/admin")} style={[actionCard, { borderColor: "#f59e0b44" }]}>
           <Text style={{ color: colors.text, fontSize: 18, fontWeight: "700" }}>🛡️ Admin Panel</Text>
           <Text style={{ color: colors.textSecondary, marginTop: 4, fontSize: 13 }}>Manage verification requests</Text>
         </TouchableOpacity>
