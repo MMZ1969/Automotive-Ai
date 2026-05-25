@@ -158,35 +158,36 @@ export default function PostDetail() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       {/* EDIT MODAL */}
-      <Modal visible={editModalVisible} transparent animationType="slide" onRequestClose={() => setEditModalVisible(false)}>
-        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1, backgroundColor: "#00000088", justifyContent: "flex-end" }}>
-          <View style={{ backgroundColor: "#11131a", borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20 }}>
-            <Text style={{ color: "white", fontSize: 20, fontWeight: "900", marginBottom: 16 }}>✏️ Edit Post</Text>
-            <TextInput
-              value={editContent}
-              onChangeText={setEditContent}
-              multiline autoFocus
-              placeholder="What's on your mind?"
-              placeholderTextColor="#4b5563"
-              style={{
-                backgroundColor: "#050509", color: "white",
-                paddingHorizontal: 16, paddingVertical: 12,
-                borderRadius: 12, borderWidth: 1, borderColor: "#345bff",
-                fontSize: 15, lineHeight: 22, minHeight: 120,
-                textAlignVertical: "top", marginBottom: 16,
-              }}
-            />
-            <View style={{ flexDirection: "row", gap: 10, marginBottom: 30 }}>
-              <TouchableOpacity onPress={() => setEditModalVisible(false)} style={{ flex: 1, backgroundColor: "#252838", padding: 14, borderRadius: 12, alignItems: "center" }}>
-                <Text style={{ color: "white", fontWeight: "700" }}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={handleSaveEdit} disabled={saving || !editContent.trim()} style={{ flex: 1, backgroundColor: saving || !editContent.trim() ? "#1f2937" : "#345bff", padding: 14, borderRadius: 12, alignItems: "center" }}>
-                <Text style={{ color: "white", fontWeight: "700" }}>{saving ? "Saving..." : "Save"}</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
+<Modal visible={editModalVisible} transparent animationType="slide" onRequestClose={() => setEditModalVisible(false)}>
+  <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
+    <TouchableOpacity style={{ flex: 1, backgroundColor: "#00000088" }} onPress={() => setEditModalVisible(false)} />
+    <View style={{ backgroundColor: "#11131a", borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20 }}>
+      <Text style={{ color: "white", fontSize: 20, fontWeight: "900", marginBottom: 16 }}>✏️ Edit Post</Text>
+      <TextInput
+        value={editContent}
+        onChangeText={setEditContent}
+        multiline autoFocus
+        placeholder="What's on your mind?"
+        placeholderTextColor="#4b5563"
+        style={{
+          backgroundColor: "#050509", color: "white",
+          paddingHorizontal: 16, paddingVertical: 12,
+          borderRadius: 12, borderWidth: 1, borderColor: "#345bff",
+          fontSize: 15, lineHeight: 22, minHeight: 120,
+          textAlignVertical: "top", marginBottom: 16,
+        }}
+      />
+      <View style={{ flexDirection: "row", gap: 10, marginBottom: 30 }}>
+        <TouchableOpacity onPress={() => setEditModalVisible(false)} style={{ flex: 1, backgroundColor: "#252838", padding: 14, borderRadius: 12, alignItems: "center" }}>
+          <Text style={{ color: "white", fontWeight: "700" }}>Cancel</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={handleSaveEdit} disabled={saving || !editContent.trim()} style={{ flex: 1, backgroundColor: saving || !editContent.trim() ? "#1f2937" : "#345bff", padding: 14, borderRadius: 12, alignItems: "center" }}>
+          <Text style={{ color: "white", fontWeight: "700" }}>{saving ? "Saving..." : "Save"}</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  </KeyboardAvoidingView>
+</Modal>
 
       {/* HEADER */}
       <View style={{ paddingTop: 60, paddingHorizontal: 20, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: "#252838", flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
