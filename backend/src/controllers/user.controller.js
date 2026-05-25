@@ -14,6 +14,7 @@ export async function getMe(req, res) {
         repPoints: true,
         profilePhoto: true,
         phone: true,
+        isAdmin: true,
         createdAt: true,
       },
     });
