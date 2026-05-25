@@ -180,9 +180,16 @@ export default function UserProfile() {
               </View>
 
               {/* NAME */}
-              <Text style={{ color: "white", fontSize: 24, fontWeight: "900" }}>
-                {profile?.name || "Anonymous"}
-              </Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                <Text style={{ color: "white", fontSize: 24, fontWeight: "900" }}>
+                  {profile?.name || "Anonymous"}
+                </Text>
+                {profile?.isVerified && (
+                  <View style={{ backgroundColor: "#1e3a8a", borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: "#345bff" }}>
+                    <Text style={{ color: "#345bff", fontSize: 11, fontWeight: "700" }}>✅ Verified</Text>
+                  </View>
+                )}
+              </View>
 
               {/* ROLE BADGE */}
                 <View style={{
