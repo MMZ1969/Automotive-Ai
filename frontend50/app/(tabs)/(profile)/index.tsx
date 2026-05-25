@@ -161,14 +161,18 @@ export default function Profile() {
         <Text style={{ color: "#9ca3af", marginTop: 4 }}>{user.email}</Text>
 
         <View style={{
-          marginTop: 10,
-          backgroundColor: isMechanic ? "#345bff" : "#10b981",
-          paddingVertical: 6, paddingHorizontal: 16, borderRadius: 20,
-        }}>
-          <Text style={{ color: "white", fontWeight: "700", fontSize: 13 }}>
-            {isMechanic ? "🏁 MECHANIC" : "🔧 DIYER"}
-          </Text>
-        </View>
+        marginTop: 10,
+        backgroundColor: user?.isVerified ? "#1e3a8a" : isMechanic ? "#345bff" : "#10b981",
+        paddingVertical: 6,
+        paddingHorizontal: 16,
+        borderRadius: 20,
+        borderWidth: user?.isVerified ? 1 : 0,
+        borderColor: "#60a5fa",
+      }}>
+        <Text style={{ color: "white", fontWeight: "700", fontSize: 13 }}>
+         {user?.isVerified ? "🏁 Verified Mechanic" : isMechanic ? "🏁 MECHANIC" : "🔧 DIYER"}
+        </Text>
+      </View>
 
         {/* STATS ROW */}
         <View style={{ flexDirection: "row", gap: 12, marginTop: 20 }}>
