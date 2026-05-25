@@ -317,7 +317,14 @@ export default function Feed() {
                 </View>
                 <View style={{ flex: 1 }}>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                     <Text style={{ color: "white", fontWeight: "700", fontSize: 15 }}>{item.user?.name || "Anonymous"}</Text>
+                    {item.user?.isVerified && (
+                      <View style={{ backgroundColor: "#1e3a8a", borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1, borderColor: "#345bff" }}>
+                        <Text style={{ color: "#345bff", fontSize: 10, fontWeight: "700" }}>✅ Verified</Text>
+                      </View>
+                    )}
+                  </View>
                     <View style={{ backgroundColor: getBadge(item.user?.repPoints || 0).color + "22", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8, borderWidth: 1, borderColor: getBadge(item.user?.repPoints || 0).color }}>
                       <Text style={{ fontSize: 10, fontWeight: "700", color: getBadge(item.user?.repPoints || 0).color }}>
                         {getBadge(item.user?.repPoints || 0).emoji} {getBadge(item.user?.repPoints || 0).label}
