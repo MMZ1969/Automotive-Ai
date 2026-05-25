@@ -39,8 +39,9 @@ export default function Profile() {
   };
 
   const fetchStats = useCallback(async () => {
-    try {
-      const res = await api.get(`/api/users/${user?.id}/follow-status`);
+  if (!user?.id) return;
+  try {
+    const res = await api.get(`/api/users/${user?.id}/follow-status`);
       setFollowerCount(res.data.followerCount || 0);
       setFollowingCount(res.data.followingCount || 0);
     } catch (err) {
