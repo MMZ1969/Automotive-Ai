@@ -3,10 +3,10 @@ import * as Location from "expo-location";
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
-    ActivityIndicator,
-    Text,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import MapView, { Callout, Marker, PROVIDER_GOOGLE } from "react-native-maps";
 
@@ -20,8 +20,7 @@ interface MechanicPin {
   location: string;
   lat: number;
   lng: number;
-  jobTitle?: string;
-  jobBudget?: number;
+  isVerified: boolean;
 }
 
 export default function NearMe() {
@@ -34,9 +33,7 @@ export default function NearMe() {
   const [selectedPin, setSelectedPin] = useState<MechanicPin | null>(null);
   const [locationError, setLocationError] = useState(false);
 
-  useEffect(() => {
-    initMap();
-  }, []);
+  useEffect(() => { initMap(); }, []);
 
   const initMap = async () => {
     try {
@@ -49,42 +46,34 @@ export default function NearMe() {
       }
 
       const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-      const userLat = loc.coords.latitude;
-      const userLng = loc.coords.longitude;
-      setUserLocation({ lat: userLat, lng: userLng });
+      setUserLocation({ lat: loc.coords.latitude, lng: loc.coords.longitude });
 
-      // 2. Fetch all open jobs with locations
-      const jobsRes = await api.get("/api/jobs");
-      const jobsWithLocation = jobsRes.data.filter((j: any) => j.location && j.status === "OPEN");
+      // 2. Fetch all mechanics with a location set
+      const res = await api.get("/api/users/mechanics");
+      const mechanicsWithLocation = res.data;;
 
-      // 3. Geocode each unique location
+      // 3. Geocode each mechanic's location
       const geocoded: MechanicPin[] = [];
-      const seenMechanics = new Set<number>();
 
-      for (const job of jobsWithLocation) {
-        if (!job.poster || seenMechanics.has(job.poster.id)) continue;
-        if (job.poster.role !== "MECHANIC") continue;
-
+      for (const mechanic of mechanicsWithLocation) {
         try {
           const geoRes = await fetch(
-            `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(job.location)}&key=${GOOGLE_MAPS_API_KEY}`
+            `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(mechanic.location)}&key=${GOOGLE_MAPS_API_KEY}`
           );
           const geoData = await geoRes.json();
 
           if (geoData.results?.[0]) {
             const { lat, lng } = geoData.results[0].geometry.location;
             geocoded.push({
-              id: job.poster.id,
-              name: job.poster.name || "Mechanic",
-              profilePhoto: job.poster.profilePhoto,
-              repPoints: job.poster.repPoints || 0,
-              location: job.location,
+              id: mechanic.id,
+              name: mechanic.name || "Mechanic",
+              profilePhoto: mechanic.profilePhoto,
+              repPoints: mechanic.repPoints || 0,
+              location: mechanic.location,
               lat,
               lng,
-              jobTitle: job.title,
-              jobBudget: job.budget,
+              isVerified: mechanic.isVerified || false,
             });
-            seenMechanics.add(job.poster.id);
           }
         } catch (err) {
           console.error("GEOCODE ERROR:", err);
@@ -124,13 +113,8 @@ export default function NearMe() {
       <View style={{ flex: 1, backgroundColor: "#050509", justifyContent: "center", alignItems: "center", padding: 40 }}>
         <Text style={{ fontSize: 48, marginBottom: 16 }}>📍</Text>
         <Text style={{ color: "white", fontSize: 20, fontWeight: "700", textAlign: "center", marginBottom: 8 }}>Location Required</Text>
-        <Text style={{ color: "#9ca3af", textAlign: "center", marginBottom: 24 }}>
-          AutoAI needs your location to show mechanics near you. Please enable location access in your device settings.
-        </Text>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={{ backgroundColor: "#345bff", padding: 14, borderRadius: 12, paddingHorizontal: 30 }}
-        >
+        <Text style={{ color: "#9ca3af", textAlign: "center", marginBottom: 24 }}>AutoAI needs your location to show mechanics near you.</Text>
+        <TouchableOpacity onPress={() => router.back()} style={{ backgroundColor: "#345bff", padding: 14, borderRadius: 12, paddingHorizontal: 30 }}>
           <Text style={{ color: "white", fontWeight: "700" }}>Go Back</Text>
         </TouchableOpacity>
       </View>
@@ -175,8 +159,9 @@ export default function NearMe() {
               coordinate={{ latitude: mechanic.lat, longitude: mechanic.lng }}
               onPress={() => setSelectedPin(mechanic)}
             >
+              {/* Verified = gold pin, unverified = blue pin */}
               <View style={{
-                backgroundColor: "#345bff",
+                backgroundColor: mechanic.isVerified ? "#f59e0b" : "#345bff",
                 borderRadius: 20,
                 padding: 8,
                 borderWidth: 2,
@@ -184,13 +169,15 @@ export default function NearMe() {
                 alignItems: "center",
                 justifyContent: "center",
               }}>
-                <Text style={{ fontSize: 14 }}>🔧</Text>
+                <Text style={{ fontSize: 14 }}>{mechanic.isVerified ? "🏁" : "🔧"}</Text>
               </View>
               <Callout tooltip>
-                <View style={{ backgroundColor: "#11131a", borderRadius: 10, padding: 10, borderWidth: 1, borderColor: "#252838", minWidth: 140 }}>
+                <View style={{ backgroundColor: "#11131a", borderRadius: 10, padding: 10, borderWidth: 1, borderColor: mechanic.isVerified ? "#f59e0b" : "#252838", minWidth: 140 }}>
                   <Text style={{ color: "white", fontWeight: "700", fontSize: 13 }}>{mechanic.name}</Text>
-                  <Text style={{ color: "#9ca3af", fontSize: 11 }}>📍 {mechanic.location}</Text>
-                  {mechanic.jobTitle && <Text style={{ color: "#345bff", fontSize: 11, marginTop: 2 }}>{mechanic.jobTitle}</Text>}
+                  {mechanic.isVerified && (
+                    <Text style={{ color: "#f59e0b", fontSize: 10, fontWeight: "700" }}>🏁 Verified Mechanic</Text>
+                  )}
+                  <Text style={{ color: "#9ca3af", fontSize: 11, marginTop: 2 }}>📍 {mechanic.location}</Text>
                 </View>
               </Callout>
             </Marker>
@@ -209,11 +196,18 @@ export default function NearMe() {
         {selectedPin && (
           <View style={{ position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: "#11131a", borderTopLeftRadius: 20, borderTopRightRadius: 20, borderTopWidth: 1, borderColor: "#252838", padding: 20 }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 12 }}>
-              <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: "#252838", borderWidth: 2, borderColor: "#345bff", justifyContent: "center", alignItems: "center" }}>
+              <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: "#252838", borderWidth: 2, borderColor: selectedPin.isVerified ? "#f59e0b" : "#345bff", justifyContent: "center", alignItems: "center" }}>
                 <Text style={{ color: "white", fontSize: 18, fontWeight: "700" }}>{selectedPin.name[0]?.toUpperCase()}</Text>
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ color: "white", fontSize: 17, fontWeight: "700" }}>{selectedPin.name}</Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  <Text style={{ color: "white", fontSize: 17, fontWeight: "700" }}>{selectedPin.name}</Text>
+                  {selectedPin.isVerified && (
+                    <View style={{ backgroundColor: "#1e3a8a", borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1, borderColor: "#60a5fa" }}>
+                      <Text style={{ color: "white", fontSize: 10, fontWeight: "700" }}>🏁 Verified</Text>
+                    </View>
+                  )}
+                </View>
                 <Text style={{ color: "#9ca3af", fontSize: 13 }}>📍 {selectedPin.location}</Text>
               </View>
               <TouchableOpacity onPress={() => setSelectedPin(null)}>
@@ -221,31 +215,15 @@ export default function NearMe() {
               </TouchableOpacity>
             </View>
 
-            {selectedPin.jobTitle && (
-              <View style={{ backgroundColor: "#050509", borderRadius: 10, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: "#252838" }}>
-                <Text style={{ color: "#9ca3af", fontSize: 11, marginBottom: 2 }}>Open Job</Text>
-                <Text style={{ color: "white", fontSize: 14, fontWeight: "600" }}>{selectedPin.jobTitle}</Text>
-                {selectedPin.jobBudget && (
-                  <Text style={{ color: "#10b981", fontSize: 13, fontWeight: "700", marginTop: 2 }}>💰 ${selectedPin.jobBudget}</Text>
-                )}
-              </View>
-            )}
-
             <View style={{ flexDirection: "row", gap: 10 }}>
               <TouchableOpacity
-                onPress={() => {
-                  setSelectedPin(null);
-                  router.push(`/(tabs)/user/${selectedPin.id}`);
-                }}
+                onPress={() => { setSelectedPin(null); router.push(`/(tabs)/user/${selectedPin.id}`); }}
                 style={{ flex: 1, backgroundColor: "#345bff", padding: 13, borderRadius: 10, alignItems: "center" }}
               >
                 <Text style={{ color: "white", fontWeight: "700" }}>View Profile</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                onPress={() => {
-                  setSelectedPin(null);
-                  router.push("/(tabs)/mechanic/jobs");
-                }}
+                onPress={() => { setSelectedPin(null); router.push("/(tabs)/mechanic/jobs"); }}
                 style={{ flex: 1, backgroundColor: "#11131a", padding: 13, borderRadius: 10, alignItems: "center", borderWidth: 1, borderColor: "#252838" }}
               >
                 <Text style={{ color: "white", fontWeight: "700" }}>View Jobs</Text>
@@ -261,7 +239,7 @@ export default function NearMe() {
           <View style={{ backgroundColor: "#11131a", borderRadius: 16, padding: 24, borderWidth: 1, borderColor: "#252838", alignItems: "center" }}>
             <Text style={{ fontSize: 40, marginBottom: 12 }}>🔧</Text>
             <Text style={{ color: "white", fontSize: 16, fontWeight: "700", textAlign: "center" }}>No mechanics found nearby</Text>
-            <Text style={{ color: "#9ca3af", fontSize: 13, textAlign: "center", marginTop: 8 }}>Mechanics with open jobs will appear as pins on the map</Text>
+            <Text style={{ color: "#9ca3af", fontSize: 13, textAlign: "center", marginTop: 8 }}>Mechanics who set their service area will appear here</Text>
           </View>
         </View>
       )}
@@ -269,7 +247,6 @@ export default function NearMe() {
   );
 }
 
-// Dark map style to match app theme
 const darkMapStyle = [
   { elementType: "geometry", stylers: [{ color: "#0a0a12" }] },
   { elementType: "labels.text.fill", stylers: [{ color: "#9ca3af" }] },

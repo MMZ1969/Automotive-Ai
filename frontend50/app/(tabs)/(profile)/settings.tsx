@@ -228,6 +228,34 @@ export default function Settings() {
         )}
       </View>
 
+      {/* LOCATION ROW */}
+        <View style={divider} />
+        {isMechanic && (
+          <TouchableOpacity style={row} onPress={() => {
+            Alert.prompt(
+              "Service Area",
+              "Enter your city/region (e.g. Newark, NJ)",
+              async (location) => {
+                if (!location) return;
+                try {
+                  await api.put("/api/users/me", { location });
+                  Alert.alert("✅ Location updated!");
+                } catch {
+                  Alert.alert("Error", "Could not update location.");
+                }
+              },
+              "plain-text",
+              user?.location || ""
+            );
+          }}>
+            <Text style={labelStyle}>📍 Service Area</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <Text style={valueStyle}>{user?.location || "Add location"}</Text>
+              <Text style={{ color: "#345bff", fontSize: 13 }}>Edit</Text>
+            </View>
+          </TouchableOpacity>
+        )}
+
       {/* VERIFICATION SECTION — mechanics only */}
       {isMechanic && (
         <>
