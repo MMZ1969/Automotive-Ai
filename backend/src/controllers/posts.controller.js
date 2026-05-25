@@ -13,7 +13,7 @@ export const getAllPosts = async (req, res) => {
        { createdAt: "desc" },
       ],
       include: {
-        user: true,
+        user: { select: { id: true, name: true, profilePhoto: true, role: true, repPoints: true, isVerified: true } },
         comments: { include: { user: true }, orderBy: { createdAt: "asc" } },
         likes: true,
       },
@@ -32,7 +32,7 @@ export const getPostById = async (req, res) => {
     const post = await prisma.post.findUnique({
       where: { id },
       include: {
-        user: true,
+        user: { select: { id: true, name: true, profilePhoto: true, role: true, repPoints: true, isVerified: true } },
         comments: { include: { user: true }, orderBy: { createdAt: "asc" } },
         likes: true,
       },
@@ -226,7 +226,7 @@ export const getFollowingPosts = async (req, res) => {
   { createdAt: "desc" },
   ],
       include: {
-        user: true,
+        user: { select: { id: true, name: true, profilePhoto: true, role: true, repPoints: true, isVerified: true } },
         comments: { include: { user: true }, orderBy: { createdAt: "asc" } },
         likes: true,
       },
@@ -284,7 +284,7 @@ export const searchPosts = async (req, res) => {
       },
       orderBy: { createdAt: "desc" },
       include: {
-        user: true,
+        user: { select: { id: true, name: true, profilePhoto: true, role: true, repPoints: true, isVerified: true } },
         likes: true,
         comments: true,
       },
