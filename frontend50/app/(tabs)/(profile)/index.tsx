@@ -1,4 +1,5 @@
 import { useAuth } from "@context/AuthContext";
+import { useTheme } from "@context/ThemeContext";
 import api from "@lib/api";
 import * as ImagePicker from "expo-image-picker";
 import { useFocusEffect, useRouter } from "expo-router";
@@ -17,6 +18,7 @@ import { storage } from "../../../firebaseConfig";
 
 export default function Profile() {
   const { user, logout, isMechanic, isDIYer, updateProfilePhoto } = useAuth();
+  const { colors } = useTheme();
   const router = useRouter();
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -39,9 +41,9 @@ export default function Profile() {
   };
 
   const fetchStats = useCallback(async () => {
-  if (!user?.id) return;
-  try {
-    const res = await api.get(`/api/users/${user?.id}/follow-status`);
+    if (!user?.id) return;
+    try {
+      const res = await api.get(`/api/users/${user?.id}/follow-status`);
       setFollowerCount(res.data.followerCount || 0);
       setFollowingCount(res.data.followingCount || 0);
     } catch (err) {
@@ -58,8 +60,8 @@ export default function Profile() {
 
   if (!user) {
     return (
-      <View style={{ flex: 1, backgroundColor: "#050509", justifyContent: "center", alignItems: "center" }}>
-        <Text style={{ color: "white", fontSize: 20 }}>Not logged in</Text>
+      <View style={{ flex: 1, backgroundColor: colors.background, justifyContent: "center", alignItems: "center" }}>
+        <Text style={{ color: colors.text, fontSize: 20 }}>Not logged in</Text>
       </View>
     );
   }
@@ -122,9 +124,29 @@ export default function Profile() {
 
   const itemSize = 80;
 
+  const actionCard = {
+    backgroundColor: colors.card,
+    padding: 16,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: 12,
+  };
+
+  const statPill = {
+    backgroundColor: colors.card,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: "center" as const,
+    minWidth: 80,
+  };
+
   return (
     <ScrollView
-      style={{ flex: 1, backgroundColor: "#050509" }}
+      style={{ flex: 1, backgroundColor: colors.background }}
       contentContainerStyle={{ padding: 20 }}
     >
       {/* PROFILE PHOTO + USER HEADER */}
@@ -132,15 +154,15 @@ export default function Profile() {
         <TouchableOpacity onPress={handlePickPhoto} disabled={uploading}>
           <View style={{
             width: 100, height: 100, borderRadius: 50,
-            backgroundColor: "#11131a", borderWidth: 2,
-            borderColor: isMechanic ? "#345bff" : "#10b981",
+            backgroundColor: colors.card, borderWidth: 2,
+            borderColor: isMechanic ? colors.blue : colors.green,
             justifyContent: "center", alignItems: "center",
             marginBottom: 12, overflow: "hidden",
           }}>
             {uploading ? (
               <View style={{ alignItems: "center" }}>
-                <ActivityIndicator color="#ffffff" />
-                <Text style={{ color: "#9ca3af", fontSize: 11, marginTop: 4 }}>{uploadProgress}%</Text>
+                <ActivityIndicator color={colors.text} />
+                <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 4 }}>{uploadProgress}%</Text>
               </View>
             ) : user.profilePhoto ? (
               <Image source={{ uri: user.profilePhoto }} style={{ width: 100, height: 100, borderRadius: 50 }} />
@@ -151,68 +173,65 @@ export default function Profile() {
         </TouchableOpacity>
 
         <TouchableOpacity onPress={handlePickPhoto} disabled={uploading}>
-          <Text style={{ color: "#9ca3af", fontSize: 13 }}>
+          <Text style={{ color: colors.textSecondary, fontSize: 13 }}>
             {uploading ? "Uploading..." : "Tap photo to change"}
           </Text>
         </TouchableOpacity>
 
-        <Text style={{ color: "white", fontSize: 26, fontWeight: "bold", marginTop: 12 }}>
+        <Text style={{ color: colors.text, fontSize: 26, fontWeight: "bold", marginTop: 12 }}>
           {user.name || "Your Profile"}
         </Text>
-        <Text style={{ color: "#9ca3af", marginTop: 4 }}>{user.email}</Text>
+        <Text style={{ color: colors.textSecondary, marginTop: 4 }}>{user.email}</Text>
 
         <View style={{
-        marginTop: 10,
-        backgroundColor: user?.isVerified ? "#1e3a8a" : isMechanic ? "#345bff" : "#10b981",
-        paddingVertical: 6,
-        paddingHorizontal: 16,
-        borderRadius: 20,
-        borderWidth: user?.isVerified ? 1 : 0,
-        borderColor: "#60a5fa",
-      }}>
-        <Text style={{ color: "white", fontWeight: "700", fontSize: 13 }}>
-         {user?.isVerified ? "🏁 Verified Mechanic" : isMechanic ? "🏁 MECHANIC" : "🔧 DIYER"}
-        </Text>
-      </View>
+          marginTop: 10,
+          backgroundColor: user?.isVerified ? "#1e3a8a" : isMechanic ? colors.blue : colors.green,
+          paddingVertical: 6, paddingHorizontal: 16, borderRadius: 20,
+          borderWidth: user?.isVerified ? 1 : 0, borderColor: "#60a5fa",
+        }}>
+          <Text style={{ color: "white", fontWeight: "700", fontSize: 13 }}>
+            {user?.isVerified ? "🏁 Verified Mechanic" : isMechanic ? "🏁 MECHANIC" : "🔧 DIYER"}
+          </Text>
+        </View>
 
         {/* STATS ROW */}
         <View style={{ flexDirection: "row", gap: 12, marginTop: 20 }}>
           <View style={statPill}>
-            <Text style={{ color: "white", fontWeight: "700", fontSize: 18 }}>{user.repPoints || 0}</Text>
-            <Text style={{ color: "#9ca3af", fontSize: 11 }}>Rep</Text>
+            <Text style={{ color: colors.text, fontWeight: "700", fontSize: 18 }}>{user.repPoints || 0}</Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 11 }}>Rep</Text>
           </View>
           <TouchableOpacity
             style={statPill}
             onPress={() => router.push({ pathname: "/(tabs)/followers", params: { id: user.id, type: "followers" } })}
           >
-            <Text style={{ color: "white", fontWeight: "700", fontSize: 18 }}>{followerCount}</Text>
-            <Text style={{ color: "#9ca3af", fontSize: 11 }}>Followers</Text>
+            <Text style={{ color: colors.text, fontWeight: "700", fontSize: 18 }}>{followerCount}</Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 11 }}>Followers</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={statPill}
             onPress={() => router.push({ pathname: "/(tabs)/followers", params: { id: user.id, type: "following" } })}
           >
-            <Text style={{ color: "white", fontWeight: "700", fontSize: 18 }}>{followingCount}</Text>
-            <Text style={{ color: "#9ca3af", fontSize: 11 }}>Following</Text>
+            <Text style={{ color: colors.text, fontWeight: "700", fontSize: 18 }}>{followingCount}</Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 11 }}>Following</Text>
           </TouchableOpacity>
         </View>
       </View>
 
       {/* RIDES & BUILDS GALLERY */}
-      <View style={{ backgroundColor: "#11131a", borderRadius: 16, borderWidth: 1, borderColor: "#252838", padding: 16, marginBottom: 20 }}>
+      <View style={{ backgroundColor: colors.card, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 16, marginBottom: 20 }}>
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-          <Text style={{ color: "white", fontSize: 18, fontWeight: "800" }}>🚗 Rides & Builds</Text>
+          <Text style={{ color: colors.text, fontSize: 18, fontWeight: "800" }}>🚗 Rides & Builds</Text>
           <TouchableOpacity onPress={() => router.push("/(tabs)/create")}>
-            <Text style={{ color: "#345bff", fontSize: 13 }}>+ Add</Text>
+            <Text style={{ color: colors.blue, fontSize: 13 }}>+ Add</Text>
           </TouchableOpacity>
         </View>
 
         {loadingPosts ? (
-          <ActivityIndicator color="#345bff" />
+          <ActivityIndicator color={colors.blue} />
         ) : vanityPosts.length === 0 ? (
           <View style={{ alignItems: "center", paddingVertical: 24 }}>
             <Text style={{ fontSize: 36, marginBottom: 8 }}>📸</Text>
-            <Text style={{ color: "#9ca3af", fontSize: 14, textAlign: "center" }}>
+            <Text style={{ color: colors.textSecondary, fontSize: 14, textAlign: "center" }}>
               No builds posted yet.{"\n"}Share your first ride!
             </Text>
           </View>
@@ -222,14 +241,14 @@ export default function Profile() {
               <TouchableOpacity
                 key={post.id}
                 onPress={() => router.push(`/(tabs)/post/${post.id}`)}
-                style={{ width: itemSize, height: itemSize, borderRadius: 10, overflow: "hidden", backgroundColor: "#252838" }}
+                style={{ width: itemSize, height: itemSize, borderRadius: 10, overflow: "hidden", backgroundColor: colors.border }}
               >
                 {post.imageUrl ? (
                   <Image source={{ uri: post.imageUrl }} style={{ width: itemSize, height: itemSize }} resizeMode="cover" />
                 ) : (
                   <View style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: 8 }}>
                     <Text style={{ fontSize: 20, marginBottom: 4 }}>🚗</Text>
-                    <Text style={{ color: "#9ca3af", fontSize: 10, textAlign: "center" }} numberOfLines={3}>{post.content}</Text>
+                    <Text style={{ color: colors.textSecondary, fontSize: 10, textAlign: "center" }} numberOfLines={3}>{post.content}</Text>
                   </View>
                 )}
               </TouchableOpacity>
@@ -241,65 +260,54 @@ export default function Profile() {
       {/* MECHANIC DASHBOARD LINK */}
       {isMechanic && (
         <TouchableOpacity onPress={() => router.push("/(tabs)/mechanic")} style={actionCard}>
-          <Text style={actionCardTitle}>🏁 Mechanic Dashboard</Text>
-          <Text style={actionCardSub}>Jobs • Reviews • Earnings</Text>
+          <Text style={{ color: colors.text, fontSize: 18, fontWeight: "700" }}>🏁 Mechanic Dashboard</Text>
+          <Text style={{ color: colors.textSecondary, marginTop: 4, fontSize: 13 }}>Jobs • Reviews • Earnings</Text>
         </TouchableOpacity>
       )}
       {isMechanic && (
         <TouchableOpacity onPress={() => router.push("/quick-alert")} style={[actionCard, { borderColor: "#f59e0b44", backgroundColor: "#1a1200" }]}>
-          <Text style={actionCardTitle}>⚡ Quick Alert</Text>
-          <Text style={actionCardSub}>Send a customer a vehicle status update</Text>
+          <Text style={{ color: colors.text, fontSize: 18, fontWeight: "700" }}>⚡ Quick Alert</Text>
+          <Text style={{ color: colors.textSecondary, marginTop: 4, fontSize: 13 }}>Send a customer a vehicle status update</Text>
         </TouchableOpacity>
       )}
 
-      {/* JOBS */}
       <TouchableOpacity onPress={() => router.push("/(tabs)/mechanic/jobs")} style={[actionCard, { borderColor: "#345bff44", backgroundColor: "#0f1628" }]}>
-        <Text style={actionCardTitle}>💼 {isMechanic ? "Browse Jobs" : "My Job Requests"}</Text>
-        <Text style={actionCardSub}>{isMechanic ? "Find work and place bids" : "Post a job and find a mechanic"}</Text>
+        <Text style={{ color: colors.text, fontSize: 18, fontWeight: "700" }}>💼 {isMechanic ? "Browse Jobs" : "My Job Requests"}</Text>
+        <Text style={{ color: colors.textSecondary, marginTop: 4, fontSize: 13 }}>{isMechanic ? "Find work and place bids" : "Post a job and find a mechanic"}</Text>
       </TouchableOpacity>
 
-      {/* SEARCH */}
       <TouchableOpacity onPress={() => router.push("/(tabs)/search")} style={actionCard}>
-        <Text style={actionCardTitle}>🔍 Search Users</Text>
-        <Text style={actionCardSub}>Find DIYers and Mechanics</Text>
+        <Text style={{ color: colors.text, fontSize: 18, fontWeight: "700" }}>🔍 Search Users</Text>
+        <Text style={{ color: colors.textSecondary, marginTop: 4, fontSize: 13 }}>Find DIYers and Mechanics</Text>
       </TouchableOpacity>
 
-      {/* LEADERBOARD */}
       <TouchableOpacity onPress={() => router.push("/(tabs)/leaderboard")} style={actionCard}>
-        <Text style={actionCardTitle}>🏆 Leaderboard</Text>
-        <Text style={actionCardSub}>Top earners by rep points</Text>
+        <Text style={{ color: colors.text, fontSize: 18, fontWeight: "700" }}>🏆 Leaderboard</Text>
+        <Text style={{ color: colors.textSecondary, marginTop: 4, fontSize: 13 }}>Top earners by rep points</Text>
       </TouchableOpacity>
 
-      {/* VEHICLES */}
       <TouchableOpacity onPress={() => router.push("/(tabs)/(profile)/vehicles")} style={actionCard}>
-        <Text style={actionCardTitle}>🚗 Your Vehicles</Text>
-        <Text style={actionCardSub}>View and manage your garage</Text>
+        <Text style={{ color: colors.text, fontSize: 18, fontWeight: "700" }}>🚗 Your Vehicles</Text>
+        <Text style={{ color: colors.textSecondary, marginTop: 4, fontSize: 13 }}>View and manage your garage</Text>
       </TouchableOpacity>
 
-      {/* LOGS */}
       <TouchableOpacity onPress={() => router.push("/(tabs)/(profile)/logs")} style={actionCard}>
-        <Text style={actionCardTitle}>📋 Maintenance Logs</Text>
-        <Text style={actionCardSub}>All logs across all vehicles</Text>
+        <Text style={{ color: colors.text, fontSize: 18, fontWeight: "700" }}>📋 Maintenance Logs</Text>
+        <Text style={{ color: colors.textSecondary, marginTop: 4, fontSize: 13 }}>All logs across all vehicles</Text>
       </TouchableOpacity>
 
-      {/* ADMIN PANEL — only visible to admin */}
       {user?.isAdmin && (
-        <TouchableOpacity
-          onPress={() => router.push("/(tabs)/(profile)/admin")}
-          style={[actionCard, { borderColor: "#f59e0b44", backgroundColor: "#1a1200" }]}
-        >
-          <Text style={actionCardTitle}>🛡️ Admin Panel</Text>
-          <Text style={actionCardSub}>Manage verification requests</Text>
+        <TouchableOpacity onPress={() => router.push("/(tabs)/(profile)/admin")} style={[actionCard, { borderColor: "#f59e0b44", backgroundColor: "#1a1200" }]}>
+          <Text style={{ color: colors.text, fontSize: 18, fontWeight: "700" }}>🛡️ Admin Panel</Text>
+          <Text style={{ color: colors.textSecondary, marginTop: 4, fontSize: 13 }}>Manage verification requests</Text>
         </TouchableOpacity>
       )}
 
-      {/* SETTINGS */}
       <TouchableOpacity onPress={() => router.push("/(tabs)/(profile)/settings")} style={actionCard}>
-        <Text style={actionCardTitle}>⚙️ Settings</Text>
-        <Text style={actionCardSub}>Account preferences & app settings</Text>
+        <Text style={{ color: colors.text, fontSize: 18, fontWeight: "700" }}>⚙️ Settings</Text>
+        <Text style={{ color: colors.textSecondary, marginTop: 4, fontSize: 13 }}>Account preferences & app settings</Text>
       </TouchableOpacity>
 
-      {/* LOGOUT */}
       <TouchableOpacity
         onPress={async () => await logout()}
         style={{ backgroundColor: "#b91c1c", padding: 16, borderRadius: 14, marginTop: 10, marginBottom: 40, alignItems: "center" }}
@@ -309,25 +317,3 @@ export default function Profile() {
     </ScrollView>
   );
 }
-
-const actionCard = {
-  backgroundColor: "#11131a",
-  padding: 16,
-  borderRadius: 14,
-  borderWidth: 1,
-  borderColor: "#252838",
-  marginBottom: 12,
-};
-
-const actionCardTitle = { color: "#f5f5f5", fontSize: 18, fontWeight: "700" as const };
-const actionCardSub = { color: "#9fa4c0", marginTop: 4, fontSize: 13 };
-const statPill = {
-  backgroundColor: "#11131a",
-  paddingHorizontal: 20,
-  paddingVertical: 12,
-  borderRadius: 16,
-  borderWidth: 1,
-  borderColor: "#252838",
-  alignItems: "center" as const,
-  minWidth: 80,
-};
