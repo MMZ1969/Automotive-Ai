@@ -65,17 +65,20 @@ export default function Settings() {
   };
 
   const handleSaveLocation = async () => {
-    try {
-      setSavingLocation(true);
-      await api.put("/api/users/me", { location: newLocation.trim() });
-      setEditingLocation(false);
-      Alert.alert("✅ Service area updated!");
-    } catch (err) {
-      Alert.alert("Error", "Could not update location. Try again.");
-    } finally {
-      setSavingLocation(false);
-    }
-  };
+  try {
+    setSavingLocation(true);
+    console.log("SAVING LOCATION:", newLocation); // ADD THIS
+    const res = await api.put("/api/users/me", { location: newLocation.trim() });
+    console.log("SAVE RESPONSE:", res.data); // ADD THIS
+    setEditingLocation(false);
+    Alert.alert("✅ Service area updated!");
+  } catch (err) {
+    console.error("SAVE LOCATION ERROR:", err); // ADD THIS
+    Alert.alert("Error", "Could not update location. Try again.");
+  } finally {
+    setSavingLocation(false);
+  }
+};
 
   const handleSubmitVerification = async () => {
     if (!licenseNumber.trim() || !shopName.trim()) {

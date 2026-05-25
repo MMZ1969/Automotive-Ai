@@ -55,6 +55,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="followers" options={{ href: null }} />
       <Tabs.Screen name="near-me" options={{ href: null }} />
       <Tabs.Screen name="admin" options={{ href: null }} />
+      <Tabs.Screen name="(profile)/admin" options={{ href: null }} />
 
       {/* VISIBLE TABS */}
       <Tabs.Screen
