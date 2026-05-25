@@ -16,12 +16,18 @@ import {
 export default function Settings() {
   const { user, logout, isMechanic, updateName, switchRole } = useAuth();
   const router = useRouter();
+
   const [editingName, setEditingName] = useState(false);
   const [newName, setNewName] = useState(user?.name || "");
   const [saving, setSaving] = useState(false);
+
   const [editingPhone, setEditingPhone] = useState(false);
   const [newPhone, setNewPhone] = useState(user?.phone || "");
   const [savingPhone, setSavingPhone] = useState(false);
+
+  const [editingLocation, setEditingLocation] = useState(false);
+  const [newLocation, setNewLocation] = useState(user?.location || "");
+  const [savingLocation, setSavingLocation] = useState(false);
 
   // Verification request state
   const [showVerifyModal, setShowVerifyModal] = useState(false);
@@ -55,6 +61,19 @@ export default function Settings() {
       Alert.alert("Error", "Could not update phone number. Try again.");
     } finally {
       setSavingPhone(false);
+    }
+  };
+
+  const handleSaveLocation = async () => {
+    try {
+      setSavingLocation(true);
+      await api.put("/api/users/me", { location: newLocation.trim() });
+      setEditingLocation(false);
+      Alert.alert("✅ Service area updated!");
+    } catch (err) {
+      Alert.alert("Error", "Could not update location. Try again.");
+    } finally {
+      setSavingLocation(false);
     }
   };
 
@@ -92,57 +111,23 @@ export default function Settings() {
               <Text style={{ color: "#9ca3af", fontSize: 13, marginBottom: 20 }}>Submit your credentials to get a verified badge on your profile.</Text>
 
               <Text style={{ color: "#9ca3af", fontSize: 13, marginBottom: 6 }}>License / Certification Number *</Text>
-              <TextInput
-                value={licenseNumber}
-                onChangeText={setLicenseNumber}
-                placeholder="e.g. ASE-12345"
-                placeholderTextColor="#4b5563"
-                style={inputStyle}
-              />
+              <TextInput value={licenseNumber} onChangeText={setLicenseNumber} placeholder="e.g. ASE-12345" placeholderTextColor="#4b5563" style={inputStyle} />
 
               <Text style={{ color: "#9ca3af", fontSize: 13, marginBottom: 6 }}>Shop / Business Name *</Text>
-              <TextInput
-                value={shopName}
-                onChangeText={setShopName}
-                placeholder="e.g. Mike's Auto Repair"
-                placeholderTextColor="#4b5563"
-                style={inputStyle}
-              />
+              <TextInput value={shopName} onChangeText={setShopName} placeholder="e.g. Mike's Auto Repair" placeholderTextColor="#4b5563" style={inputStyle} />
 
               <Text style={{ color: "#9ca3af", fontSize: 13, marginBottom: 6 }}>Location</Text>
-              <TextInput
-                value={shopLocation}
-                onChangeText={setShopLocation}
-                placeholder="e.g. Newark, NJ"
-                placeholderTextColor="#4b5563"
-                style={inputStyle}
-              />
+              <TextInput value={shopLocation} onChangeText={setShopLocation} placeholder="e.g. Newark, NJ" placeholderTextColor="#4b5563" style={inputStyle} />
 
               <Text style={{ color: "#9ca3af", fontSize: 13, marginBottom: 6 }}>Years of Experience</Text>
-              <TextInput
-                value={experience}
-                onChangeText={setExperience}
-                placeholder="e.g. 10 years"
-                placeholderTextColor="#4b5563"
-                keyboardType="numeric"
-                style={inputStyle}
-              />
+              <TextInput value={experience} onChangeText={setExperience} placeholder="e.g. 10" placeholderTextColor="#4b5563" keyboardType="numeric" style={inputStyle} />
 
               <View style={{ flexDirection: "row", gap: 10, marginTop: 8, marginBottom: 30 }}>
-                <TouchableOpacity
-                  onPress={() => setShowVerifyModal(false)}
-                  style={{ flex: 1, backgroundColor: "#252838", padding: 14, borderRadius: 12, alignItems: "center" }}
-                >
+                <TouchableOpacity onPress={() => setShowVerifyModal(false)} style={{ flex: 1, backgroundColor: "#252838", padding: 14, borderRadius: 12, alignItems: "center" }}>
                   <Text style={{ color: "white", fontWeight: "700" }}>Cancel</Text>
                 </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={handleSubmitVerification}
-                  disabled={submittingVerification}
-                  style={{ flex: 1, backgroundColor: "#345bff", padding: 14, borderRadius: 12, alignItems: "center" }}
-                >
-                  <Text style={{ color: "white", fontWeight: "700" }}>
-                    {submittingVerification ? "Submitting..." : "Submit"}
-                  </Text>
+                <TouchableOpacity onPress={handleSubmitVerification} disabled={submittingVerification} style={{ flex: 1, backgroundColor: "#345bff", padding: 14, borderRadius: 12, alignItems: "center" }}>
+                  <Text style={{ color: "white", fontWeight: "700" }}>{submittingVerification ? "Submitting..." : "Submit"}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -159,6 +144,8 @@ export default function Settings() {
       {/* ACCOUNT SECTION */}
       <Text style={sectionTitle}>Account</Text>
       <View style={card}>
+
+        {/* NAME */}
         {editingName ? (
           <View style={{ padding: 16 }}>
             <Text style={{ color: "#9ca3af", fontSize: 13, marginBottom: 8 }}>Edit Name</Text>
@@ -185,6 +172,8 @@ export default function Settings() {
         <View style={divider} />
         <View style={row}><Text style={labelStyle}>Email</Text><Text style={valueStyle}>{user?.email || "—"}</Text></View>
         <View style={divider} />
+
+        {/* ROLE */}
         <View style={row}>
           <Text style={labelStyle}>Role</Text>
           {user?.id === 1 ? (
@@ -196,12 +185,14 @@ export default function Settings() {
             <Text style={valueStyle}>{isMechanic ? "🏁 Mechanic" : "🔧 DIYer"}</Text>
           )}
         </View>
+
         <View style={divider} />
         <TouchableOpacity style={row} onPress={() => router.push("/change-password")}>
           <Text style={labelStyle}>Password</Text>
           <Text style={{ color: "#345bff", fontSize: 13 }}>Change →</Text>
         </TouchableOpacity>
 
+        {/* PHONE */}
         <View style={divider} />
         {editingPhone ? (
           <View style={{ padding: 16 }}>
@@ -226,35 +217,38 @@ export default function Settings() {
             </View>
           </TouchableOpacity>
         )}
-      </View>
 
-      {/* LOCATION ROW */}
-        <View style={divider} />
+        {/* SERVICE AREA — mechanics only */}
         {isMechanic && (
-          <TouchableOpacity style={row} onPress={() => {
-            Alert.prompt(
-              "Service Area",
-              "Enter your city/region (e.g. Newark, NJ)",
-              async (location) => {
-                if (!location) return;
-                try {
-                  await api.put("/api/users/me", { location });
-                  Alert.alert("✅ Location updated!");
-                } catch {
-                  Alert.alert("Error", "Could not update location.");
-                }
-              },
-              "plain-text",
-              user?.location || ""
-            );
-          }}>
-            <Text style={labelStyle}>📍 Service Area</Text>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-              <Text style={valueStyle}>{user?.location || "Add location"}</Text>
-              <Text style={{ color: "#345bff", fontSize: 13 }}>Edit</Text>
-            </View>
-          </TouchableOpacity>
+          <>
+            <View style={divider} />
+            {editingLocation ? (
+              <View style={{ padding: 16 }}>
+                <Text style={{ color: "#9ca3af", fontSize: 13, marginBottom: 4 }}>Service Area</Text>
+                <Text style={{ color: "#6b7280", fontSize: 11, marginBottom: 8 }}>Your city/region shown on the Near Me map.</Text>
+                <TextInput value={newLocation} onChangeText={setNewLocation} style={{ backgroundColor: "#050509", color: "white", padding: 12, borderRadius: 10, borderWidth: 1, borderColor: "#345bff", fontSize: 16, marginBottom: 12 }} autoFocus placeholder="e.g. Newark, NJ" placeholderTextColor="#4b5563" />
+                <View style={{ flexDirection: "row", gap: 10 }}>
+                  <TouchableOpacity onPress={handleSaveLocation} disabled={savingLocation} style={{ flex: 1, backgroundColor: "#345bff", padding: 12, borderRadius: 10, alignItems: "center" }}>
+                    <Text style={{ color: "white", fontWeight: "700" }}>{savingLocation ? "Saving..." : "Save"}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => { setEditingLocation(false); setNewLocation(user?.location || ""); }} style={{ flex: 1, backgroundColor: "#11131a", padding: 12, borderRadius: 10, alignItems: "center", borderWidth: 1, borderColor: "#252838" }}>
+                    <Text style={{ color: "#9ca3af", fontWeight: "700" }}>Cancel</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <TouchableOpacity style={row} onPress={() => setEditingLocation(true)}>
+                <Text style={labelStyle}>📍 Service Area</Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <Text style={valueStyle}>{user?.location || "Add location"}</Text>
+                  <Text style={{ color: "#345bff", fontSize: 13 }}>Edit</Text>
+                </View>
+              </TouchableOpacity>
+            )}
+          </>
         )}
+
+      </View>
 
       {/* VERIFICATION SECTION — mechanics only */}
       {isMechanic && (
@@ -264,9 +258,7 @@ export default function Settings() {
             <TouchableOpacity style={row} onPress={() => setShowVerifyModal(true)}>
               <View>
                 <Text style={labelStyle}>⭐ Get Verified</Text>
-                <Text style={{ color: "#6b7280", fontSize: 12, marginTop: 2 }}>
-                  Submit credentials for a verified badge
-                </Text>
+                <Text style={{ color: "#6b7280", fontSize: 12, marginTop: 2 }}>Submit credentials for a verified badge</Text>
               </View>
               <Text style={{ color: "#345bff", fontSize: 13 }}>Apply →</Text>
             </TouchableOpacity>
