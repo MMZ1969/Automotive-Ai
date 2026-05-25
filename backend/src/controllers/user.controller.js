@@ -69,9 +69,11 @@ export async function updateProfile(req, res) {
       role: true,
       profilePhoto: true,
       phone: true,
-      repPoints: true,  
+      repPoints: true,
+      isAdmin: true,
+      location: true,
       createdAt: true,
-},
+ },
     });
 
     res.json(updated);
