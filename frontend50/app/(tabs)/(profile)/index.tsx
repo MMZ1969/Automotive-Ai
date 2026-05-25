@@ -334,6 +334,17 @@ fetchStats();
         <Text style={actionCardSub}>All logs across all vehicles</Text>
       </TouchableOpacity>
 
+      {/* ADMIN PANEL — only visible to admin */}
+      {user?.isAdmin && (
+        <TouchableOpacity
+    onPress={() => router.push("/(tabs)/(profile)/admin")}
+    style={[actionCard, { borderColor: "#f59e0b44", backgroundColor: "#1a1200" }]}
+       >
+       <Text style={actionCardTitle}>🛡️ Admin Panel</Text>
+      <Text style={actionCardSub}>Manage verification requests</Text>
+      </TouchableOpacity>
+        )}
+
       {/* SETTINGS */}
       <TouchableOpacity
         onPress={() => router.push("/(tabs)/(profile)/settings")}
