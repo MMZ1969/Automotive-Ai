@@ -1,4 +1,5 @@
 import { useAuth } from "@context/AuthContext";
+import { useTheme } from "@context/ThemeContext";
 import api from "@lib/api";
 import { useRouter } from "expo-router";
 import { useState } from "react";
@@ -15,6 +16,7 @@ import {
 
 export default function Settings() {
   const { user, logout, isMechanic, updateName, switchRole } = useAuth();
+  const { themeMode, setThemeMode } = useTheme();
   const router = useRouter();
 
   const [editingName, setEditingName] = useState(false);
@@ -270,12 +272,34 @@ export default function Settings() {
       )}
 
       {/* APP SECTION */}
-      <Text style={sectionTitle}>App</Text>
-      <View style={card}>
-        <View style={row}><Text style={labelStyle}>Version</Text><Text style={valueStyle}>1.0.4</Text></View>
-        <View style={divider} />
-        <View style={row}><Text style={labelStyle}>Build</Text><Text style={valueStyle}>17</Text></View>
-      </View>
+<Text style={sectionTitle}>App</Text>
+<View style={card}>
+  <View style={row}>
+    <Text style={labelStyle}>Theme</Text>
+    <View style={{ flexDirection: "row", gap: 8 }}>
+      {(["dark", "light", "system"] as const).map((mode) => (
+        <TouchableOpacity
+          key={mode}
+          onPress={() => setThemeMode(mode)}
+          style={{
+            paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20,
+            backgroundColor: themeMode === mode ? "#345bff" : "#252838",
+            borderWidth: 1,
+            borderColor: themeMode === mode ? "#345bff" : "#252838",
+          }}
+        >
+          <Text style={{ color: "white", fontSize: 12, fontWeight: "700" }}>
+            {mode === "dark" ? "🌙 Dark" : mode === "light" ? "☀️ Light" : "📱 System"}
+          </Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  </View>
+  <View style={divider} />
+  <View style={row}><Text style={labelStyle}>Version</Text><Text style={valueStyle}>1.0.4</Text></View>
+  <View style={divider} />
+  <View style={row}><Text style={labelStyle}>Build</Text><Text style={valueStyle}>17</Text></View>
+</View>
 
       {/* FEEDBACK SECTION */}
       <Text style={sectionTitle}>Feedback</Text>

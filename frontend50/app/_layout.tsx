@@ -1,5 +1,6 @@
 import { AuthProvider, useAuth } from "@context/AuthContext";
 import { LogProvider } from "@context/LogContext";
+import { ThemeProvider } from "@context/ThemeContext";
 import { VehicleProvider } from "@context/VehicleContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Slot, useRouter, useSegments } from "expo-router";
@@ -48,12 +49,14 @@ function RouteGuard() {
 
 export default function RootLayout() {
   return (
-    <AuthProvider>
-      <VehicleProvider>
-        <LogProvider>
-          <RouteGuard />
-        </LogProvider>
-      </VehicleProvider>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <VehicleProvider>
+          <LogProvider>
+            <RouteGuard />
+          </LogProvider>
+        </VehicleProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
