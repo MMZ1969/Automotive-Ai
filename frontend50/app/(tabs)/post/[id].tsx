@@ -10,6 +10,7 @@ import {
   KeyboardAvoidingView,
   Modal,
   Platform,
+  ScrollView,
   Text,
   TextInput,
   TouchableOpacity,
@@ -161,7 +162,11 @@ export default function PostDetail() {
 <Modal visible={editModalVisible} transparent animationType="slide" onRequestClose={() => setEditModalVisible(false)}>
   <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
     <TouchableOpacity style={{ flex: 1, backgroundColor: "#00000088" }} onPress={() => setEditModalVisible(false)} />
-    <View style={{ backgroundColor: "#11131a", borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20 }}>
+    <ScrollView
+      style={{ backgroundColor: "#11131a", borderTopLeftRadius: 20, borderTopRightRadius: 20 }}
+      contentContainerStyle={{ padding: 20 }}
+      keyboardShouldPersistTaps="handled"
+    >
       <Text style={{ color: "white", fontSize: 20, fontWeight: "900", marginBottom: 16 }}>✏️ Edit Post</Text>
       <TextInput
         value={editContent}
@@ -185,7 +190,7 @@ export default function PostDetail() {
           <Text style={{ color: "white", fontWeight: "700" }}>{saving ? "Saving..." : "Save"}</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </ScrollView>
   </KeyboardAvoidingView>
 </Modal>
 
