@@ -119,14 +119,18 @@ const isMatch = await bcrypt.compare(password, user.password);
     );
 
     res.json({
-      token,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-        profilePhoto: user.profilePhoto,
-      },
+  token,
+  user: {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    role: user.role,
+    profilePhoto: user.profilePhoto,
+    repPoints: user.repPoints,
+    isAdmin: user.isAdmin,
+    location: user.location,
+    isVerified: user.isVerified,
+  },
     });
   } catch (err) {
     console.error("LOGIN ERROR:", err);
