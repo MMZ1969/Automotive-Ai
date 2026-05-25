@@ -428,3 +428,27 @@ export async function getVerificationRequests(req, res) {
     res.status(500).json({ error: "Failed to fetch verification requests" });
   }
 }
+
+// GET /users/mechanics — get all mechanics with location
+export async function getMechanics(req, res) {
+  try {
+    const mechanics = await prisma.user.findMany({
+      where: { 
+        role: "MECHANIC",
+        location: { not: null },
+      },
+      select: {
+        id: true,
+        name: true,
+        profilePhoto: true,
+        repPoints: true,
+        location: true,
+        isVerified: true,
+      },
+    });
+    res.json(mechanics);
+  } catch (err) {
+    console.error("GET MECHANICS ERROR:", err);
+    res.status(500).json({ error: "Failed to fetch mechanics" });
+  }
+}

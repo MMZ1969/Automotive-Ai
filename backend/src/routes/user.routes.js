@@ -9,6 +9,7 @@ router.get("/me", authMiddleware, getMe);
 router.put("/me", authMiddleware, updateProfile);
 router.get("/search", authMiddleware, searchUsers);
 router.get("/blocked", authMiddleware, getBlockedUsers);
+router.get("/mechanics", authMiddleware, getMechanics);
 router.get("/:id/profile", authMiddleware, getUserProfile);
 router.get("/:id/mechanic-stats", authMiddleware, getMechanicStats);
 router.post("/push-token", authMiddleware, savePushToken);
