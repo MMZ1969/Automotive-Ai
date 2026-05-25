@@ -1,6 +1,5 @@
 import { useAuth } from "@context/AuthContext";
 import api from "@lib/api";
-import { getBadge } from "@utils/badges";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import {
@@ -315,28 +314,31 @@ export default function Feed() {
                     <Text style={{ color: "white", fontSize: 18, fontWeight: "bold" }}>{item.user?.name?.[0]?.toUpperCase() || "?"}</Text>
                   )}
                 </View>
-                <View style={{ flex: 1 }}>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                    <Text style={{ color: "white", fontWeight: "700", fontSize: 15 }}>{item.user?.name || "Anonymous"}</Text>
-                    {item.user?.isVerified && (
-                      <View style={{ backgroundColor: "#1e3a8a", borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1, borderColor: "#345bff" }}>
-                        <Text style={{ color: "#345bff", fontSize: 10, fontWeight: "700" }}>✅ Verified</Text>
-                      </View>
-                    )}
-                  </View>
-                    <View style={{ backgroundColor: getBadge(item.user?.repPoints || 0).color + "22", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8, borderWidth: 1, borderColor: getBadge(item.user?.repPoints || 0).color }}>
-                      <Text style={{ fontSize: 10, fontWeight: "700", color: getBadge(item.user?.repPoints || 0).color }}>
-                        {getBadge(item.user?.repPoints || 0).emoji} {getBadge(item.user?.repPoints || 0).label}
-                      </Text>
-                    </View>
-                  </View>
-                  <View style={{ backgroundColor: item.user?.role === "MECHANIC" ? "#1e3a8a" : "#064e3b", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10, alignSelf: "flex-start", marginTop: 3 }}>
-                    <Text style={{ color: "white", fontSize: 11, fontWeight: "600" }}>
-                      {item.user?.role === "MECHANIC" ? "🏁 Mechanic" : "🔧 DIYer"}
-                    </Text>
-                  </View>
-                </View>
+                <View style={{ flex: 1, flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
+  <Text style={{ color: "white", fontWeight: "700", fontSize: 15 }}>{item.user?.name || "Anonymous"}</Text>
+  {item.user?.role === "MECHANIC" && item.user?.isVerified ? (
+    <View style={{
+      paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8,
+      borderWidth: 1, borderColor: "#60a5fa",
+      shadowColor: "#345bff", shadowOpacity: 0.4, shadowRadius: 4,
+      elevation: 4,
+      backgroundColor: "#1e3a8a",
+    }}>
+      <Text style={{ color: "white", fontSize: 10, fontWeight: "700" }}>🏁 Verified Mechanic</Text>
+    </View>
+  ) : (
+    <View style={{
+      paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8,
+      backgroundColor: item.user?.role === "MECHANIC" ? "#1e3a8a" : "#064e3b",
+      borderWidth: 1,
+      borderColor: item.user?.role === "MECHANIC" ? "#345bff" : "#10b981",
+    }}>
+      <Text style={{ color: "white", fontSize: 10, fontWeight: "700" }}>
+        {item.user?.role === "MECHANIC" ? "🏁 Mechanic" : "🔧 DIYer"}
+      </Text>
+    </View>
+  )}
+</View>
               </TouchableOpacity>
               <TouchableOpacity onPress={() => setMenuPost(item)} style={{ padding: 8 }}>
                 <Text style={{ color: "#9ca3af", fontSize: 20 }}>⋯</Text>

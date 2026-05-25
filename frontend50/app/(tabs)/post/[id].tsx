@@ -1,6 +1,5 @@
 import { useAuth } from "@context/AuthContext";
 import api from "@lib/api";
-import { getBadge } from "@utils/badges";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -242,13 +241,19 @@ export default function PostDetail() {
                   )}
                 </View>
                 <View>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  <View style={{ flex: 1, flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
                     <Text style={{ color: "white", fontWeight: "700", fontSize: 15 }}>{post?.user?.name || "Anonymous"}</Text>
-                    <View style={{ backgroundColor: getBadge(post?.user?.repPoints || 0).color + "22", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8, borderWidth: 1, borderColor: getBadge(post?.user?.repPoints || 0).color }}>
-                      <Text style={{ fontSize: 10, fontWeight: "700", color: getBadge(post?.user?.repPoints || 0).color }}>
-                        {getBadge(post?.user?.repPoints || 0).emoji} {getBadge(post?.user?.repPoints || 0).label}
-                      </Text>
-                    </View>
+                    {post?.user?.role === "MECHANIC" && post?.user?.isVerified ? (
+                      <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, borderWidth: 1, borderColor: "#60a5fa", shadowColor: "#345bff", shadowOpacity: 0.4, shadowRadius: 4, elevation: 4, backgroundColor: "#1e3a8a" }}>
+                        <Text style={{ color: "white", fontSize: 10, fontWeight: "700" }}>🏁 Verified Mechanic</Text>
+                      </View>
+                    ) : (
+                      <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, backgroundColor: post?.user?.role === "MECHANIC" ? "#1e3a8a" : "#064e3b", borderWidth: 1, borderColor: post?.user?.role === "MECHANIC" ? "#345bff" : "#10b981" }}>
+                        <Text style={{ color: "white", fontSize: 10, fontWeight: "700" }}>
+                          {post?.user?.role === "MECHANIC" ? "🏁 Mechanic" : "🔧 DIYer"}
+                        </Text>
+                      </View>
+                    )}
                   </View>
                   <Text style={{ color: "#9ca3af", fontSize: 12 }}>{post?.user?.role === "MECHANIC" ? "🏁 Mechanic" : "🔧 DIYer"}</Text>
                 </View>
