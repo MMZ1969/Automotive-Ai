@@ -1,4 +1,5 @@
 import { useAuth } from "@context/AuthContext";
+import { useTheme } from "@context/ThemeContext";
 import api from "@lib/api";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
@@ -14,6 +15,7 @@ import {
 
 export default function LoginScreen() {
   const { login } = useAuth();
+  const { colors } = useTheme();
   const router = useRouter();
 
   const [email, setEmail] = useState("");
@@ -56,13 +58,13 @@ export default function LoginScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#050509", justifyContent: "center", alignItems: "center", paddingHorizontal: 30 }}>
+    <View style={{ flex: 1, backgroundColor: colors.background, justifyContent: "center", alignItems: "center", paddingHorizontal: 30 }}>
       <Image
         source={require("../../assets/autoai_icon_1024_tm.png")}
         style={{ width: 200, height: 200, marginBottom: 8 }}
         resizeMode="contain"
       />
-      <Text style={{ color: "#9ca3af", fontSize: 14, marginBottom: 32 }}>
+      <Text style={{ color: colors.textSecondary, fontSize: 14, marginBottom: 32 }}>
         The social platform for car enthusiasts
       </Text>
 
@@ -70,21 +72,21 @@ export default function LoginScreen() {
         value={email}
         onChangeText={setEmail}
         placeholder="Email"
-        placeholderTextColor="#6b7280"
+        placeholderTextColor={colors.textMuted}
         autoCapitalize="none"
         keyboardType="email-address"
-        style={{ width: "100%", backgroundColor: "#11131a", color: "white", paddingHorizontal: 16, paddingVertical: 12, borderRadius: 10, marginBottom: 12, borderWidth: 1, borderColor: "#252838" }}
+        style={{ width: "100%", backgroundColor: colors.input, color: colors.text, paddingHorizontal: 16, paddingVertical: 12, borderRadius: 10, marginBottom: 12, borderWidth: 1, borderColor: colors.border }}
       />
 
       {/* PASSWORD WITH EYE ICON */}
-      <View style={{ width: "100%", flexDirection: "row", alignItems: "center", backgroundColor: "#11131a", borderRadius: 10, marginBottom: 8, borderWidth: 1, borderColor: "#252838" }}>
+      <View style={{ width: "100%", flexDirection: "row", alignItems: "center", backgroundColor: colors.input, borderRadius: 10, marginBottom: 8, borderWidth: 1, borderColor: colors.border }}>
         <TextInput
           value={password}
           onChangeText={setPassword}
           placeholder="Password"
-          placeholderTextColor="#6b7280"
+          placeholderTextColor={colors.textMuted}
           secureTextEntry={!showPassword}
-          style={{ flex: 1, color: "white", paddingHorizontal: 16, paddingVertical: 12 }}
+          style={{ flex: 1, color: colors.text, paddingHorizontal: 16, paddingVertical: 12 }}
         />
         <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ paddingHorizontal: 14 }}>
           <Text style={{ fontSize: 18 }}>{showPassword ? "🙈" : "👁️"}</Text>
@@ -93,7 +95,7 @@ export default function LoginScreen() {
 
       {/* FORGOT PASSWORD */}
       <TouchableOpacity onPress={() => router.push("/forgot-password")} style={{ alignSelf: "flex-end", marginBottom: 16 }}>
-        <Text style={{ color: "#345bff", fontSize: 13 }}>Forgot Password?</Text>
+        <Text style={{ color: colors.blue, fontSize: 13 }}>Forgot Password?</Text>
       </TouchableOpacity>
 
       {/* ERROR */}
@@ -101,14 +103,14 @@ export default function LoginScreen() {
         <Text style={{ color: "#f87171", marginBottom: 12, textAlign: "center" }}>{error}</Text>
       )}
 
-      {/* NEEDS VERIFICATION — resend button */}
+      {/* NEEDS VERIFICATION */}
       {needsVerification && (
         <TouchableOpacity
           onPress={handleResend}
           disabled={resending}
-          style={{ backgroundColor: "#11131a", borderWidth: 1, borderColor: "#345bff", padding: 12, borderRadius: 10, width: "100%", alignItems: "center", marginBottom: 12 }}
+          style={{ backgroundColor: colors.input, borderWidth: 1, borderColor: colors.blue, padding: 12, borderRadius: 10, width: "100%", alignItems: "center", marginBottom: 12 }}
         >
-          <Text style={{ color: "#345bff", fontWeight: "700" }}>
+          <Text style={{ color: colors.blue, fontWeight: "700" }}>
             {resending ? "Sending..." : "📧 Resend Verification Email"}
           </Text>
         </TouchableOpacity>
@@ -117,7 +119,7 @@ export default function LoginScreen() {
       <TouchableOpacity
         onPress={handleLogin}
         disabled={submitting}
-        style={{ width: "100%", backgroundColor: submitting ? "#1f2937" : "#345bff", paddingVertical: 16, borderRadius: 12, alignItems: "center", marginBottom: 16 }}
+        style={{ width: "100%", backgroundColor: submitting ? colors.card : colors.blue, paddingVertical: 16, borderRadius: 12, alignItems: "center", marginBottom: 16 }}
       >
         {submitting ? (
           <ActivityIndicator color="#ffffff" />
@@ -127,7 +129,7 @@ export default function LoginScreen() {
       </TouchableOpacity>
 
       <TouchableOpacity onPress={() => router.push("/(auth)/register")}>
-        <Text style={{ color: "#3b82f6", fontSize: 15 }}>Don't have an account? Sign Up</Text>
+        <Text style={{ color: colors.blue, fontSize: 15 }}>Don't have an account? Sign Up</Text>
       </TouchableOpacity>
     </View>
   );

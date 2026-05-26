@@ -1,3 +1,4 @@
+import { useTheme } from "@context/ThemeContext";
 import api from "@lib/api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -7,11 +8,10 @@ import { ActivityIndicator, Text, TouchableOpacity, View } from "react-native";
 export default function VerifyEmail() {
   const { token } = useLocalSearchParams();
   const router = useRouter();
+  const { colors } = useTheme();
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
 
-  useEffect(() => {
-    if (token) verifyToken();
-  }, [token]);
+  useEffect(() => { if (token) verifyToken(); }, [token]);
 
   const verifyToken = async () => {
     try {
@@ -29,29 +29,26 @@ export default function VerifyEmail() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#050509", justifyContent: "center", alignItems: "center", padding: 30 }}>
+    <View style={{ flex: 1, backgroundColor: colors.background, justifyContent: "center", alignItems: "center", padding: 30 }}>
       {status === "loading" && (
         <>
-          <ActivityIndicator color="#345bff" size="large" />
-          <Text style={{ color: "#9ca3af", marginTop: 20, fontSize: 15 }}>Verifying your email...</Text>
+          <ActivityIndicator color={colors.blue} size="large" />
+          <Text style={{ color: colors.textSecondary, marginTop: 20, fontSize: 15 }}>Verifying your email...</Text>
         </>
       )}
       {status === "success" && (
         <>
           <Text style={{ fontSize: 60, marginBottom: 20 }}>✅</Text>
-          <Text style={{ color: "white", fontSize: 24, fontWeight: "900", textAlign: "center", marginBottom: 12 }}>Email Verified!</Text>
-          <Text style={{ color: "#9ca3af", fontSize: 15, textAlign: "center" }}>Welcome to AutoAI 🚗 Taking you to the feed...</Text>
+          <Text style={{ color: colors.text, fontSize: 24, fontWeight: "900", textAlign: "center", marginBottom: 12 }}>Email Verified!</Text>
+          <Text style={{ color: colors.textSecondary, fontSize: 15, textAlign: "center" }}>Welcome to AutoAI 🚗 Taking you to the feed...</Text>
         </>
       )}
       {status === "error" && (
         <>
           <Text style={{ fontSize: 60, marginBottom: 20 }}>❌</Text>
-          <Text style={{ color: "white", fontSize: 24, fontWeight: "900", textAlign: "center", marginBottom: 12 }}>Link Expired</Text>
-          <Text style={{ color: "#9ca3af", fontSize: 15, textAlign: "center", marginBottom: 24 }}>This verification link is invalid or has expired.</Text>
-          <TouchableOpacity
-            onPress={() => router.replace("/(auth)/login")}
-            style={{ backgroundColor: "#345bff", padding: 14, borderRadius: 12, paddingHorizontal: 30 }}
-          >
+          <Text style={{ color: colors.text, fontSize: 24, fontWeight: "900", textAlign: "center", marginBottom: 12 }}>Link Expired</Text>
+          <Text style={{ color: colors.textSecondary, fontSize: 15, textAlign: "center", marginBottom: 24 }}>This verification link is invalid or has expired.</Text>
+          <TouchableOpacity onPress={() => router.replace("/(auth)/login")} style={{ backgroundColor: colors.blue, padding: 14, borderRadius: 12, paddingHorizontal: 30 }}>
             <Text style={{ color: "white", fontWeight: "700" }}>Back to Login</Text>
           </TouchableOpacity>
         </>

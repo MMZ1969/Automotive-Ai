@@ -1,26 +1,19 @@
 import { useAuth } from "@context/AuthContext";
+import { useTheme } from "@context/ThemeContext";
 import api from "@lib/api";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { getDownloadURL, ref, uploadBytesResumable } from "firebase/storage";
 import { useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  Keyboard,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+  ActivityIndicator, Alert, Image, Keyboard, KeyboardAvoidingView,
+  Platform, ScrollView, Text, TextInput, TouchableOpacity, View,
 } from "react-native";
 import { storage } from "../../firebaseConfig";
 
 export default function CreatePostScreen() {
   const { user, isMechanic } = useAuth();
+  const { colors } = useTheme();
   const router = useRouter();
   const [content, setContent] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -31,8 +24,6 @@ export default function CreatePostScreen() {
   const [postType, setPostType] = useState<"VANITY" | "QUESTION" | "SERVICE" | "BEFORE_AFTER">("VANITY");
   const [servicePrice, setServicePrice] = useState("");
   const [serviceLocation, setServiceLocation] = useState("");
-
-  // Before/After state
   const [beforeUri, setBeforeUri] = useState<string | null>(null);
   const [beforeUrl, setBeforeUrl] = useState<string | null>(null);
   const [afterUri, setAfterUri] = useState<string | null>(null);
@@ -45,45 +36,26 @@ export default function CreatePostScreen() {
   const handlePickPhoto = async () => {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== "granted") {
-        Alert.alert("Permission needed", "Please allow access to your photo library.");
-        return;
-      }
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ["images"],
-        allowsEditing: true,
-        quality: 0.7,
-      });
+      if (status !== "granted") { Alert.alert("Permission needed", "Please allow access to your photo library."); return; }
+      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], allowsEditing: true, quality: 0.7 });
       if (result.canceled) return;
       const uri = result.assets[0].uri;
       setImageUri(uri);
       await uploadToFirebase(uri, "main");
-    } catch (err) {
-      Alert.alert("Error", "Could not open photo library.");
-    }
+    } catch { Alert.alert("Error", "Could not open photo library."); }
   };
 
   const handlePickBeforeAfter = async (slot: "before" | "after") => {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== "granted") {
-        Alert.alert("Permission needed", "Please allow access to your photo library.");
-        return;
-      }
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ["images"],
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.7,
-      });
+      if (status !== "granted") { Alert.alert("Permission needed", "Please allow access to your photo library."); return; }
+      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], allowsEditing: true, aspect: [1, 1], quality: 0.7 });
       if (result.canceled) return;
       const uri = result.assets[0].uri;
       if (slot === "before") setBeforeUri(uri);
       else setAfterUri(uri);
       await uploadToFirebase(uri, slot);
-    } catch (err) {
-      Alert.alert("Error", "Could not open photo library.");
-    }
+    } catch { Alert.alert("Error", "Could not open photo library."); }
   };
 
   const uploadToFirebase = async (uri: string, slot: "main" | "before" | "after") => {
@@ -91,22 +63,19 @@ export default function CreatePostScreen() {
       if (slot === "before") { setUploadingBefore(true); setBeforeProgress(0); }
       else if (slot === "after") { setUploadingAfter(true); setAfterProgress(0); }
       else { setUploading(true); setUploadProgress(0); }
-
       const response = await fetch(uri);
       const blob = await response.blob();
       const filename = `post-photos/${user?.id}/${slot}_${Date.now()}.jpg`;
       const storageRef = ref(storage, filename);
       const uploadTask = uploadBytesResumable(storageRef, blob);
-
-      uploadTask.on(
-        "state_changed",
+      uploadTask.on("state_changed",
         (snapshot) => {
           const progress = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
           if (slot === "before") setBeforeProgress(progress);
           else if (slot === "after") setAfterProgress(progress);
           else setUploadProgress(progress);
         },
-        (error) => {
+        () => {
           Alert.alert("Upload failed", "Please try again.");
           if (slot === "before") setUploadingBefore(false);
           else if (slot === "after") setUploadingAfter(false);
@@ -119,7 +88,7 @@ export default function CreatePostScreen() {
           else { setImageUrl(downloadURL); setUploading(false); }
         }
       );
-    } catch (err) {
+    } catch {
       if (slot === "before") setUploadingBefore(false);
       else if (slot === "after") setUploadingAfter(false);
       else setUploading(false);
@@ -127,68 +96,41 @@ export default function CreatePostScreen() {
   };
 
   const handlePost = async () => {
-  console.log("POST TYPE BEING SENT:", postType); // ADD THIS
-  console.log("BEFORE URL:", beforeUrl);          // ADD THIS
-  console.log("AFTER URL:", afterUrl);            // ADD THIS
-
-    if (!content.trim()) {
-      Alert.alert("Empty post", "Write something before posting!");
-      return;
-    }
-    if (postType === "BEFORE_AFTER" && (!beforeUrl || !afterUrl)) {
-      Alert.alert("Missing photos", "Please add both a Before and After photo!");
-      return;
-    }
-    if (uploading || uploadingBefore || uploadingAfter) {
-      Alert.alert("Please wait", "Photos are still uploading...");
-      return;
-    }
+    if (!content.trim()) { Alert.alert("Empty post", "Write something before posting!"); return; }
+    if (postType === "BEFORE_AFTER" && (!beforeUrl || !afterUrl)) { Alert.alert("Missing photos", "Please add both a Before and After photo!"); return; }
+    if (uploading || uploadingBefore || uploadingAfter) { Alert.alert("Please wait", "Photos are still uploading..."); return; }
     try {
       setSubmitting(true);
       await api.post("/api/posts", {
-        content,
-        imageUrl: postType === "BEFORE_AFTER" ? null : imageUrl,
-        postType,
+        content, imageUrl: postType === "BEFORE_AFTER" ? null : imageUrl, postType,
         servicePrice: postType === "SERVICE" ? servicePrice : null,
         serviceLocation: postType === "SERVICE" ? serviceLocation : null,
         beforeImageUrl: postType === "BEFORE_AFTER" ? beforeUrl : null,
         afterImageUrl: postType === "BEFORE_AFTER" ? afterUrl : null,
       });
-      setContent("");
-      setImageUri(null); setImageUrl(null);
-      setBeforeUri(null); setBeforeUrl(null);
-      setAfterUri(null); setAfterUrl(null);
-      setPostType("VANITY");
-      setServicePrice(""); setServiceLocation("");
+      setContent(""); setImageUri(null); setImageUrl(null);
+      setBeforeUri(null); setBeforeUrl(null); setAfterUri(null); setAfterUrl(null);
+      setPostType("VANITY"); setServicePrice(""); setServiceLocation("");
       Alert.alert("Posted! 🚗", "Your post is live!", [
         { text: "View Feed", onPress: () => router.push("/(tabs)/feed") },
         { text: "Stay here" },
       ]);
-    } catch (err) {
-      Alert.alert("Error", "Could not create post. Try again.");
-    } finally {
-      setSubmitting(false);
-    }
+    } catch { Alert.alert("Error", "Could not create post. Try again."); }
+    finally { setSubmitting(false); }
   };
 
   const isUploading = uploading || uploadingBefore || uploadingAfter;
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: "#050509" }}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
+    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.background }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       {/* HEADER */}
-      <View style={{ paddingTop: 60, paddingHorizontal: 20, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: "#252838", flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+      <View style={{ paddingTop: 60, paddingHorizontal: 20, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: colors.border, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
         <TouchableOpacity onPress={() => { Keyboard.dismiss(); setContent(""); setImageUri(null); setImageUrl(null); router.push("/(tabs)/feed"); }}>
-          <Text style={{ color: "#9ca3af", fontSize: 16 }}>Cancel</Text>
+          <Text style={{ color: colors.textSecondary, fontSize: 16 }}>Cancel</Text>
         </TouchableOpacity>
-        <Text style={{ color: "white", fontSize: 22, fontWeight: "900" }}>New Post</Text>
-        <TouchableOpacity
-          onPress={handlePost}
-          disabled={submitting || !content.trim() || isUploading}
-          style={{ backgroundColor: submitting || !content.trim() || isUploading ? "#1f2937" : "#345bff", paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20 }}
-        >
+        <Text style={{ color: colors.text, fontSize: 22, fontWeight: "900" }}>New Post</Text>
+        <TouchableOpacity onPress={handlePost} disabled={submitting || !content.trim() || isUploading}
+          style={{ backgroundColor: submitting || !content.trim() || isUploading ? colors.border : colors.blue, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20 }}>
           {submitting ? <ActivityIndicator color="white" size="small" /> : <Text style={{ color: "white", fontWeight: "700", fontSize: 15 }}>Post</Text>}
         </TouchableOpacity>
       </View>
@@ -196,11 +138,11 @@ export default function CreatePostScreen() {
       <ScrollView keyboardShouldPersistTaps="handled">
         {/* ROLE BADGE */}
         <View style={{ paddingHorizontal: 20, paddingTop: 16, flexDirection: "row", alignItems: "center", gap: 10 }}>
-          <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: "#1f2937", justifyContent: "center", alignItems: "center", borderWidth: 2, borderColor: user?.role === "MECHANIC" ? "#345bff" : "#10b981" }}>
-            <Text style={{ color: "white", fontSize: 18, fontWeight: "bold" }}>{user?.name?.[0]?.toUpperCase() || "?"}</Text>
+          <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: colors.border, justifyContent: "center", alignItems: "center", borderWidth: 2, borderColor: user?.role === "MECHANIC" ? colors.blue : colors.green }}>
+            <Text style={{ color: colors.text, fontSize: 18, fontWeight: "bold" }}>{user?.name?.[0]?.toUpperCase() || "?"}</Text>
           </View>
           <View>
-            <Text style={{ color: "white", fontWeight: "700" }}>{user?.name || "You"}</Text>
+            <Text style={{ color: colors.text, fontWeight: "700" }}>{user?.name || "You"}</Text>
             <View style={{ backgroundColor: user?.role === "MECHANIC" ? "#1e3a8a" : "#064e3b", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10, alignSelf: "flex-start", marginTop: 3 }}>
               <Text style={{ color: "white", fontSize: 11, fontWeight: "600" }}>{user?.role === "MECHANIC" ? "🏁 Mechanic" : "🔧 DIYer"}</Text>
             </View>
@@ -215,24 +157,11 @@ export default function CreatePostScreen() {
             { type: "BEFORE_AFTER", emoji: "📸", label: "Before/After", sub: "Show the transformation", color: "#ef4444" },
             ...(isMechanic ? [{ type: "SERVICE", emoji: "🏁", label: "Service", sub: "Offer your services", color: "#f59e0b" }] : []),
           ].map((item) => (
-            <TouchableOpacity
-              key={item.type}
-              onPress={() => setPostType(item.type as any)}
-              style={{
-                flex: 1,
-                minWidth: "47%",
-                paddingVertical: 10,
-                borderRadius: 12,
-                alignItems: "center",
-                backgroundColor: postType === item.type ? item.color : "#11131a",
-                borderWidth: 1,
-                borderColor: postType === item.type ? item.color : "#252838",
-                marginBottom: 4,
-              }}
-            >
+            <TouchableOpacity key={item.type} onPress={() => setPostType(item.type as any)}
+              style={{ flex: 1, minWidth: "47%", paddingVertical: 10, borderRadius: 12, alignItems: "center", backgroundColor: postType === item.type ? item.color : colors.card, borderWidth: 1, borderColor: postType === item.type ? item.color : colors.border, marginBottom: 4 }}>
               <Text style={{ fontSize: 16 }}>{item.emoji}</Text>
-              <Text style={{ color: postType === item.type ? "white" : "#6b7280", fontWeight: "700", fontSize: 12, marginTop: 4 }}>{item.label}</Text>
-              <Text style={{ color: postType === item.type ? "rgba(255,255,255,0.7)" : "#4b5563", fontSize: 10, marginTop: 2 }}>{item.sub}</Text>
+              <Text style={{ color: postType === item.type ? "white" : colors.textMuted, fontWeight: "700", fontSize: 12, marginTop: 4 }}>{item.label}</Text>
+              <Text style={{ color: postType === item.type ? "rgba(255,255,255,0.7)" : colors.textMuted, fontSize: 10, marginTop: 2 }}>{item.sub}</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -240,22 +169,18 @@ export default function CreatePostScreen() {
         {/* SERVICE FIELDS */}
         {postType === "SERVICE" && (
           <View style={{ paddingHorizontal: 20, paddingTop: 16, gap: 12 }}>
-            <TextInput value={serviceLocation} onChangeText={setServiceLocation} placeholder="Service Location (e.g. South Jersey, NJ)" placeholderTextColor="#4b5563" style={{ backgroundColor: "#11131a", color: "white", paddingHorizontal: 16, paddingVertical: 12, borderRadius: 12, borderWidth: 1, borderColor: "#252838", fontSize: 15 }} />
-            <TextInput value={servicePrice} onChangeText={setServicePrice} placeholder="Price / Rate (e.g. $75/hr)" placeholderTextColor="#4b5563" style={{ backgroundColor: "#11131a", color: "white", paddingHorizontal: 16, paddingVertical: 12, borderRadius: 12, borderWidth: 1, borderColor: "#252838", fontSize: 15 }} />
+            <TextInput value={serviceLocation} onChangeText={setServiceLocation} placeholder="Service Location (e.g. South Jersey, NJ)" placeholderTextColor={colors.textMuted} style={{ backgroundColor: colors.card, color: colors.text, paddingHorizontal: 16, paddingVertical: 12, borderRadius: 12, borderWidth: 1, borderColor: colors.border, fontSize: 15 }} />
+            <TextInput value={servicePrice} onChangeText={setServicePrice} placeholder="Price / Rate (e.g. $75/hr)" placeholderTextColor={colors.textMuted} style={{ backgroundColor: colors.card, color: colors.text, paddingHorizontal: 16, paddingVertical: 12, borderRadius: 12, borderWidth: 1, borderColor: colors.border, fontSize: 15 }} />
           </View>
         )}
 
         {/* BEFORE/AFTER PHOTO PICKERS */}
         {postType === "BEFORE_AFTER" && (
           <View style={{ paddingHorizontal: 20, paddingTop: 16 }}>
-            <Text style={{ color: "#9ca3af", fontSize: 13, marginBottom: 12 }}>Add your before and after photos</Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 12 }}>Add your before and after photos</Text>
             <View style={{ flexDirection: "row", gap: 12 }}>
-
-              {/* BEFORE */}
-              <TouchableOpacity
-                onPress={() => handlePickBeforeAfter("before")}
-                style={{ flex: 1, height: 140, borderRadius: 12, backgroundColor: "#11131a", borderWidth: 1.5, borderColor: beforeUri ? "#ef4444" : "#252838", borderStyle: beforeUri ? "solid" : "dashed", justifyContent: "center", alignItems: "center", overflow: "hidden" }}
-              >
+              <TouchableOpacity onPress={() => handlePickBeforeAfter("before")}
+                style={{ flex: 1, height: 140, borderRadius: 12, backgroundColor: colors.card, borderWidth: 1.5, borderColor: beforeUri ? "#ef4444" : colors.border, borderStyle: beforeUri ? "solid" : "dashed", justifyContent: "center", alignItems: "center", overflow: "hidden" }}>
                 {beforeUri ? (
                   <View style={{ width: "100%", height: "100%" }}>
                     <Image source={{ uri: beforeUri }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
@@ -273,21 +198,15 @@ export default function CreatePostScreen() {
                   <View style={{ alignItems: "center" }}>
                     <Text style={{ fontSize: 28 }}>📷</Text>
                     <Text style={{ color: "#ef4444", fontWeight: "700", fontSize: 13, marginTop: 6 }}>BEFORE</Text>
-                    <Text style={{ color: "#6b7280", fontSize: 11, marginTop: 2 }}>Tap to add</Text>
+                    <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 2 }}>Tap to add</Text>
                   </View>
                 )}
               </TouchableOpacity>
-
-              {/* ARROW */}
               <View style={{ justifyContent: "center", alignItems: "center" }}>
                 <Text style={{ color: "#ef4444", fontSize: 22 }}>→</Text>
               </View>
-
-              {/* AFTER */}
-              <TouchableOpacity
-                onPress={() => handlePickBeforeAfter("after")}
-                style={{ flex: 1, height: 140, borderRadius: 12, backgroundColor: "#11131a", borderWidth: 1.5, borderColor: afterUri ? "#10b981" : "#252838", borderStyle: afterUri ? "solid" : "dashed", justifyContent: "center", alignItems: "center", overflow: "hidden" }}
-              >
+              <TouchableOpacity onPress={() => handlePickBeforeAfter("after")}
+                style={{ flex: 1, height: 140, borderRadius: 12, backgroundColor: colors.card, borderWidth: 1.5, borderColor: afterUri ? "#10b981" : colors.border, borderStyle: afterUri ? "solid" : "dashed", justifyContent: "center", alignItems: "center", overflow: "hidden" }}>
                 {afterUri ? (
                   <View style={{ width: "100%", height: "100%" }}>
                     <Image source={{ uri: afterUri }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
@@ -305,31 +224,27 @@ export default function CreatePostScreen() {
                   <View style={{ alignItems: "center" }}>
                     <Text style={{ fontSize: 28 }}>📷</Text>
                     <Text style={{ color: "#10b981", fontWeight: "700", fontSize: 13, marginTop: 6 }}>AFTER</Text>
-                    <Text style={{ color: "#6b7280", fontSize: 11, marginTop: 2 }}>Tap to add</Text>
+                    <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 2 }}>Tap to add</Text>
                   </View>
                 )}
               </TouchableOpacity>
-
             </View>
           </View>
         )}
 
         {/* TEXT INPUT */}
         <TextInput
-          value={content}
-          onChangeText={setContent}
+          value={content} onChangeText={setContent}
           placeholder={
             postType === "QUESTION" ? "Ask the community a car question..."
             : postType === "SERVICE" ? "Describe the service you're offering..."
             : postType === "BEFORE_AFTER" ? "Describe the transformation..."
             : "Share a build, mod, or car moment..."
           }
-          placeholderTextColor="#4b5563"
-          multiline
-          style={{ color: "white", fontSize: 18, lineHeight: 26, paddingHorizontal: 20, paddingTop: 20, minHeight: 120, textAlignVertical: "top" }}
+          placeholderTextColor={colors.textMuted} multiline
+          style={{ color: colors.text, fontSize: 18, lineHeight: 26, paddingHorizontal: 20, paddingTop: 20, minHeight: 120, textAlignVertical: "top" }}
         />
 
-        {/* MAIN IMAGE PREVIEW (non before/after) */}
         {imageUri && postType !== "BEFORE_AFTER" && (
           <View style={{ paddingHorizontal: 20, marginTop: 10 }}>
             <Image source={{ uri: imageUri }} style={{ width: "100%", height: 200, borderRadius: 12 }} resizeMode="cover" />
@@ -347,18 +262,14 @@ export default function CreatePostScreen() {
           </View>
         )}
 
-        {/* BOTTOM TOOLBAR */}
         {postType !== "BEFORE_AFTER" && (
-          <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingVertical: 12, borderTopWidth: 1, borderTopColor: "#252838", marginTop: 12 }}>
-            <TouchableOpacity
-              onPress={handlePickPhoto}
-              disabled={uploading}
-              style={{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "#11131a", paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: "#252838" }}
-            >
+          <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingVertical: 12, borderTopWidth: 1, borderTopColor: colors.border, marginTop: 12 }}>
+            <TouchableOpacity onPress={handlePickPhoto} disabled={uploading}
+              style={{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: colors.card, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: colors.border }}>
               <Text style={{ fontSize: 16 }}>📷</Text>
-              <Text style={{ color: "#9ca3af", fontSize: 13 }}>{uploading ? `Uploading ${uploadProgress}%` : "Add Photo"}</Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 13 }}>{uploading ? `Uploading ${uploadProgress}%` : "Add Photo"}</Text>
             </TouchableOpacity>
-            <Text style={{ color: content.length > 400 ? "#f87171" : "#6b7280", fontSize: 13, marginLeft: "auto" }}>{content.length}/500</Text>
+            <Text style={{ color: content.length > 400 ? "#f87171" : colors.textMuted, fontSize: 13, marginLeft: "auto" }}>{content.length}/500</Text>
           </View>
         )}
 
