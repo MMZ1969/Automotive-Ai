@@ -1,17 +1,13 @@
+import { useTheme } from "@context/ThemeContext";
 import api from "@lib/api";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import {
-  ActivityIndicator,
-  FlatList,
-  Image,
-  RefreshControl,
-  Text,
-  TouchableOpacity,
-  View
+  ActivityIndicator, FlatList, Image, RefreshControl, Text, TouchableOpacity, View
 } from "react-native";
 
 export default function Notifications() {
+  const { colors } = useTheme();
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -19,44 +15,21 @@ export default function Notifications() {
 
   const fetchNotifications = async () => {
     try {
-      // Mark read FIRST so badge clears immediately
       await api.post("/api/notifications/mark-read");
       const res = await api.get("/api/notifications");
       setNotifications(res.data);
-    } catch (err) {
-      console.error("FETCH NOTIFICATIONS ERROR:", err);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
+    } catch (err) { console.error("FETCH NOTIFICATIONS ERROR:", err); }
+    finally { setLoading(false); setRefreshing(false); }
   };
 
-  useFocusEffect(
-    useCallback(() => {
-      fetchNotifications();
-    }, [])
-  );
-
-  const onRefresh = () => {
-    setRefreshing(true);
-    fetchNotifications();
-  };
+  useFocusEffect(useCallback(() => { fetchNotifications(); }, []));
+  const onRefresh = () => { setRefreshing(true); fetchNotifications(); };
 
   const handleNotificationPress = (item: any) => {
     switch (item.type) {
-      case "like":
-      case "comment":
-        if (item.postId) router.push(`/(tabs)/post/${item.postId}`);
-        break;
-      case "follow":
-        if (item.actorId) router.push(`/(tabs)/user/${item.actorId}`);
-        break;
-      case "bid":
-      case "bid_accepted":
-        router.push("/(tabs)/mechanic/jobs");
-        break;
-      default:
-        break;
+      case "like": case "comment": if (item.postId) router.push(`/(tabs)/post/${item.postId}`); break;
+      case "follow": if (item.actorId) router.push(`/(tabs)/user/${item.actorId}`); break;
+      case "bid": case "bid_accepted": router.push("/(tabs)/mechanic/jobs"); break;
     }
   };
 
@@ -70,98 +43,52 @@ export default function Notifications() {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, backgroundColor: "#050509", justifyContent: "center", alignItems: "center" }}>
-        <ActivityIndicator color="#345bff" size="large" />
+      <View style={{ flex: 1, backgroundColor: colors.background, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator color={colors.blue} size="large" />
       </View>
     );
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#050509" }}>
-      {/* HEADER */}
-      <View style={{
-        paddingTop: 60,
-        paddingHorizontal: 20,
-        paddingBottom: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: "#252838",
-      }}>
-        <Text style={{ color: "white", fontSize: 28, fontWeight: "900" }}>
-          Notifications
-        </Text>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <View style={{ paddingTop: 60, paddingHorizontal: 20, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+        <Text style={{ color: colors.text, fontSize: 28, fontWeight: "900" }}>Notifications</Text>
       </View>
 
       <FlatList
         data={notifications}
         keyExtractor={(item) => item.id.toString()}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#345bff" />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.blue} />}
         contentContainerStyle={{ padding: 16 }}
         ListEmptyComponent={
           <View style={{ alignItems: "center", marginTop: 80 }}>
             <Text style={{ fontSize: 48 }}>🔔</Text>
-            <Text style={{ color: "white", fontSize: 18, fontWeight: "700", marginTop: 16 }}>
-              No notifications yet
-            </Text>
-            <Text style={{ color: "#9ca3af", marginTop: 8, textAlign: "center" }}>
-              When someone likes, comments, or follows you — it'll show up here.
-            </Text>
+            <Text style={{ color: colors.text, fontSize: 18, fontWeight: "700", marginTop: 16 }}>No notifications yet</Text>
+            <Text style={{ color: colors.textSecondary, marginTop: 8, textAlign: "center" }}>When someone likes, comments, or follows you — it'll show up here.</Text>
           </View>
         }
         renderItem={({ item }) => (
           <TouchableOpacity
             onPress={() => handleNotificationPress(item)}
             style={{
-              flexDirection: "row",
-              alignItems: "center",
-              backgroundColor: item.read ? "#11131a" : "#0f1628",
-              borderRadius: 14,
-              borderWidth: 1,
-              borderColor: item.read ? "#252838" : "#345bff44",
-              padding: 14,
-              marginBottom: 10,
-              gap: 12,
+              flexDirection: "row", alignItems: "center",
+              backgroundColor: item.read ? colors.card : colors.background,
+              borderRadius: 14, borderWidth: 1,
+              borderColor: item.read ? colors.border : colors.blue + "44",
+              padding: 14, marginBottom: 10, gap: 12,
             }}>
-            {/* ACTOR AVATAR */}
-            <View style={{
-              width: 44,
-              height: 44,
-              borderRadius: 22,
-              backgroundColor: "#252838",
-              justifyContent: "center",
-              alignItems: "center",
-              overflow: "hidden",
-            }}>
+            <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: colors.border, justifyContent: "center", alignItems: "center", overflow: "hidden" }}>
               {item.actor?.profilePhoto ? (
-                <Image
-                  source={{ uri: item.actor.profilePhoto }}
-                  style={{ width: 44, height: 44, borderRadius: 22 }}
-                />
+                <Image source={{ uri: item.actor.profilePhoto }} style={{ width: 44, height: 44, borderRadius: 22 }} />
               ) : (
-                <Text style={{ fontSize: 18 }}>
-                  {item.actor?.name?.[0]?.toUpperCase() || "?"}
-                </Text>
+                <Text style={{ fontSize: 18 }}>{item.actor?.name?.[0]?.toUpperCase() || "?"}</Text>
               )}
             </View>
-
-            {/* MESSAGE */}
             <View style={{ flex: 1 }}>
-              <Text style={{ color: "white", fontSize: 15, lineHeight: 20 }}>
-                {item.message}
-              </Text>
-              <Text style={{ color: "#6b7280", fontSize: 12, marginTop: 4 }}>
-                {timeAgo(item.createdAt)}
-              </Text>
+              <Text style={{ color: colors.text, fontSize: 15, lineHeight: 20 }}>{item.message}</Text>
+              <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 4 }}>{timeAgo(item.createdAt)}</Text>
             </View>
-
-            {/* UNREAD DOT */}
-            {!item.read && (
-              <View style={{
-                width: 8,
-                height: 8,
-                borderRadius: 4,
-                backgroundColor: "#345bff",
-              }} />
-            )}
+            {!item.read && <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: colors.blue }} />}
           </TouchableOpacity>
         )}
       />
