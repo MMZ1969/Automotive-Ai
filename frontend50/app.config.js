@@ -1,0 +1,74 @@
+export default {
+  expo: {
+    name: "AutoAI",
+    slug: "frontend50",
+    version: "1.0.5",
+    orientation: "portrait",
+    icon: "./assets/autoai_icon_1024_tm.png",
+    userInterfaceStyle: "light",
+    newArchEnabled: true,
+    ios: {
+      supportsTablet: true,
+      bundleIdentifier: "app.automotiveai",
+      buildNumber: "18",
+      infoPlist: {
+        ITSAppUsesNonExemptEncryption: false,
+        NSAppTransportSecurity: { NSAllowsArbitraryLoads: true },
+        NSSpeechRecognitionUsageDescription: "AutoAI uses speech recognition to let you describe car problems hands-free.",
+        NSMicrophoneUsageDescription: "AutoAI uses your microphone to listen for car problem descriptions.",
+        NSPhotoLibraryUsageDescription: "AutoAI uses your photo library so you can upload photos of your vehicle or car problems to share with the community in posts and to set your profile photo.",
+        NSCameraUsageDescription: "AutoAI uses your camera so you can take photos of parts you want to list for sale.",
+        NSLocationWhenInUseUsageDescription: "AutoAI uses your location to show mechanics near you.",
+      },
+      config: {
+        googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,
+      },
+    },
+    android: {
+      adaptiveIcon: {
+        foregroundImage: "./assets/autoai_icon_1024_tm.png",
+        backgroundColor: "#050509",
+      },
+      package: "app.automotiveai",
+      versionCode: 7,
+      permissions: [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+      ],
+      config: {
+        googleMaps: {
+          apiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,
+        },
+      },
+      intentFilters: [
+        {
+          action: "VIEW",
+          autoVerify: true,
+          data: [{ scheme: "automotiveai" }],
+          category: ["BROWSABLE", "DEFAULT"],
+        },
+      ],
+    },
+    web: { favicon: "./assets/favicon.png" },
+    plugins: [
+      "expo-router",
+      "expo-speech-recognition",
+      "expo-notifications",
+      [
+        "expo-location",
+        {
+          locationWhenInUsePermission: "AutoAI uses your location to show mechanics near you.",
+        },
+      ],
+    ],
+    scheme: "automotiveai",
+    extra: {
+      router: {},
+      eas: {
+        projectId: "6f942beb-c59e-4d1a-b4b0-8317a2566f21",
+      },
+    },
+    owner: "m2so",
+  },
+};

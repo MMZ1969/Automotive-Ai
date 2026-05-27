@@ -1,6 +1,7 @@
 import { useAuth } from "@context/AuthContext";
 import { useTheme } from "@context/ThemeContext";
 import api from "@lib/api";
+import { ensureFirebaseAuth } from "@lib/firebaseAuth";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { getDownloadURL, ref, uploadBytesResumable } from "firebase/storage";
@@ -78,6 +79,7 @@ export default function AddPartScreen() {
 
   const uploadToFirebase = async (uri: string) => {
     try {
+      await ensureFirebaseAuth();
       setUploading(true); setUploadProgress(0);
       const response = await fetch(uri);
       const blob = await response.blob();

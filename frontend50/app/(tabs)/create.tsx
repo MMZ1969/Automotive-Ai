@@ -1,6 +1,7 @@
 import { useAuth } from "@context/AuthContext";
 import { useTheme } from "@context/ThemeContext";
 import api from "@lib/api";
+import { ensureFirebaseAuth } from "@lib/firebaseAuth";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { getDownloadURL, ref, uploadBytesResumable } from "firebase/storage";
@@ -59,10 +60,12 @@ export default function CreatePostScreen() {
   };
 
   const uploadToFirebase = async (uri: string, slot: "main" | "before" | "after") => {
-    try {
-      if (slot === "before") { setUploadingBefore(true); setBeforeProgress(0); }
-      else if (slot === "after") { setUploadingAfter(true); setAfterProgress(0); }
-      else { setUploading(true); setUploadProgress(0); }
+  try {
+    await ensureFirebaseAuth(); // 🔒 Authenticate before upload
+    
+    if (slot === "before") { setUploadingBefore(true); setBeforeProgress(0); }
+    else if (slot === "after") { setUploadingAfter(true); setAfterProgress(0); }
+    else { setUploading(true); setUploadProgress(0); }
       const response = await fetch(uri);
       const blob = await response.blob();
       const filename = `post-photos/${user?.id}/${slot}_${Date.now()}.jpg`;
