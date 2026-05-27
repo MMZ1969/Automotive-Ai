@@ -1,23 +1,15 @@
+import WrenchButton from "@components/WrenchButton";
+import { useTheme } from "@context/ThemeContext";
+import { deleteLog, fetchLogById } from "@lib/logs";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { ActivityIndicator, Alert, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-
-import WrenchButton from "@components/WrenchButton";
-import { deleteLog, fetchLogById } from "@lib/logs";
 
 export default function LogDetailsScreen() {
   const { id, logId } = useLocalSearchParams();
   const router = useRouter();
-
+  const { colors } = useTheme();
   const [log, setLog] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -37,103 +29,77 @@ export default function LogDetailsScreen() {
     load();
   }, [logId, id]);
 
-  const goBack = () => {
-    router.push(`/(tabs)/(profile)/vehicles/${id}/logs`);
-  };
-
-  const openEdit = () => {
-    router.push(`/(tabs)/(profile)/vehicles/${id}/logs/${String(logId)}/edit`);
-  };
+  const goBack = () => router.push(`/(tabs)/(profile)/vehicles/${id}/logs`);
+  const openEdit = () => router.push(`/(tabs)/(profile)/vehicles/${id}/logs/${String(logId)}/edit`);
 
   const handleDelete = () => {
-    Alert.alert(
-      "Delete Log",
-      "Are you sure you want to delete this log? This cannot be undone.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await deleteLog(id as string, logId as string);
-              router.push(`/(tabs)/(profile)/vehicles/${id}/logs`);
-            } catch (err) {
-              Alert.alert("Error", "Could not delete log. Try again.");
-            }
-          },
+    Alert.alert("Delete Log", "Are you sure you want to delete this log? This cannot be undone.", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete", style: "destructive",
+        onPress: async () => {
+          try {
+            await deleteLog(id as string, logId as string);
+            router.push(`/(tabs)/(profile)/vehicles/${id}/logs`);
+          } catch (err) {
+            Alert.alert("Error", "Could not delete log. Try again.");
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   if (loading) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: "#050509" }}>
-        <ActivityIndicator size="large" color="#345bff" />
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" color={colors.blue} />
       </SafeAreaView>
     );
   }
 
   if (!log) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: "#050509", justifyContent: "center", alignItems: "center" }}>
-        <Text style={{ color: "white", fontSize: 18 }}>Log not found.</Text>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: "center", alignItems: "center" }}>
+        <Text style={{ color: colors.text, fontSize: 18 }}>Log not found.</Text>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#050509" }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <ScrollView contentContainerStyle={{ padding: 20 }}>
         {/* HEADER */}
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 24, marginTop: 10 }}>
           <View style={{ flexDirection: "row", alignItems: "center" }}>
             <TouchableOpacity onPress={goBack} style={{ marginRight: 12 }}>
-              <Text style={{ color: "#345bff", fontSize: 16 }}>← Back</Text>
+              <Text style={{ color: colors.blue, fontSize: 16 }}>← Back</Text>
             </TouchableOpacity>
-            <Text style={styles.title}>{log.title || "Log Detail"}</Text>
+            <Text style={{ fontSize: 22, fontWeight: "bold", color: colors.text }}>{log.title || "Log Detail"}</Text>
           </View>
           <TouchableOpacity onPress={handleDelete}>
             <Text style={{ color: "#ef4444", fontSize: 14, fontWeight: "700" }}>Delete</Text>
           </TouchableOpacity>
         </View>
 
-        <View style={styles.card}>
-          <View style={styles.row}>
-            <Text style={styles.label}>📅 Date</Text>
-            <Text style={styles.value}>
-              {log.performedAt
-                ? new Date(log.performedAt).toLocaleDateString()
-                : "N/A"}
-            </Text>
+        <View style={{ backgroundColor: colors.card, borderRadius: 14, borderWidth: 1, borderColor: colors.border, padding: 16, marginBottom: 20 }}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", paddingVertical: 8 }}>
+            <Text style={{ fontSize: 15, fontWeight: "600", color: colors.textSecondary, flex: 1 }}>📅 Date</Text>
+            <Text style={{ fontSize: 15, color: colors.text, flex: 2, textAlign: "right" }}>{log.performedAt ? new Date(log.performedAt).toLocaleDateString() : "N/A"}</Text>
           </View>
-
-          <View style={styles.divider} />
-
-          <View style={styles.row}>
-            <Text style={styles.label}>💰 Cost</Text>
-            <Text style={styles.value}>
-              ${log.cost ? parseFloat(log.cost).toFixed(2) : "0.00"}
-            </Text>
+          <View style={{ height: 1, backgroundColor: colors.border }} />
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", paddingVertical: 8 }}>
+            <Text style={{ fontSize: 15, fontWeight: "600", color: colors.textSecondary, flex: 1 }}>💰 Cost</Text>
+            <Text style={{ fontSize: 15, color: colors.text, flex: 2, textAlign: "right" }}>${log.cost ? parseFloat(log.cost).toFixed(2) : "0.00"}</Text>
           </View>
-
-          <View style={styles.divider} />
-
-          <View style={styles.row}>
-            <Text style={styles.label}>🛣 Mileage</Text>
-            <Text style={styles.value}>
-              {log.mileage ? Number(log.mileage).toLocaleString() + " miles" : "N/A"}
-            </Text>
+          <View style={{ height: 1, backgroundColor: colors.border }} />
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", paddingVertical: 8 }}>
+            <Text style={{ fontSize: 15, fontWeight: "600", color: colors.textSecondary, flex: 1 }}>🛣 Mileage</Text>
+            <Text style={{ fontSize: 15, color: colors.text, flex: 2, textAlign: "right" }}>{log.mileage ? Number(log.mileage).toLocaleString() + " miles" : "N/A"}</Text>
           </View>
-
-          <View style={styles.divider} />
-
-          <View style={styles.row}>
-            <Text style={styles.label}>📝 Description</Text>
-            <Text style={styles.value}>
-              {log.description || "No description added."}
-            </Text>
+          <View style={{ height: 1, backgroundColor: colors.border }} />
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", paddingVertical: 8 }}>
+            <Text style={{ fontSize: 15, fontWeight: "600", color: colors.textSecondary, flex: 1 }}>📝 Description</Text>
+            <Text style={{ fontSize: 15, color: colors.text, flex: 2, textAlign: "right" }}>{log.description || "No description added."}</Text>
           </View>
         </View>
 
@@ -142,24 +108,3 @@ export default function LogDetailsScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  title: { fontSize: 22, fontWeight: "bold", color: "white" },
-  card: {
-    backgroundColor: "#11131a",
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "#252838",
-    padding: 16,
-    marginBottom: 20,
-  },
-  row: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    paddingVertical: 8,
-  },
-  divider: { height: 1, backgroundColor: "#252838" },
-  label: { fontSize: 15, fontWeight: "600", color: "#9ca3af", flex: 1 },
-  value: { fontSize: 15, color: "white", flex: 2, textAlign: "right" },
-});

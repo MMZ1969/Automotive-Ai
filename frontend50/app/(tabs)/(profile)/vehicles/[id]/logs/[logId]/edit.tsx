@@ -1,22 +1,14 @@
+import { useTheme } from "@context/ThemeContext";
+import { fetchLogById, updateLog } from "@lib/logs";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { ActivityIndicator, Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-
-import { fetchLogById, updateLog } from "@lib/logs";
 
 export default function EditLogScreen() {
   const { id, logId } = useLocalSearchParams();
   const router = useRouter();
+  const { colors } = useTheme();
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -36,11 +28,7 @@ export default function EditLogScreen() {
           setDescription(data.description || "");
           setCost(data.cost ? String(data.cost) : "");
           setMileage(data.mileage ? String(data.mileage) : "");
-          setPerformedAt(
-            data.performedAt
-              ? new Date(data.performedAt).toISOString().split("T")[0]
-              : ""
-          );
+          setPerformedAt(data.performedAt ? new Date(data.performedAt).toISOString().split("T")[0] : "");
         }
       } catch (err) {
         console.error("Error loading log:", err);
@@ -51,15 +39,10 @@ export default function EditLogScreen() {
     load();
   }, [logId, id]);
 
-  const goBack = () => {
-    router.push(`/(tabs)/(profile)/vehicles/${id}/logs/${logId}`);
-  };
+  const goBack = () => router.push(`/(tabs)/(profile)/vehicles/${id}/logs/${logId}`);
 
   const handleSave = async () => {
-    if (!title.trim()) {
-      Alert.alert("Missing Title", "Please enter a log title.");
-      return;
-    }
+    if (!title.trim()) { Alert.alert("Missing Title", "Please enter a log title."); return; }
     setLoading(true);
     try {
       await updateLog(id as string, logId as string, {
@@ -67,9 +50,7 @@ export default function EditLogScreen() {
         description,
         cost: cost ? parseFloat(cost) : 0,
         mileage: mileage ? parseInt(mileage) : undefined,
-        performedAt: performedAt
-          ? new Date(performedAt).toISOString()
-          : undefined,
+        performedAt: performedAt ? new Date(performedAt).toISOString() : undefined,
       });
       goBack();
     } catch (err) {
@@ -82,109 +63,45 @@ export default function EditLogScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: "#050509" }}>
-        <ActivityIndicator size="large" color="#345bff" />
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" color={colors.blue} />
       </SafeAreaView>
     );
   }
 
+  const inputStyle = { backgroundColor: colors.input, color: colors.text, padding: 12, borderRadius: 10, borderWidth: 1, borderColor: colors.border, fontSize: 15 };
+  const labelStyle = { fontSize: 15, fontWeight: "600" as const, color: colors.textSecondary, marginTop: 16, marginBottom: 6 };
+
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#050509" }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <ScrollView contentContainerStyle={{ padding: 20 }}>
         {/* HEADER */}
-        <View style={{
-          flexDirection: "row",
-          alignItems: "center",
-          marginBottom: 24,
-          marginTop: 10,
-        }}>
+        <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 24, marginTop: 10 }}>
           <TouchableOpacity onPress={goBack} style={{ marginRight: 12 }}>
-            <Text style={{ color: "#345bff", fontSize: 16 }}>← Back</Text>
+            <Text style={{ color: colors.blue, fontSize: 16 }}>← Back</Text>
           </TouchableOpacity>
-          <Text style={styles.title}>Edit Log</Text>
+          <Text style={{ fontSize: 22, fontWeight: "bold", color: colors.text }}>Edit Log</Text>
         </View>
 
-        <Text style={styles.label}>Title *</Text>
-        <TextInput
-          style={styles.input}
-          value={title}
-          onChangeText={setTitle}
-          placeholder="Oil Change, Brake Job..."
-          placeholderTextColor="#6b7280"
-        />
+        <Text style={labelStyle}>Title *</Text>
+        <TextInput style={inputStyle} value={title} onChangeText={setTitle} placeholder="Oil Change, Brake Job..." placeholderTextColor={colors.textMuted} />
 
-        <Text style={styles.label}>Date</Text>
-        <TextInput
-          style={styles.input}
-          value={performedAt}
-          onChangeText={setPerformedAt}
-          placeholder="YYYY-MM-DD"
-          placeholderTextColor="#6b7280"
-        />
+        <Text style={labelStyle}>Date</Text>
+        <TextInput style={inputStyle} value={performedAt} onChangeText={setPerformedAt} placeholder="YYYY-MM-DD" placeholderTextColor={colors.textMuted} />
 
-        <Text style={styles.label}>Cost ($)</Text>
-        <TextInput
-          style={styles.input}
-          value={cost}
-          onChangeText={setCost}
-          placeholder="0.00"
-          placeholderTextColor="#6b7280"
-          keyboardType="numeric"
-        />
+        <Text style={labelStyle}>Cost ($)</Text>
+        <TextInput style={inputStyle} value={cost} onChangeText={setCost} placeholder="0.00" placeholderTextColor={colors.textMuted} keyboardType="numeric" />
 
-        <Text style={styles.label}>Mileage at Service</Text>
-        <TextInput
-          style={styles.input}
-          value={mileage}
-          onChangeText={setMileage}
-          placeholder="50000"
-          placeholderTextColor="#6b7280"
-          keyboardType="numeric"
-        />
+        <Text style={labelStyle}>Mileage at Service</Text>
+        <TextInput style={inputStyle} value={mileage} onChangeText={setMileage} placeholder="50000" placeholderTextColor={colors.textMuted} keyboardType="numeric" />
 
-        <Text style={styles.label}>Description</Text>
-        <TextInput
-          style={[styles.input, { height: 120 }]}
-          value={description}
-          onChangeText={setDescription}
-          placeholder="Details about the service..."
-          placeholderTextColor="#6b7280"
-          multiline
-        />
+        <Text style={labelStyle}>Description</Text>
+        <TextInput style={[inputStyle, { height: 120 }]} value={description} onChangeText={setDescription} placeholder="Details about the service..." placeholderTextColor={colors.textMuted} multiline />
 
-        <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-          <Text style={styles.saveButtonText}>💾 Save Changes</Text>
+        <TouchableOpacity style={{ backgroundColor: colors.blue, padding: 16, borderRadius: 14, alignItems: "center", marginTop: 24, marginBottom: 40 }} onPress={handleSave}>
+          <Text style={{ color: "white", fontSize: 17, fontWeight: "700" }}>💾 Save Changes</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  title: { fontSize: 22, fontWeight: "bold", color: "white" },
-  label: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#9ca3af",
-    marginTop: 16,
-    marginBottom: 6,
-  },
-  input: {
-    backgroundColor: "#11131a",
-    color: "white",
-    padding: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#252838",
-    fontSize: 15,
-  },
-  saveButton: {
-    backgroundColor: "#345bff",
-    padding: 16,
-    borderRadius: 14,
-    alignItems: "center",
-    marginTop: 24,
-    marginBottom: 40,
-  },
-  saveButtonText: { color: "white", fontSize: 17, fontWeight: "700" },
-});
