@@ -414,6 +414,62 @@ app.post("/api/scan-receipt", authMiddleware, async (req, res) => {
   }
 });
 
+// Voice Log route
+app.post("/api/voice-log", authMiddleware, async (req, res) => {
+  try {
+    const { transcript } = req.body;
+
+    if (!transcript) {
+      return res.status(400).json({ error: "No transcript provided" });
+    }
+
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": process.env.ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-5",
+        max_tokens: 500,
+        messages: [
+          {
+            role: "user",
+            content: `You are an automotive maintenance log assistant. Extract maintenance log details from this voice transcript and respond ONLY with JSON, no markdown:
+{
+  "title": "service type (e.g. Oil Change, Brake Replacement)",
+  "date": "YYYY-MM-DD format or empty string",
+  "cost": "numeric amount only or empty string",
+  "mileage": "numeric mileage only or empty string",
+  "description": "brief summary of the service"
+}
+
+If you cannot determine a field, use an empty string.
+
+Voice transcript: "${transcript}"`,
+          },
+        ],
+      }),
+    });
+
+    const data = await response.json();
+    if (!data.content || !data.content[0]) {
+      return res.status(500).json({ error: "AI service error" });
+    }
+    const text = data.content[0].text;
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      return res.status(500).json({ error: "Invalid AI response" });
+    }
+    const parsed = JSON.parse(jsonMatch[0]);
+    res.json(parsed);
+  } catch (err) {
+    console.error("VOICE LOG ERROR:", err);
+    res.status(500).json({ error: "Failed to parse voice log" });
+  }
+});
+
 // VIN Scanner route — image → VIN number
 app.post("/api/scan-vin", async (req, res) => {
   try {
