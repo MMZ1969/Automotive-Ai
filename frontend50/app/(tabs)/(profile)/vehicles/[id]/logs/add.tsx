@@ -3,7 +3,6 @@ import api from "@lib/api";
 import { createLog } from "@lib/logs";
 import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { ExpoSpeechRecognitionModule } from "expo-speech-recognition";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
@@ -16,6 +15,12 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+let ExpoSpeechRecognitionModule: any = null;
+try {
+  ExpoSpeechRecognitionModule = require("expo-speech-recognition").ExpoSpeechRecognitionModule;
+} catch (e) {
+  console.log("Speech recognition not available in this environment");
+}
 
 export default function AddLogScreen() {
   const { id } = useLocalSearchParams();
@@ -69,6 +74,10 @@ export default function AddLogScreen() {
   };
 
   const handleVoiceEntry = async () => {
+  if (!ExpoSpeechRecognitionModule) {
+    Alert.alert("Not Available", "Voice entry requires a device build. Coming soon!");
+    return;
+  }
   try {
     const result = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
     if (!result.granted) {
@@ -83,7 +92,7 @@ export default function AddLogScreen() {
       interimResults: false,
     });
 
-    ExpoSpeechRecognitionModule.addListener("result", async (event) => {
+    ExpoSpeechRecognitionModule.addListener("result", async (event: any) => {
       const transcript = event.results?.[0]?.transcript;
       if (!transcript) return;
       setListening(false);
@@ -103,7 +112,7 @@ export default function AddLogScreen() {
       }
     });
 
-    ExpoSpeechRecognitionModule.addListener("error", (event) => {
+    ExpoSpeechRecognitionModule.addListener("error", (event: any) => {
       console.error("SPEECH ERROR:", event);
       setListening(false);
       Alert.alert("Error", "Voice recognition failed. Try again.");
