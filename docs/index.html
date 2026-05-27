@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AutoAI — The Social Platform for Car People</title>
+  <meta name="description" content="AutoAI is the social platform built for car enthusiasts, DIYers, and professional mechanics. AI diagnostics, repair videos, parts marketplace, and more." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #050509;
+      --blue: #345bff;
+      --green: #10b981;
+      --card: #0d0f17;
+      --border: #1a1d2e;
+      --text: #ffffff;
+      --muted: #6b7280;
+      --secondary: #9ca3af;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Barlow', sans-serif;
+      overflow-x: hidden;
+    }
+
+    /* NOISE OVERLAY */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.4;
+    }
+
+    /* NAV */
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      padding: 20px 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(5, 5, 9, 0.85);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .nav-logo {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 900;
+      font-size: 24px;
+      letter-spacing: 0.05em;
+      color: var(--text);
+      text-decoration: none;
+    }
+
+    .nav-logo span { color: var(--blue); }
+
+    .nav-links {
+      display: flex;
+      gap: 32px;
+      list-style: none;
+    }
+
+    .nav-links a {
+      color: var(--secondary);
+      text-decoration: none;
+      font-size: 15px;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover { color: var(--text); }
+
+    .nav-cta {
+      background: var(--blue);
+      color: white !important;
+      padding: 10px 24px;
+      border-radius: 8px;
+      font-weight: 600 !important;
+    }
+
+    .nav-cta:hover { background: #2a4de0; color: white !important; }
+
+    /* HERO */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 120px 20px 80px;
+      position: relative;
+    }
+
+    .hero-glow {
+      position: absolute;
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(52, 91, 255, 0.15) 0%, transparent 70%);
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(52, 91, 255, 0.1);
+      border: 1px solid rgba(52, 91, 255, 0.3);
+      border-radius: 100px;
+      padding: 8px 18px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--blue);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 32px;
+      animation: fadeUp 0.6s ease both;
+    }
+
+    .hero h1 {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 900;
+      font-size: clamp(56px, 10vw, 100px);
+      line-height: 0.95;
+      letter-spacing: -0.02em;
+      text-transform: uppercase;
+      margin-bottom: 24px;
+      animation: fadeUp 0.6s ease 0.1s both;
+    }
+
+    .hero h1 .accent { color: var(--blue); }
+    .hero h1 .accent-green { color: var(--green); }
+
+    .hero-sub {
+      font-size: clamp(16px, 2.5vw, 20px);
+      color: var(--secondary);
+      max-width: 560px;
+      line-height: 1.6;
+      margin-bottom: 48px;
+      animation: fadeUp 0.6s ease 0.2s both;
+    }
+
+    .hero-buttons {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      justify-content: center;
+      animation: fadeUp 0.6s ease 0.3s both;
+    }
+
+    .btn-primary {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--blue);
+      color: white;
+      text-decoration: none;
+      padding: 16px 32px;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 700;
+      transition: transform 0.2s, background 0.2s;
+    }
+
+    .btn-primary:hover { background: #2a4de0; transform: translateY(-2px); }
+
+    .btn-secondary {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--card);
+      color: var(--text);
+      text-decoration: none;
+      padding: 16px 32px;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 700;
+      border: 1px solid var(--border);
+      transition: transform 0.2s, border-color 0.2s;
+    }
+
+    .btn-secondary:hover { border-color: var(--secondary); transform: translateY(-2px); }
+
+    .btn-icon { font-size: 20px; }
+
+    .hero-stats {
+      display: flex;
+      gap: 48px;
+      margin-top: 72px;
+      animation: fadeUp 0.6s ease 0.4s both;
+    }
+
+    .stat {
+      text-align: center;
+    }
+
+    .stat-num {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 900;
+      font-size: 36px;
+      color: var(--text);
+      display: block;
+    }
+
+    .stat-label {
+      font-size: 13px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    /* DIVIDER LINE */
+    .divider {
+      width: 100%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border), transparent);
+    }
+
+    /* FEATURES */
+    .section {
+      padding: 100px 40px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .section-label {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--blue);
+      margin-bottom: 16px;
+    }
+
+    .section-title {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 900;
+      font-size: clamp(36px, 5vw, 56px);
+      text-transform: uppercase;
+      line-height: 1;
+      margin-bottom: 16px;
+    }
+
+    .section-sub {
+      font-size: 17px;
+      color: var(--secondary);
+      max-width: 500px;
+      line-height: 1.6;
+      margin-bottom: 64px;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+    }
+
+    .feature-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px;
+      transition: border-color 0.3s, transform 0.3s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .feature-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--blue), transparent);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .feature-card:hover { border-color: rgba(52, 91, 255, 0.3); transform: translateY(-4px); }
+    .feature-card:hover::before { opacity: 1; }
+
+    .feature-icon {
+      font-size: 36px;
+      margin-bottom: 16px;
+      display: block;
+    }
+
+    .feature-title {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700;
+      font-size: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      margin-bottom: 10px;
+    }
+
+    .feature-desc {
+      font-size: 14px;
+      color: var(--secondary);
+      line-height: 1.6;
+    }
+
+    /* ROLES */
+    .roles-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+
+    .role-card {
+      border-radius: 20px;
+      padding: 40px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .role-card.diyer {
+      background: linear-gradient(135deg, #064e3b 0%, #022c22 100%);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .role-card.mechanic {
+      background: linear-gradient(135deg, #1e3a8a 0%, #0f1f4a 100%);
+      border: 1px solid rgba(52, 91, 255, 0.3);
+    }
+
+    .role-emoji {
+      font-size: 48px;
+      margin-bottom: 20px;
+      display: block;
+    }
+
+    .role-title {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 900;
+      font-size: 32px;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    .role-card.diyer .role-title { color: var(--green); }
+    .role-card.mechanic .role-title { color: var(--blue); }
+
+    .role-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .role-list li {
+      font-size: 15px;
+      color: rgba(255,255,255,0.8);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .role-list li::before {
+      content: '→';
+      font-weight: 700;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+
+    .role-card.diyer .role-list li::before { color: var(--green); }
+    .role-card.mechanic .role-list li::before { color: var(--blue); }
+
+    /* CTA SECTION */
+    .cta-section {
+      padding: 100px 40px;
+      text-align: center;
+      position: relative;
+    }
+
+    .cta-bg {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at center, rgba(52, 91, 255, 0.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .cta-section h2 {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 900;
+      font-size: clamp(40px, 6vw, 72px);
+      text-transform: uppercase;
+      line-height: 1;
+      margin-bottom: 20px;
+    }
+
+    .cta-section p {
+      font-size: 18px;
+      color: var(--secondary);
+      margin-bottom: 40px;
+    }
+
+    /* FOOTER */
+    footer {
+      padding: 40px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: gap;
+    }
+
+    .footer-logo {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 900;
+      font-size: 20px;
+      color: var(--text);
+    }
+
+    .footer-logo span { color: var(--blue); }
+
+    .footer-links {
+      display: flex;
+      gap: 24px;
+      list-style: none;
+    }
+
+    .footer-links a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 14px;
+      transition: color 0.2s;
+    }
+
+    .footer-links a:hover { color: var(--text); }
+
+    .footer-copy {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    /* ANIMATIONS */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* SCROLL REVEAL */
+    .reveal {
+      opacity: 0;
+      transform: translateY(32px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* MOBILE */
+    @media (max-width: 768px) {
+      nav { padding: 16px 20px; }
+      .nav-links { display: none; }
+      .section { padding: 60px 20px; }
+      .roles-grid { grid-template-columns: 1fr; }
+      .hero-stats { gap: 24px; }
+      .cta-section { padding: 60px 20px; }
+      footer { flex-direction: column; gap: 20px; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav>
+    <a href="#" class="nav-logo">Auto<span>AI</span>™</a>
+    <ul class="nav-links">
+      <li><a href="#features">Features</a></li>
+      <li><a href="#roles">For You</a></li>
+      <li><a href="#download" class="nav-cta">Download Free</a></li>
+    </ul>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-glow"></div>
+    <div class="hero-badge">🚗 Now on App Store & Google Play</div>
+    <h1>
+      Built for<br/>
+      <span class="accent">Car</span> <span class="accent-green">People</span>
+    </h1>
+    <p class="hero-sub">
+      The social platform where DIYers and mechanics connect, diagnose, and get the job done — powered by AI.
+    </p>
+    <div class="hero-buttons">
+      <a href="https://apps.apple.com/us/app/autoai-auto-intelligence/id6764058138" class="btn-primary" target="_blank">
+        <span class="btn-icon">🍎</span> App Store
+      </a>
+      <a href="https://play.google.com/store/apps/details?id=app.automotiveai" class="btn-secondary" target="_blank">
+        <span class="btn-icon">🤖</span> Google Play
+      </a>
+    </div>
+    <div class="hero-stats">
+      <div class="stat">
+        <span class="stat-num">AI</span>
+        <span class="stat-label">Powered Diagnosis</span>
+      </div>
+      <div class="stat">
+        <span class="stat-num">2</span>
+        <span class="stat-label">User Roles</span>
+      </div>
+      <div class="stat">
+        <span class="stat-num">Free</span>
+        <span class="stat-label">To Download</span>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- FEATURES -->
+  <section class="section" id="features">
+    <div class="reveal">
+      <p class="section-label">What's Inside</p>
+      <h2 class="section-title">Everything a<br/>Car Person Needs</h2>
+      <p class="section-sub">From AI diagnostics to a full community — AutoAI has your back under the hood.</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card reveal">
+        <span class="feature-icon">🤖</span>
+        <h3 class="feature-title">AI Diagnostics</h3>
+        <p class="feature-desc">Describe your car problem and get instant AI analysis — severity, causes, estimated cost, and step-by-step repair guidance.</p>
+      </div>
+      <div class="feature-card reveal">
+        <span class="feature-icon">📹</span>
+        <h3 class="feature-title">Repair Videos</h3>
+        <p class="feature-desc">AutoAI automatically finds relevant YouTube repair tutorials for your exact problem. No more searching — just answers.</p>
+      </div>
+      <div class="feature-card reveal">
+        <span class="feature-icon">🔧</span>
+        <h3 class="feature-title">Car Community</h3>
+        <p class="feature-desc">Post your builds, ask questions, share repairs. Like, comment, and follow the car people you respect.</p>
+      </div>
+      <div class="feature-card reveal">
+        <span class="feature-icon">🛒</span>
+        <h3 class="feature-title">Parts Marketplace</h3>
+        <p class="feature-desc">Buy and sell automotive parts directly within the community. No middlemen, no fees.</p>
+      </div>
+      <div class="feature-card reveal">
+        <span class="feature-icon">📍</span>
+        <h3 class="feature-title">Find a Mechanic</h3>
+        <p class="feature-desc">The Near Me map shows verified mechanics in your area. Real professionals, real reviews, real reputation.</p>
+      </div>
+      <div class="feature-card reveal">
+        <span class="feature-icon">⭐</span>
+        <h3 class="feature-title">Rep Points</h3>
+        <p class="feature-desc">Earn reputation points for posts, likes, and helpful answers. The leaderboard shows who really knows their stuff.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- ROLES -->
+  <section class="section" id="roles">
+    <div class="reveal">
+      <p class="section-label">Who It's For</p>
+      <h2 class="section-title">Your Role,<br/>Your Tools</h2>
+      <p class="section-sub">AutoAI is built around two roles — choose yours and get a tailored experience.</p>
+    </div>
+    <div class="roles-grid">
+      <div class="role-card diyer reveal">
+        <span class="role-emoji">🔧</span>
+        <h3 class="role-title">DIYer</h3>
+        <ul class="role-list">
+          <li>AI diagnose your car problems instantly</li>
+          <li>Watch repair videos for your exact issue</li>
+          <li>Post your builds and get community help</li>
+          <li>Track your vehicle maintenance logs</li>
+          <li>Find verified mechanics near you</li>
+          <li>Buy and sell parts in the marketplace</li>
+        </ul>
+      </div>
+      <div class="role-card mechanic reveal">
+        <span class="role-emoji">🏁</span>
+        <h3 class="role-title">Mechanic</h3>
+        <ul class="role-list">
+          <li>Build your reputation with rep points</li>
+          <li>Get verified with the Mechanic badge</li>
+          <li>Post your work and show your skills</li>
+          <li>Receive job requests from DIYers</li>
+          <li>Send quick alerts to your customers</li>
+          <li>Keep 100% of what you earn</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- CTA -->
+  <section class="cta-section" id="download">
+    <div class="cta-bg"></div>
+    <div class="reveal">
+      <h2>Download<br/><span style="color: var(--blue)">Free</span> Today</h2>
+      <p>For DIYers, Mechanics & Anyone who likes to get their hands dirty under the hood.</p>
+      <div class="hero-buttons" style="justify-content:center">
+        <a href="https://apps.apple.com/us/app/autoai-auto-intelligence/id6764058138" class="btn-primary" target="_blank">
+          <span class="btn-icon">🍎</span> Download on App Store
+        </a>
+        <a href="https://play.google.com/store/apps/details?id=app.automotiveai" class="btn-secondary" target="_blank">
+          <span class="btn-icon">🤖</span> Get it on Google Play
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-logo">Auto<span>AI</span>™</div>
+    <ul class="footer-links">
+      <li><a href="https://mmz1969.github.io/Automotive-Ai/privacy-policy.html" target="_blank">Privacy Policy</a></li>
+      <li><a href="https://mmz1969.github.io/Automotive-Ai/terms.html" target="_blank">Terms of Service</a></li>
+      <li><a href="mailto:maz@amazmade.com">Contact</a></li>
+    </ul>
+    <p class="footer-copy">© 2026 aMAZmade. All rights reserved.</p>
+  </footer>
+
+  <script>
+    // Scroll reveal
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+  </script>
+
+</body>
+</html>
