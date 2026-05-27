@@ -34,6 +34,7 @@ admin.initializeApp({
 dotenv.config();
 
 const app = express();
+app.set("trust proxy", 1);
 
 // Firebase custom token endpoint
 app.post("/api/auth/firebase-token", authMiddleware, async (req, res) => {
