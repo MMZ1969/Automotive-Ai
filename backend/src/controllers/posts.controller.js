@@ -50,7 +50,7 @@ export const createPost = async (req, res) => {
   try {
     console.log("CREATE POST BODY:", req.body);
     console.log("POST TYPE RECEIVED:", req.body.postType);
-    const { content, imageUrl, postType, servicePrice, serviceLocation, beforeImageUrl, afterImageUrl } = req.body;
+    const { content, imageUrl, imageUrls, postType, servicePrice, serviceLocation, beforeImageUrl, afterImageUrl } = req.body;
     const userId = req.user.id;
     if (!content || content.trim() === "") {
       return res.status(400).json({ error: "Post content cannot be empty" });
@@ -59,15 +59,16 @@ export const createPost = async (req, res) => {
     const type = validTypes.includes(postType) ? postType : "VANITY";
     const post = await prisma.post.create({
     data: { 
-    content, 
-    userId, 
-    imageUrl, 
-    postType: type,
-    servicePrice: servicePrice || null,
-    serviceLocation: serviceLocation || null,
-    beforeImageUrl: beforeImageUrl || null,
-    afterImageUrl: afterImageUrl || null,
-  },
+  content, 
+  userId, 
+  imageUrl: imageUrl || (imageUrls?.[0] || null),
+  imageUrls: imageUrls || [],
+  postType: type,
+  servicePrice: servicePrice || null,
+  serviceLocation: serviceLocation || null,
+  beforeImageUrl: beforeImageUrl || null,
+  afterImageUrl: afterImageUrl || null,
+    },
   });
 
     // Award rep for posting

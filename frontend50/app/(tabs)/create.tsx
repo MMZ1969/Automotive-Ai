@@ -12,19 +12,26 @@ import {
 } from "react-native";
 import { storage } from "../../firebaseConfig";
 
+const MAX_PHOTOS = 5;
+
 export default function CreatePostScreen() {
   const { user, isMechanic } = useAuth();
   const { colors } = useTheme();
   const router = useRouter();
+
   const [content, setContent] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [imageUri, setImageUri] = useState<string | null>(null);
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
   const [postType, setPostType] = useState<"VANITY" | "QUESTION" | "SERVICE" | "BEFORE_AFTER">("VANITY");
   const [servicePrice, setServicePrice] = useState("");
   const [serviceLocation, setServiceLocation] = useState("");
+
+  // Multiple photos
+  const [photoUris, setPhotoUris] = useState<string[]>([]);
+  const [photoUrls, setPhotoUrls] = useState<string[]>([]);
+  const [uploadingIndex, setUploadingIndex] = useState<number | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+
+  // Before/After
   const [beforeUri, setBeforeUri] = useState<string | null>(null);
   const [beforeUrl, setBeforeUrl] = useState<string | null>(null);
   const [afterUri, setAfterUri] = useState<string | null>(null);
@@ -34,16 +41,68 @@ export default function CreatePostScreen() {
   const [beforeProgress, setBeforeProgress] = useState(0);
   const [afterProgress, setAfterProgress] = useState(0);
 
-  const handlePickPhoto = async () => {
+  const handlePickPhotos = async () => {
+    if (photoUris.length >= MAX_PHOTOS) {
+      Alert.alert("Max photos", `You can only add up to ${MAX_PHOTOS} photos.`);
+      return;
+    }
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== "granted") { Alert.alert("Permission needed", "Please allow access to your photo library."); return; }
-      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], allowsEditing: true, quality: 0.7 });
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsMultipleSelection: true,
+        selectionLimit: MAX_PHOTOS - photoUris.length,
+        quality: 0.7,
+      });
       if (result.canceled) return;
-      const uri = result.assets[0].uri;
-      setImageUri(uri);
-      await uploadToFirebase(uri, "main");
+      const newUris = result.assets.map(a => a.uri);
+      const startIndex = photoUris.length;
+      setPhotoUris(prev => [...prev, ...newUris]);
+      // Upload each new photo
+      for (let i = 0; i < newUris.length; i++) {
+        await uploadPhoto(newUris[i], startIndex + i);
+      }
     } catch { Alert.alert("Error", "Could not open photo library."); }
+  };
+
+  const uploadPhoto = async (uri: string, index: number) => {
+    try {
+      await ensureFirebaseAuth();
+      setUploadingIndex(index);
+      setUploadProgress(0);
+      const response = await fetch(uri);
+      const blob = await response.blob();
+      const filename = `post-photos/${user?.id}/photo_${Date.now()}_${index}.jpg`;
+      const storageRef = ref(storage, filename);
+      const uploadTask = uploadBytesResumable(storageRef, blob);
+      await new Promise<void>((resolve, reject) => {
+        uploadTask.on("state_changed",
+          (snapshot) => {
+            setUploadProgress(Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100));
+          },
+          (err) => { reject(err); },
+          async () => {
+            const url = await getDownloadURL(uploadTask.snapshot.ref);
+            setPhotoUrls(prev => {
+              const updated = [...prev];
+              updated[index] = url;
+              return updated;
+            });
+            resolve();
+          }
+        );
+      });
+    } catch {
+      Alert.alert("Upload failed", "One photo failed to upload. Please try again.");
+    } finally {
+      setUploadingIndex(null);
+    }
+  };
+
+  const removePhoto = (index: number) => {
+    setPhotoUris(prev => prev.filter((_, i) => i !== index));
+    setPhotoUrls(prev => prev.filter((_, i) => i !== index));
   };
 
   const handlePickBeforeAfter = async (slot: "before" | "after") => {
@@ -55,17 +114,15 @@ export default function CreatePostScreen() {
       const uri = result.assets[0].uri;
       if (slot === "before") setBeforeUri(uri);
       else setAfterUri(uri);
-      await uploadToFirebase(uri, slot);
+      await uploadBeforeAfter(uri, slot);
     } catch { Alert.alert("Error", "Could not open photo library."); }
   };
 
-  const uploadToFirebase = async (uri: string, slot: "main" | "before" | "after") => {
-  try {
-    await ensureFirebaseAuth(); // 🔒 Authenticate before upload
-    
-    if (slot === "before") { setUploadingBefore(true); setBeforeProgress(0); }
-    else if (slot === "after") { setUploadingAfter(true); setAfterProgress(0); }
-    else { setUploading(true); setUploadProgress(0); }
+  const uploadBeforeAfter = async (uri: string, slot: "before" | "after") => {
+    try {
+      await ensureFirebaseAuth();
+      if (slot === "before") { setUploadingBefore(true); setBeforeProgress(0); }
+      else { setUploadingAfter(true); setAfterProgress(0); }
       const response = await fetch(uri);
       const blob = await response.blob();
       const filename = `post-photos/${user?.id}/${slot}_${Date.now()}.jpg`;
@@ -75,43 +132,44 @@ export default function CreatePostScreen() {
         (snapshot) => {
           const progress = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
           if (slot === "before") setBeforeProgress(progress);
-          else if (slot === "after") setAfterProgress(progress);
-          else setUploadProgress(progress);
+          else setAfterProgress(progress);
         },
         () => {
           Alert.alert("Upload failed", "Please try again.");
           if (slot === "before") setUploadingBefore(false);
-          else if (slot === "after") setUploadingAfter(false);
-          else setUploading(false);
+          else setUploadingAfter(false);
         },
         async () => {
-          const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-          if (slot === "before") { setBeforeUrl(downloadURL); setUploadingBefore(false); }
-          else if (slot === "after") { setAfterUrl(downloadURL); setUploadingAfter(false); }
-          else { setImageUrl(downloadURL); setUploading(false); }
+          const url = await getDownloadURL(uploadTask.snapshot.ref);
+          if (slot === "before") { setBeforeUrl(url); setUploadingBefore(false); }
+          else { setAfterUrl(url); setUploadingAfter(false); }
         }
       );
     } catch {
       if (slot === "before") setUploadingBefore(false);
-      else if (slot === "after") setUploadingAfter(false);
-      else setUploading(false);
+      else setUploadingAfter(false);
     }
   };
 
   const handlePost = async () => {
     if (!content.trim()) { Alert.alert("Empty post", "Write something before posting!"); return; }
     if (postType === "BEFORE_AFTER" && (!beforeUrl || !afterUrl)) { Alert.alert("Missing photos", "Please add both a Before and After photo!"); return; }
-    if (uploading || uploadingBefore || uploadingAfter) { Alert.alert("Please wait", "Photos are still uploading..."); return; }
+    if (uploadingIndex !== null || uploadingBefore || uploadingAfter) { Alert.alert("Please wait", "Photos are still uploading..."); return; }
     try {
       setSubmitting(true);
+      const validUrls = photoUrls.filter(Boolean);
       await api.post("/api/posts", {
-        content, imageUrl: postType === "BEFORE_AFTER" ? null : imageUrl, postType,
+        content,
+        imageUrl: validUrls[0] || null,
+        imageUrls: validUrls,
+        postType,
         servicePrice: postType === "SERVICE" ? servicePrice : null,
         serviceLocation: postType === "SERVICE" ? serviceLocation : null,
         beforeImageUrl: postType === "BEFORE_AFTER" ? beforeUrl : null,
         afterImageUrl: postType === "BEFORE_AFTER" ? afterUrl : null,
       });
-      setContent(""); setImageUri(null); setImageUrl(null);
+      // Reset
+      setContent(""); setPhotoUris([]); setPhotoUrls([]);
       setBeforeUri(null); setBeforeUrl(null); setAfterUri(null); setAfterUrl(null);
       setPostType("VANITY"); setServicePrice(""); setServiceLocation("");
       Alert.alert("Posted! 🚗", "Your post is live!", [
@@ -122,13 +180,13 @@ export default function CreatePostScreen() {
     finally { setSubmitting(false); }
   };
 
-  const isUploading = uploading || uploadingBefore || uploadingAfter;
+  const isUploading = uploadingIndex !== null || uploadingBefore || uploadingAfter;
 
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.background }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       {/* HEADER */}
       <View style={{ paddingTop: 60, paddingHorizontal: 20, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: colors.border, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-        <TouchableOpacity onPress={() => { Keyboard.dismiss(); setContent(""); setImageUri(null); setImageUrl(null); router.push("/(tabs)/feed"); }}>
+        <TouchableOpacity onPress={() => { Keyboard.dismiss(); setContent(""); setPhotoUris([]); setPhotoUrls([]); router.push("/(tabs)/feed"); }}>
           <Text style={{ color: colors.textSecondary, fontSize: 16 }}>Cancel</Text>
         </TouchableOpacity>
         <Text style={{ color: colors.text, fontSize: 22, fontWeight: "900" }}>New Post</Text>
@@ -177,7 +235,7 @@ export default function CreatePostScreen() {
           </View>
         )}
 
-        {/* BEFORE/AFTER PHOTO PICKERS */}
+        {/* BEFORE/AFTER */}
         {postType === "BEFORE_AFTER" && (
           <View style={{ paddingHorizontal: 20, paddingTop: 16 }}>
             <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 12 }}>Add your before and after photos</Text>
@@ -188,7 +246,7 @@ export default function CreatePostScreen() {
                   <View style={{ width: "100%", height: "100%" }}>
                     <Image source={{ uri: beforeUri }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
                     {uploadingBefore && (
-                      <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center" }}>
+                      <View style={{ position: "absolute", inset: 0, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center" }}>
                         <ActivityIndicator color="white" />
                         <Text style={{ color: "white", fontSize: 12, marginTop: 4 }}>{beforeProgress}%</Text>
                       </View>
@@ -214,7 +272,7 @@ export default function CreatePostScreen() {
                   <View style={{ width: "100%", height: "100%" }}>
                     <Image source={{ uri: afterUri }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
                     {uploadingAfter && (
-                      <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center" }}>
+                      <View style={{ position: "absolute", inset: 0, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center" }}>
                         <ActivityIndicator color="white" />
                         <Text style={{ color: "white", fontSize: 12, marginTop: 4 }}>{afterProgress}%</Text>
                       </View>
@@ -248,29 +306,39 @@ export default function CreatePostScreen() {
           style={{ color: colors.text, fontSize: 18, lineHeight: 26, paddingHorizontal: 20, paddingTop: 20, minHeight: 120, textAlignVertical: "top" }}
         />
 
-        {imageUri && postType !== "BEFORE_AFTER" && (
+        {/* MULTI PHOTO GRID */}
+        {postType !== "BEFORE_AFTER" && photoUris.length > 0 && (
           <View style={{ paddingHorizontal: 20, marginTop: 10 }}>
-            <Image source={{ uri: imageUri }} style={{ width: "100%", height: 200, borderRadius: 12 }} resizeMode="cover" />
-            {uploading && (
-              <View style={{ position: "absolute", top: 0, left: 20, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.6)", borderRadius: 12, justifyContent: "center", alignItems: "center" }}>
-                <ActivityIndicator color="white" />
-                <Text style={{ color: "white", marginTop: 8 }}>{uploadProgress}%</Text>
-              </View>
-            )}
-            {!uploading && (
-              <TouchableOpacity onPress={() => { setImageUri(null); setImageUrl(null); }} style={{ position: "absolute", top: 8, right: 8, backgroundColor: "rgba(0,0,0,0.7)", borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4 }}>
-                <Text style={{ color: "white", fontSize: 12 }}>✕ Remove</Text>
-              </TouchableOpacity>
-            )}
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+              {photoUris.map((uri, index) => (
+                <View key={index} style={{ width: photoUris.length === 1 ? "100%" : "47%", aspectRatio: photoUris.length === 1 ? 16/9 : 1, borderRadius: 12, overflow: "hidden", backgroundColor: colors.border }}>
+                  <Image source={{ uri }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
+                  {uploadingIndex === index && (
+                    <View style={{ position: "absolute", inset: 0, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center" }}>
+                      <ActivityIndicator color="white" />
+                      <Text style={{ color: "white", fontSize: 12, marginTop: 4 }}>{uploadProgress}%</Text>
+                    </View>
+                  )}
+                  {uploadingIndex !== index && (
+                    <TouchableOpacity onPress={() => removePhoto(index)} style={{ position: "absolute", top: 6, right: 6, backgroundColor: "rgba(0,0,0,0.7)", borderRadius: 12, paddingHorizontal: 8, paddingVertical: 3 }}>
+                      <Text style={{ color: "white", fontSize: 12 }}>✕</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              ))}
+            </View>
           </View>
         )}
 
+        {/* ADD PHOTO BUTTON */}
         {postType !== "BEFORE_AFTER" && (
           <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingVertical: 12, borderTopWidth: 1, borderTopColor: colors.border, marginTop: 12 }}>
-            <TouchableOpacity onPress={handlePickPhoto} disabled={uploading}
+            <TouchableOpacity onPress={handlePickPhotos} disabled={uploadingIndex !== null || photoUris.length >= MAX_PHOTOS}
               style={{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: colors.card, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: colors.border }}>
               <Text style={{ fontSize: 16 }}>📷</Text>
-              <Text style={{ color: colors.textSecondary, fontSize: 13 }}>{uploading ? `Uploading ${uploadProgress}%` : "Add Photo"}</Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 13 }}>
+                {uploadingIndex !== null ? `Uploading ${uploadProgress}%` : photoUris.length >= MAX_PHOTOS ? "Max photos added" : `Add Photos (${photoUris.length}/${MAX_PHOTOS})`}
+              </Text>
             </TouchableOpacity>
             <Text style={{ color: content.length > 400 ? "#f87171" : colors.textMuted, fontSize: 13, marginLeft: "auto" }}>{content.length}/500</Text>
           </View>

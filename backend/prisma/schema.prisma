@@ -55,6 +55,7 @@ model Post {
   userId          Int
   content         String
   imageUrl        String?
+  imageUrls       String[]  @default([])
   postType        String    @default("VANITY")
   servicePrice    String?
   serviceLocation String?
