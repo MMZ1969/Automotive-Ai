@@ -56,6 +56,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="near-me" options={{ href: null }} />
       <Tabs.Screen name="admin" options={{ href: null }} />
       <Tabs.Screen name="(profile)/admin" options={{ href: null }} />
+      <Tabs.Screen name="car-show" options={{ href: null }} />
 
       {/* VISIBLE TABS */}
       <Tabs.Screen
