@@ -86,6 +86,7 @@ export default function Feed() {
   const handleFilterSelect = (filter: FilterKey) => {
     setFilterModalVisible(false);
     if (filter === "NEAR_ME") { router.push("/(tabs)/near-me"); return; }
+    if (filter === "CAR_SHOW") { router.push("/(tabs)/car-show"); return; }
     setActiveFilter(filter);
     setLoading(true);
     fetchPosts(activeTab, filter);
