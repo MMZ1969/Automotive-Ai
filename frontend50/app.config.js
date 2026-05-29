@@ -2,7 +2,7 @@ export default {
   expo: {
     name: "AutoAI",
     slug: "frontend50",
-    version: "1.0.5",
+    version: "1.0.6",
     orientation: "portrait",
     icon: "./assets/autoai_icon_1024_tm.png",
     userInterfaceStyle: "light",
@@ -10,7 +10,7 @@ export default {
     ios: {
       supportsTablet: true,
       bundleIdentifier: "app.automotiveai",
-      buildNumber: "18",
+      buildNumber: "19",
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
         NSAppTransportSecurity: { NSAllowsArbitraryLoads: true },
@@ -30,7 +30,7 @@ export default {
         backgroundColor: "#050509",
       },
       package: "app.automotiveai",
-      versionCode: 7,
+      versionCode: 8,
       permissions: [
         "android.permission.RECORD_AUDIO",
         "android.permission.ACCESS_FINE_LOCATION",

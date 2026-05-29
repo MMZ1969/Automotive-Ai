@@ -10,25 +10,27 @@ import {
   Image,
   Modal,
   RefreshControl,
-  ScrollView,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 
 const logo = require("../../assets/autoai_icon_1024_tm.png");
 
-const TABS = [
-  { key: "forYou",      label: "For You",      feed: "forYou",    filter: "ALL" },
-  { key: "following",   label: "Following",    feed: "following", filter: "ALL" },
-  { key: "vanity",      label: "Vanity",       feed: "forYou",    filter: "VANITY" },
-  { key: "qa",          label: "Q&A",          feed: "forYou",    filter: "QUESTION" },
-  { key: "service",     label: "Service",      feed: "forYou",    filter: "SERVICE" },
-  { key: "beforeAfter", label: "Before/After", feed: "forYou",    filter: "BEFORE_AFTER" },
-  { key: "nearMe",      label: "📍 Near Me",   feed: "nearMe",    filter: "ALL" },
+const MAIN_TABS = ["forYou", "following", "all"] as const;
+type MainTab = typeof MAIN_TABS[number];
+
+const FILTERS = [
+  { key: "ALL",          label: "All Posts",   icon: "🌐" },
+  { key: "VANITY",       label: "Vanity",       icon: "🚗" },
+  { key: "QUESTION",     label: "Q&A",          icon: "🔧" },
+  { key: "SERVICE",      label: "Service",      icon: "🏁" },
+  { key: "BEFORE_AFTER", label: "Before/After", icon: "📸" },
+  { key: "CAR_SHOW",     label: "Car Shows",    icon: "🎪" },
+  { key: "NEAR_ME",      label: "Near Me",      icon: "📍" },
 ] as const;
 
-type TabKey = typeof TABS[number]["key"];
+type FilterKey = typeof FILTERS[number]["key"];
 
 export default function Feed() {
   const router = useRouter();
@@ -37,15 +39,22 @@ export default function Feed() {
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState<TabKey>("forYou");
+  const [activeTab, setActiveTab] = useState<MainTab>("forYou");
+  const [activeFilter, setActiveFilter] = useState<FilterKey>("ALL");
+  const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [menuPost, setMenuPost] = useState<any>(null);
 
-  const fetchPosts = async (tabKey: TabKey = activeTab) => {
-    const tab = TABS.find(t => t.key === tabKey)!;
-    if (tab.feed === "nearMe") { setLoading(false); setRefreshing(false); return; }
+  const fetchPosts = async (tab: MainTab = activeTab, filter: FilterKey = activeFilter) => {
+    if (filter === "NEAR_ME") {
+      router.push("/(tabs)/near-me");
+      setLoading(false);
+      setRefreshing(false);
+      return;
+    }
     try {
-      const endpoint = tab.feed === "following" ? "/api/posts/following" : "/api/posts";
-      const res = await api.get(endpoint, { params: { type: tab.filter } });
+      const endpoint = tab === "following" ? "/api/posts/following" : "/api/posts";
+      const params = (tab === "all" || filter === "ALL") ? {} : { type: filter };
+      const res = await api.get(endpoint, { params });
       const postsWithFollow = await Promise.all(
         res.data.map(async (post: any) => {
           if (post.user?.id === user?.id) return { ...post, isFollowing: false };
@@ -64,23 +73,30 @@ export default function Feed() {
     }
   };
 
-  useFocusEffect(useCallback(() => { fetchPosts(activeTab); }, [activeTab]));
-  const onRefresh = () => { setRefreshing(true); fetchPosts(activeTab); };
+  useFocusEffect(useCallback(() => { fetchPosts(activeTab, activeFilter); }, [activeTab, activeFilter]));
+  const onRefresh = () => { setRefreshing(true); fetchPosts(activeTab, activeFilter); };
 
-  const handleTabChange = (tabKey: TabKey) => {
-    if (tabKey === "nearMe") { router.push("/(tabs)/near-me"); return; }
-    setActiveTab(tabKey);
+  const handleTabChange = (tab: MainTab) => {
+    setActiveTab(tab);
     setLoading(true);
-    fetchPosts(tabKey);
+    fetchPosts(tab, activeFilter);
+  };
+
+  const handleFilterSelect = (filter: FilterKey) => {
+    setFilterModalVisible(false);
+    if (filter === "NEAR_ME") { router.push("/(tabs)/near-me"); return; }
+    setActiveFilter(filter);
+    setLoading(true);
+    fetchPosts(activeTab, filter);
   };
 
   const handleLike = async (postId: number) => {
-    try { await api.post(`/api/posts/${postId}/like`); fetchPosts(activeTab); }
+    try { await api.post(`/api/posts/${postId}/like`); fetchPosts(activeTab, activeFilter); }
     catch (err) { console.error("LIKE ERROR:", err); }
   };
 
   const handleFollow = async (userId: number) => {
-    try { await api.post(`/api/users/${userId}/follow`); fetchPosts(activeTab); }
+    try { await api.post(`/api/users/${userId}/follow`); fetchPosts(activeTab, activeFilter); }
     catch (err) { console.error("FOLLOW ERROR:", err); }
   };
 
@@ -88,7 +104,7 @@ export default function Feed() {
     Alert.alert("Delete Post", "Are you sure you want to delete this post?", [
       { text: "Cancel", style: "cancel" },
       { text: "Delete", style: "destructive", onPress: async () => {
-        try { await api.delete(`/api/posts/${postId}`); setMenuPost(null); fetchPosts(activeTab); }
+        try { await api.delete(`/api/posts/${postId}`); setMenuPost(null); fetchPosts(activeTab, activeFilter); }
         catch (err) { console.error("DELETE ERROR:", err); }
       }},
     ]);
@@ -104,7 +120,7 @@ export default function Feed() {
   };
 
   const handlePinPost = async (postId: number) => {
-    try { await api.post(`/api/posts/${postId}/pin`); setMenuPost(null); fetchPosts(activeTab); }
+    try { await api.post(`/api/posts/${postId}/pin`); setMenuPost(null); fetchPosts(activeTab, activeFilter); }
     catch (err) { Alert.alert("Error", "Could not pin post. Try again."); }
   };
 
@@ -120,6 +136,8 @@ export default function Feed() {
       );
     }
   };
+
+  const activeFilterMeta = FILTERS.find(f => f.key === activeFilter);
 
   if (loading) {
     return (
@@ -157,6 +175,39 @@ export default function Feed() {
         </TouchableOpacity>
       </Modal>
 
+      {/* FILTER BOTTOM SHEET */}
+      <Modal visible={filterModalVisible} transparent animationType="slide" onRequestClose={() => setFilterModalVisible(false)}>
+        <TouchableOpacity style={{ flex: 1, backgroundColor: "#00000088" }} activeOpacity={1} onPress={() => setFilterModalVisible(false)} />
+        <View style={{ backgroundColor: colors.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 48 }}>
+          <View style={{ width: 40, height: 4, backgroundColor: colors.border, borderRadius: 2, alignSelf: "center", marginBottom: 20 }} />
+          <Text style={{ color: colors.text, fontSize: 18, fontWeight: "800", marginBottom: 16 }}>Filter Posts</Text>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+            {FILTERS.map((f) => {
+              const isActive = activeFilter === f.key;
+              return (
+                <TouchableOpacity
+                  key={f.key}
+                  onPress={() => handleFilterSelect(f.key)}
+                  style={{
+                    flexDirection: "row", alignItems: "center", gap: 8,
+                    paddingHorizontal: 16, paddingVertical: 14,
+                    borderRadius: 14, borderWidth: 1.5,
+                    backgroundColor: isActive ? colors.blue : colors.background,
+                    borderColor: isActive ? colors.blue : colors.border,
+                    width: "47%",
+                  }}
+                >
+                  <Text style={{ fontSize: 22 }}>{f.icon}</Text>
+                  <Text style={{ color: isActive ? "white" : colors.text, fontWeight: isActive ? "700" : "500", fontSize: 14 }}>
+                    {f.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+      </Modal>
+
       {/* HEADER */}
       <View style={{ paddingTop: 60, paddingHorizontal: 20, paddingBottom: 0, borderBottomWidth: 1, borderBottomColor: colors.border }}>
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
@@ -172,34 +223,43 @@ export default function Feed() {
           </TouchableOpacity>
         </View>
 
-        {/* ROW 1: FOR YOU / FOLLOWING */}
-        <View style={{ flexDirection: "row", borderBottomWidth: 1, borderBottomColor: colors.border }}>
-          {(["forYou", "following"] as const).map((key) => {
+        {/* ROW: FOR YOU / FOLLOWING / ALL + FILTER BUTTON */}
+        <View style={{ flexDirection: "row", alignItems: "center", borderBottomWidth: 1, borderBottomColor: colors.border }}>
+          {(["forYou", "following", "all"] as const).map((key) => {
             const isActive = activeTab === key;
+            const labels: Record<string, string> = { forYou: "For You", following: "Following", all: "All" };
             return (
-              <TouchableOpacity key={key} onPress={() => handleTabChange(key)} style={{ flex: 1, paddingVertical: 10, alignItems: "center", borderBottomWidth: 2, borderBottomColor: isActive ? colors.blue : "transparent" }}>
-                <Text style={{ color: isActive ? colors.text : colors.textMuted, fontSize: 14, fontWeight: isActive ? "700" : "400" }}>
-                  {key === "forYou" ? "For You" : "Following"}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        {/* ROW 2: POST TYPE FILTERS */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 4 }}>
-          {(["vanity", "qa", "service", "beforeAfter", "nearMe"] as const).map((key) => {
-            const labels: Record<string, string> = { vanity: "Vanity", qa: "Q&A", service: "Service", beforeAfter: "Before/After", nearMe: "Near Me" };
-            const isActive = activeTab === key;
-            return (
-              <TouchableOpacity key={key} onPress={() => handleTabChange(key)} style={{ paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 2, borderBottomColor: isActive ? colors.blue : "transparent" }}>
+              <TouchableOpacity
+                key={key}
+                onPress={() => handleTabChange(key)}
+                style={{ flex: 1, paddingVertical: 10, alignItems: "center", borderBottomWidth: 2, borderBottomColor: isActive ? colors.blue : "transparent" }}
+              >
                 <Text style={{ color: isActive ? colors.text : colors.textMuted, fontSize: 14, fontWeight: isActive ? "700" : "400" }}>
                   {labels[key]}
                 </Text>
               </TouchableOpacity>
             );
           })}
-        </ScrollView>
+
+          {/* FILTER PILL BUTTON */}
+          <TouchableOpacity
+            onPress={() => setFilterModalVisible(true)}
+            style={{
+              flexDirection: "row", alignItems: "center", gap: 5,
+              paddingHorizontal: 12, paddingVertical: 7,
+              marginBottom: 6,
+              backgroundColor: activeFilter !== "ALL" ? colors.blue : colors.card,
+              borderRadius: 20, borderWidth: 1,
+              borderColor: activeFilter !== "ALL" ? colors.blue : colors.border,
+            }}
+          >
+            <Text style={{ fontSize: 13 }}>{activeFilterMeta?.icon}</Text>
+            <Text style={{ color: activeFilter !== "ALL" ? "white" : colors.textMuted, fontSize: 12, fontWeight: "600" }}>
+              {activeFilter !== "ALL" ? activeFilterMeta?.label : "Filter"}
+            </Text>
+            <Text style={{ color: activeFilter !== "ALL" ? "white" : colors.textMuted, fontSize: 10 }}>▾</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* POSTS LIST */}
@@ -222,7 +282,6 @@ export default function Feed() {
             borderRadius: 16, borderWidth: 1,
             borderColor: item.pinned ? colors.blue : colors.border, padding: 16,
           }}>
-            {/* PINNED BADGE */}
             {item.pinned && (
               <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 10 }}>
                 <Text style={{ fontSize: 13 }}>📌</Text>
@@ -230,7 +289,6 @@ export default function Feed() {
               </View>
             )}
 
-            {/* POST TYPE BADGE */}
             <View style={{
               alignSelf: "flex-start",
               backgroundColor: item.postType === "QUESTION" ? "#1e3a8a" : item.postType === "SERVICE" ? "#78350f" : item.postType === "BEFORE_AFTER" ? "#991b1b" : "#5b21b6",
@@ -241,7 +299,6 @@ export default function Feed() {
               </Text>
             </View>
 
-            {/* POST HEADER */}
             <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
               <TouchableOpacity onPress={() => router.push(`/(tabs)/user/${item.user?.id}`)} style={{ flexDirection: "row", alignItems: "center", flex: 1 }}>
                 <View style={{
@@ -276,7 +333,6 @@ export default function Feed() {
               </TouchableOpacity>
             </View>
 
-            {/* FOLLOW BUTTON + DATE */}
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
               {item.user?.id !== user?.id ? (
                 <TouchableOpacity
@@ -289,7 +345,6 @@ export default function Feed() {
               <Text style={{ color: colors.textMuted, fontSize: 12 }}>{new Date(item.createdAt).toLocaleDateString()}</Text>
             </View>
 
-            {/* SERVICE DETAILS */}
             {item.postType === "SERVICE" && (item.serviceLocation || item.servicePrice) && (
               <View style={{ backgroundColor: "#1a1200", borderRadius: 10, borderWidth: 1, borderColor: "#f59e0b33", padding: 12, marginBottom: 10, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                 {item.serviceLocation && (
@@ -307,7 +362,6 @@ export default function Feed() {
               </View>
             )}
 
-            {/* POST CONTENT + IMAGE */}
             <TouchableOpacity onPress={() => router.push(`/(tabs)/post/${item.id}`)} activeOpacity={0.8}>
               <Text style={{ color: colors.text, fontSize: 15, lineHeight: 22 }}>{item.content}</Text>
               {item.imageUrl && (
@@ -331,7 +385,6 @@ export default function Feed() {
               )}
             </TouchableOpacity>
 
-            {/* ACTIONS */}
             <View style={{ flexDirection: "row", marginTop: 14, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border, gap: 20 }}>
               <TouchableOpacity onPress={() => handleLike(item.id)} style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                 <Text style={{ fontSize: 18 }}>{item.likes?.some((l: any) => l.userId === user?.id) ? "❤️" : "🤍"}</Text>

@@ -286,9 +286,9 @@ export default function Settings() {
           </View>
         </View>
         <View style={divider} />
-        <View style={row}><Text style={labelStyle}>Version</Text><Text style={valueStyle}>1.0.4</Text></View>
+        <View style={row}><Text style={labelStyle}>Version</Text><Text style={valueStyle}>1.0.6</Text></View>
         <View style={divider} />
-        <View style={row}><Text style={labelStyle}>Build</Text><Text style={valueStyle}>17</Text></View>
+        <View style={row}><Text style={labelStyle}>Build</Text><Text style={valueStyle}>19</Text></View>
       </View>
 
       {/* FEEDBACK SECTION */}
