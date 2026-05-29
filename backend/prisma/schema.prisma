@@ -18,13 +18,13 @@ model User {
   pushToken             String?
   phone                 String?
   location              String?
-  dailyDiagnoses        Int           @default(0)
+  dailyDiagnoses        Int            @default(0)
   lastDiagnosisDate     DateTime?
-  emailVerified         Boolean  @default(false)
+  emailVerified         Boolean        @default(false)
   verificationToken     String?
-  isAdmin               Boolean       @default(false)
-  isVerified            Boolean  @default(false)
-  verificationRequest   String? 
+  isAdmin               Boolean        @default(false)
+  isVerified            Boolean        @default(false)
+  verificationRequest   String?
   resetToken            String?
   resetTokenExpiry      DateTime?
   createdAt             DateTime       @default(now())
@@ -46,6 +46,8 @@ model User {
   reviewsGiven          Review[]       @relation("ReviewGiver")
   reviewsReceived       Review[]       @relation("ReviewReceiver")
   parts                 Part[]
+  carShows              CarShow[]
+  carShowAttendees      CarShowAttendee[]
 }
 
 model Post {
@@ -58,7 +60,7 @@ model Post {
   serviceLocation String?
   beforeImageUrl  String?
   afterImageUrl   String?
-  pinned          Boolean   @default(false)   // 👈 ADD THIS
+  pinned          Boolean   @default(false)
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   user            User      @relation(fields: [userId], references: [id])
@@ -170,20 +172,20 @@ model Report {
 }
 
 model Job {
-  id          Int      @id @default(autoincrement())
-  userId      Int
-  title       String
-  description String
-  vehicle     String
-  budget      Float?
-  location    String?
-  status      String   @default("OPEN")
+  id            Int      @id @default(autoincrement())
+  userId        Int
+  title         String
+  description   String
+  vehicle       String
+  budget        Float?
+  location      String?
+  status        String   @default("OPEN")
   acceptedBidId Int?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  poster      User     @relation("JobPoster", fields: [userId], references: [id])
-  bids        Bid[]
-  review      Review?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  poster        User     @relation("JobPoster", fields: [userId], references: [id])
+  bids          Bid[]
+  review        Review?
 }
 
 model Bid {
@@ -229,6 +231,31 @@ model Part {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
   user              User     @relation(fields: [userId], references: [id])
+}
+
+model CarShow {
+  id          Int               @id @default(autoincrement())
+  userId      Int
+  name        String
+  description String?
+  location    String
+  date        DateTime
+  imageUrl    String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  user        User              @relation(fields: [userId], references: [id])
+  attendees   CarShowAttendee[]
+}
+
+model CarShowAttendee {
+  id        Int      @id @default(autoincrement())
+  carShowId Int
+  userId    Int
+  createdAt DateTime @default(now())
+  carShow   CarShow  @relation(fields: [carShowId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([carShowId, userId])
 }
 
 model playing_with_neon {

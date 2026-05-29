@@ -5,6 +5,7 @@ import express from "express";
 import rateLimit from "express-rate-limit";
 import helmet from "helmet";
 import xss from "xss";
+dotenv.config();
 
 import prisma from "./lib/prisma.js";
 import authMiddleware from "./middleware/authMiddleware.js";
@@ -30,8 +31,6 @@ admin.initializeApp({
     privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
   }),
 });
-
-dotenv.config();
 
 const app = express();
 app.set("trust proxy", 1);
