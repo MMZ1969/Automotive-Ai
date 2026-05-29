@@ -366,9 +366,24 @@ export default function Feed() {
 
             <TouchableOpacity onPress={() => router.push(`/(tabs)/post/${item.id}`)} activeOpacity={0.8}>
               <Text style={{ color: colors.text, fontSize: 15, lineHeight: 22 }}>{item.content}</Text>
-              {item.imageUrl && (
-                <Image source={{ uri: item.imageUrl }} style={{ width: "100%", height: 200, borderRadius: 12, marginTop: 12 }} resizeMode="cover" />
-              )}
+              {item.imageUrls?.length > 1 ? (
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 4, marginTop: 12 }}>
+            {item.imageUrls.map((url: string, index: number) => (
+                      <Image
+                        key={index}
+                        source={{ uri: url }}
+                        style={{
+                          width: item.imageUrls.length === 2 ? "49%" : item.imageUrls.length === 3 && index === 0 ? "100%" : "49%",
+                          height: item.imageUrls.length === 2 ? 160 : item.imageUrls.length === 3 && index === 0 ? 200 : 160,
+                          borderRadius: 10,
+                        }}
+                        resizeMode="cover"
+                      />
+                    ))}
+                  </View>
+                ) : item.imageUrl ? (
+                  <Image source={{ uri: item.imageUrl }} style={{ width: "100%", height: 200, borderRadius: 12, marginTop: 12 }} resizeMode="cover" />
+                ) : null}
               {item.postType === "BEFORE_AFTER" && item.beforeImageUrl && item.afterImageUrl && (
                 <View style={{ flexDirection: "row", gap: 6, marginTop: 10 }}>
                   <View style={{ flex: 1, borderRadius: 10, overflow: "hidden" }}>
