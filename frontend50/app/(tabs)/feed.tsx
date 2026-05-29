@@ -77,10 +77,11 @@ export default function Feed() {
   const onRefresh = () => { setRefreshing(true); fetchPosts(activeTab, activeFilter); };
 
   const handleTabChange = (tab: MainTab) => {
-    setActiveTab(tab);
-    setLoading(true);
-    fetchPosts(tab, activeFilter);
-  };
+  setActiveTab(tab);
+  setActiveFilter("ALL"); // ✅ reset filter when switching main tabs
+  setLoading(true);
+  fetchPosts(tab, "ALL");
+};
 
   const handleFilterSelect = (filter: FilterKey) => {
     setFilterModalVisible(false);
