@@ -12,6 +12,7 @@ import authMiddleware from "./middleware/authMiddleware.js";
 
 import admin from "firebase-admin";
 import authRoutes from "./auth/auth.routes.js";
+import carShowRoutes from "./routes/carShow.routes.js";
 import followRoutes from "./routes/follow.routes.js";
 import jobRoutes from "./routes/job.routes.js";
 import logsRoutes from "./routes/logs.routes.js";
@@ -109,6 +110,7 @@ app.use("/api/notifications", notificationRoutes);
 app.use("/api/jobs", jobRoutes);
 app.use("/api/parts", partsRoutes);
 app.use("/api/reviews", reviewRoutes);
+app.use("/api/car-shows", carShowRoutes);
 
 // AI Diagnosis route
 app.post("/api/diagnose", authMiddleware, async (req, res) => {
