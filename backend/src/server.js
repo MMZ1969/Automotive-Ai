@@ -16,6 +16,7 @@ import carShowRoutes from "./routes/carShow.routes.js";
 import followRoutes from "./routes/follow.routes.js";
 import jobRoutes from "./routes/job.routes.js";
 import logsRoutes from "./routes/logs.routes.js";
+import messagesRoutes from "./routes/messages.routes.js";
 import notificationRoutes from "./routes/notification.routes.js";
 import partsRoutes from "./routes/parts.routes.js";
 import postsRoutes from "./routes/posts.js";
@@ -111,6 +112,7 @@ app.use("/api/jobs", jobRoutes);
 app.use("/api/parts", partsRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/car-shows", carShowRoutes);
+app.use("/api/messages", messagesRoutes);
 
 // AI Diagnosis route
 app.post("/api/diagnose", authMiddleware, async (req, res) => {
