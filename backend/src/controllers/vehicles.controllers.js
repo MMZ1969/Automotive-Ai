@@ -5,7 +5,7 @@ import prisma from "../lib/prisma.js";
 export const createVehicle = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { year, make, model, trim, vin } = req.body;
+    const { year, make, model, trim, vin, mileage, notes } = req.body;
 
     const vehicle = await prisma.vehicle.create({
       data: {
@@ -68,7 +68,7 @@ export const updateVehicle = async (req, res) => {
   try {
     const userId = req.user.id;
     const vehicleId = Number(req.params.id);
-    const { year, make, model, trim, vin } = req.body;
+    const { year, make, model, trim, vin, mileage, notes } = req.body;
 
     const existing = await prisma.vehicle.findUnique({
       where: { id: vehicleId },
@@ -80,7 +80,7 @@ export const updateVehicle = async (req, res) => {
 
     const updated = await prisma.vehicle.update({
       where: { id: vehicleId },
-      data: { year, make, model, trim, vin },
+      data: { year, make, model, trim, vin, mileage, notes },
     });
 
     res.json(updated);

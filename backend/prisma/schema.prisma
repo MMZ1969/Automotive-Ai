@@ -106,6 +106,8 @@ model Vehicle {
   model     String
   trim      String?
   vin       String?
+  mileage   Int?
+  notes     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   logs      Log[]
