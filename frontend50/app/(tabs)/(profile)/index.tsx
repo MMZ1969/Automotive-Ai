@@ -278,6 +278,11 @@ export default function Profile() {
         <Text style={{ color: colors.textSecondary, marginTop: 4, fontSize: 13 }}>{isMechanic ? "Find work and place bids" : "Post a job and find a mechanic"}</Text>
       </TouchableOpacity>
 
+      <TouchableOpacity onPress={() => router.push("/(tabs)/messages")} style={[actionCard, { borderColor: "#345bff44" }]}>
+        <Text style={{ color: colors.text, fontSize: 18, fontWeight: "700" }}>💬 Messages</Text>
+        <Text style={{ color: colors.textSecondary, marginTop: 4, fontSize: 13 }}>Your conversations</Text>
+      </TouchableOpacity>
+
       <TouchableOpacity onPress={() => router.push("/(tabs)/search")} style={actionCard}>
         <Text style={{ color: colors.text, fontSize: 18, fontWeight: "700" }}>🔍 Search Users</Text>
         <Text style={{ color: colors.textSecondary, marginTop: 4, fontSize: 13 }}>Find DIYers and Mechanics</Text>

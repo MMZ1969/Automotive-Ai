@@ -174,6 +174,17 @@ export default function UserProfile() {
                   <TouchableOpacity onPress={handleFollow} disabled={followLoading} style={{ flex: 1, backgroundColor: isFollowing ? colors.card : colors.blue, paddingVertical: 12, paddingHorizontal: 24, borderRadius: 24, borderWidth: 1, borderColor: isFollowing ? colors.border : colors.blue, alignItems: "center" }}>
                     <Text style={{ color: "white", fontWeight: "700", fontSize: 16 }}>{followLoading ? "..." : isFollowing ? "Following" : "Follow"}</Text>
                   </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={async () => {
+                      try {
+                        const res = await api.post("/api/messages/conversations", { otherUserId: Number(id) });
+                        router.push(`/(tabs)/chat/${res.data.id}`);
+                      } catch { Alert.alert("Error", "Could not start conversation."); }
+                    }}
+                    style={{ backgroundColor: colors.card, paddingVertical: 12, paddingHorizontal: 16, borderRadius: 24, borderWidth: 1, borderColor: colors.blue + "44", alignItems: "center" }}
+                  >
+                    <Text style={{ fontSize: 18 }}>💬</Text>
+                  </TouchableOpacity>
                   <TouchableOpacity onPress={handleBlock} disabled={blockLoading} style={{ backgroundColor: colors.card, paddingVertical: 12, paddingHorizontal: 16, borderRadius: 24, borderWidth: 1, borderColor: "#ef444444", alignItems: "center" }}>
                     <Text style={{ fontSize: 18 }}>{blockLoading ? "..." : "🚫"}</Text>
                   </TouchableOpacity>
