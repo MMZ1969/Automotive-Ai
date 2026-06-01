@@ -45,9 +45,9 @@ export default function Profile() {
     if (!user?.id) return;
     console.log("FETCHING STATS FOR:", user?.id);
     try {
-      const res = await api.get(`/api/users/${user?.id}/follow-status`);
-      setFollowerCount(res.data.followerCount || 0);
-      setFollowingCount(res.data.followingCount || 0);
+      const res = await api.get(`/api/users/${user?.id}/profile`);
+      setFollowerCount(res.data._count?.followers || 0);
+      setFollowingCount(res.data._count?.following || 0);
     } catch (err) {
       console.error("FETCH STATS ERROR:", err);
     }

@@ -24,6 +24,7 @@ export default function UserProfile() {
   const [mechanicStats, setMechanicStats] = useState<any>(null);
 
   const fetchProfile = async () => {
+    console.log("VIEWING PROFILE ID:", id);
     try {
       const [userRes, postsRes, followRes] = await Promise.all([
         api.get(`/api/users/${id}/profile`),
