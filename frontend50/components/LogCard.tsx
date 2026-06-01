@@ -4,6 +4,11 @@ export default function LogCard({ log, onPress }) {
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.8}>
       <View style={styles.card}>
+        {log.vehicle && (
+        <Text style={{ fontSize: 12, fontWeight: "700", color: "#345bff", marginBottom: 6, letterSpacing: 0.5 }}>
+        🚗 {log.vehicle.year} {log.vehicle.make} {log.vehicle.model}
+          </Text>
+        )}
         <Text style={styles.title}>{log.title ?? "Untitled"}</Text>
         {log.performedAt ? (
           <Text style={styles.detail}>

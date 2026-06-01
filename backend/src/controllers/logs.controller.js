@@ -7,9 +7,14 @@ export const getAllLogs = async (req, res) => {
     const userId = req.user.id;
 
     const logs = await prisma.log.findMany({
-      where: { userId },
-      orderBy: { performedAt: "desc" },
-    });
+  where: { userId },
+  orderBy: { performedAt: "desc" },
+  include: {
+    vehicle: {
+      select: { id: true, year: true, make: true, model: true },
+    },
+  },
+});
 
     res.json(logs);
   } catch (err) {

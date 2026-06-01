@@ -8,11 +8,11 @@ import { fetchVehicles } from "@lib/vehicles";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import {
-    ActivityIndicator,
-    FlatList,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  FlatList,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -42,6 +42,7 @@ export default function GarageScreen() {
         setLogsLoading(true);
         try {
           const data = await fetchAllLogs();
+          console.log("FIRST LOG:", JSON.stringify(data?.[0]));
           setLogs(data || []);
         } catch (err) {
           console.error("Error loading logs:", err);

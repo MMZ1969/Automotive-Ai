@@ -57,8 +57,13 @@ export default function MechanicDashboard() {
       <Text style={{ color: colors.text, fontSize: 20, fontWeight: "700", marginBottom: 12 }}>Actions</Text>
 
       <TouchableOpacity onPress={() => router.push("/(tabs)/mechanic/jobs")} style={{ backgroundColor: colors.card, padding: 16, borderRadius: 14, borderWidth: 1, borderColor: colors.border, marginBottom: 12 }}>
-        <Text style={{ color: colors.text, fontSize: 18, fontWeight: "700" }}>🔧 View Jobs</Text>
-        <Text style={{ color: colors.textSecondary, marginTop: 4, fontSize: 13 }}>See open and completed jobs</Text>
+        <Text style={{ color: colors.text, fontSize: 18, fontWeight: "700" }}>🔧 Jobs Near Me</Text>
+        <Text style={{ color: colors.textSecondary, marginTop: 4, fontSize: 13 }}>Find work and place bids</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity onPress={() => router.push("/quick-alert")} style={{ backgroundColor: colors.card, padding: 16, borderRadius: 14, borderWidth: 1, borderColor: "#f59e0b44", marginBottom: 12 }}>
+        <Text style={{ color: colors.text, fontSize: 18, fontWeight: "700" }}>⚡ Quick Alert</Text>
+        <Text style={{ color: colors.textSecondary, marginTop: 4, fontSize: 13 }}>Send a customer a vehicle status update</Text>
       </TouchableOpacity>
 
       <TouchableOpacity onPress={() => router.push("/(tabs)/mechanic/reviews")} style={{ backgroundColor: colors.card, padding: 16, borderRadius: 14, borderWidth: 1, borderColor: colors.border, marginBottom: 12 }}>
