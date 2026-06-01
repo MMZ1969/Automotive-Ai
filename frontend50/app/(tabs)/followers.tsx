@@ -11,12 +11,12 @@ export default function FollowersList() {
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useFocusEffect(useCallback(() => { fetchUsers(); }, []));
+  useFocusEffect(useCallback(() => { fetchUsers(); }, [id, type]));
 
   const fetchUsers = async () => {
     try {
-      const res = await api.get(`/api/users/${id}/${type}`);
-      setUsers(res.data);
+    const res = await api.get(`/api/users/${id}/${type}`);
+    setUsers(res.data);
     } catch (err) { console.error("FETCH FOLLOWERS ERROR:", err); }
     finally { setLoading(false); }
   };
@@ -32,7 +32,7 @@ export default function FollowersList() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <View style={{ paddingTop: 60, paddingHorizontal: 20, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: colors.border, flexDirection: "row", alignItems: "center", gap: 12 }}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => router.push("/(tabs)/(profile)")}>
           <Text style={{ color: colors.blue, fontSize: 16 }}>← Back</Text>
         </TouchableOpacity>
         <Text style={{ color: colors.text, fontSize: 20, fontWeight: "900" }}>
