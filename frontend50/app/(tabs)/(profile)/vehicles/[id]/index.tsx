@@ -228,10 +228,10 @@ export default function VehicleDetailsScreen() {
             </View>
 
             <TouchableOpacity onPress={openLogs} style={styles.logsButton}>
-              <Text style={styles.logsButtonText}>📋 View Maintenance Logs</Text>
-            </TouchableOpacity>
+            <Text style={styles.logsButtonText}>📋 View Maintenance Logs</Text>
+          </TouchableOpacity>
 
-            <WrenchButton onPress={openLogs} />
+          <WrenchButton onPress={() => router.push(`/(tabs)/(profile)/vehicles/${id}/logs/add`)} />
           </>
         ) : (
           // EDIT MODE
