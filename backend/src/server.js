@@ -10,7 +10,6 @@ dotenv.config();
 import prisma from "./lib/prisma.js";
 import authMiddleware from "./middleware/authMiddleware.js";
 
-import admin from "firebase-admin";
 import authRoutes from "./auth/auth.routes.js";
 import carShowRoutes from "./routes/carShow.routes.js";
 import followRoutes from "./routes/follow.routes.js";
@@ -26,27 +25,27 @@ import userRoutes from "./routes/user.routes.js";
 import vehiclesRoutes from "./routes/vehicles.routes.js";
 
 // Initialize Firebase Admin
-admin.initializeApp({
-  credential: admin.credential.cert({
-    projectId: process.env.FIREBASE_PROJECT_ID,
-    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-    privateKey: Buffer.from(process.env.FIREBASE_PRIVATE_KEY, 'base64').toString('utf8'),
-  }),
-});
+// admin.initializeApp({
+//   credential: admin.credential.cert({
+//     projectId: process.env.FIREBASE_PROJECT_ID,
+//     clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+//     privateKey: Buffer.from(process.env.FIREBASE_PRIVATE_KEY, 'base64').toString('utf8'),
+//   }),
+// });
 
 const app = express();
 app.set("trust proxy", 1);
 
 // Firebase custom token endpoint
-app.post("/api/auth/firebase-token", authMiddleware, async (req, res) => {
-  try {
-    const token = await admin.auth().createCustomToken(String(req.user.id));
-    res.json({ token });
-  } catch (err) {
-    console.error("FIREBASE TOKEN ERROR:", err);
-    res.status(500).json({ error: "Could not generate Firebase token" });
-  }
-});
+// app.post("/api/auth/firebase-token", authMiddleware, async (req, res) => {
+//   try {
+//     const token = await admin.auth().createCustomToken(String(req.user.id));
+//     res.json({ token });
+//   } catch (err) {
+//     console.error("FIREBASE TOKEN ERROR:", err);
+//     res.status(500).json({ error: "Could not generate Firebase token" });
+//   }
+// });
 
 app.use(helmet());
 app.use(cors());

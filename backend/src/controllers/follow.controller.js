@@ -73,3 +73,37 @@ export const getFollowStatus = async (req, res) => {
     res.status(500).json({ error: "Failed to get follow status" });
   }
 };
+
+// GET FOLLOWERS LIST
+export const getFollowers = async (req, res) => {
+  try {
+    const userId = Number(req.params.id);
+    const follows = await prisma.follow.findMany({
+      where: { followingId: userId },
+      include: {
+        follower: { select: { id: true, name: true, profilePhoto: true, role: true } },
+      },
+    });
+    res.json(follows.map(f => f.follower));
+  } catch (err) {
+    console.error("GET FOLLOWERS ERROR:", err);
+    res.status(500).json({ error: "Failed to get followers" });
+  }
+};
+
+// GET FOLLOWING LIST
+export const getFollowing = async (req, res) => {
+  try {
+    const userId = Number(req.params.id);
+    const follows = await prisma.follow.findMany({
+      where: { followerId: userId },
+      include: {
+        following: { select: { id: true, name: true, profilePhoto: true, role: true } },
+      },
+    });
+    res.json(follows.map(f => f.following));
+  } catch (err) {
+    console.error("GET FOLLOWING ERROR:", err);
+    res.status(500).json({ error: "Failed to get following" });
+  }
+};
