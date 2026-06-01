@@ -98,7 +98,7 @@ export default function UserProfile() {
         ListHeaderComponent={
           <View>
             <View style={{ paddingTop: 60, paddingHorizontal: 20, paddingBottom: 16 }}>
-              <TouchableOpacity onPress={() => router.push("/(tabs)/feed")}>
+              <TouchableOpacity onPress={() => router.back()}>
                 <Text style={{ color: colors.blue, fontSize: 16 }}>← Back</Text>
               </TouchableOpacity>
             </View>

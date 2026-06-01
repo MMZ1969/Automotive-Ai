@@ -43,6 +43,7 @@ export default function Profile() {
 
   const fetchStats = useCallback(async () => {
     if (!user?.id) return;
+    console.log("FETCHING STATS FOR:", user?.id);
     try {
       const res = await api.get(`/api/users/${user?.id}/follow-status`);
       setFollowerCount(res.data.followerCount || 0);

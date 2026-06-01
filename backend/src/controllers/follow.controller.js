@@ -64,8 +64,8 @@ export const getFollowStatus = async (req, res) => {
       where: { followerId_followingId: { followerId, followingId } },
     });
 
-    const followerCount = await prisma.follow.count({ where: { followingId } });
-    const followingCount = await prisma.follow.count({ where: { followerId: followingId } });
+    const followerCount = await prisma.follow.count({ where: { followingId: Number(req.params.id) } });
+    const followingCount = await prisma.follow.count({ where: { followerId: Number(req.params.id) } });
 
     res.json({ following: !!follow, followerCount, followingCount });
   } catch (err) {

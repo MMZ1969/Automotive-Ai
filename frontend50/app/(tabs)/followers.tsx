@@ -1,7 +1,7 @@
 import { useTheme } from "@context/ThemeContext";
 import api from "@lib/api";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import { useCallback, useState } from "react";
 import { ActivityIndicator, FlatList, Image, Text, TouchableOpacity, View } from "react-native";
 
 export default function FollowersList() {
@@ -11,7 +11,7 @@ export default function FollowersList() {
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => { fetchUsers(); }, []);
+  useFocusEffect(useCallback(() => { fetchUsers(); }, []));
 
   const fetchUsers = async () => {
     try {
