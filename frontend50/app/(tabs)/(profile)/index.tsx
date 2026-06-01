@@ -18,7 +18,7 @@ import {
 import { storage } from "../../../firebaseConfig";
 
 export default function Profile() {
-  const { user, logout, isMechanic, isDIYer, updateProfilePhoto } = useAuth();
+  const { user, logout, isMechanic, updateProfilePhoto } = useAuth();
   const { colors } = useTheme();
   const router = useRouter();
   const [uploading, setUploading] = useState(false);
@@ -42,15 +42,15 @@ export default function Profile() {
   };
 
   const fetchStats = useCallback(async () => {
-  if (!user?.id) return;
-  try {
-    const res = await api.get(`/api/users/${user?.id}/profile`);
-    setFollowerCount(res.data._count?.followers || 0);
-    setFollowingCount(res.data._count?.following || 0);
-  } catch (err) {
-    console.error("FETCH STATS ERROR:", err);
-  }
-}, [user?.id]);
+    if (!user?.id) return;
+    try {
+      const res = await api.get(`/api/users/${user?.id}/profile`);
+      setFollowerCount(res.data._count?.followers || 0);
+      setFollowingCount(res.data._count?.following || 0);
+    } catch (err) {
+      console.error("FETCH STATS ERROR:", err);
+    }
+  }, [user?.id]);
 
   useFocusEffect(
     useCallback(() => {
@@ -126,15 +126,6 @@ export default function Profile() {
 
   const itemSize = 80;
 
-  const actionCard = {
-    backgroundColor: colors.card,
-    padding: 16,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: colors.border,
-    marginBottom: 12,
-  };
-
   const statPill = {
     backgroundColor: colors.card,
     paddingHorizontal: 20,
@@ -144,6 +135,18 @@ export default function Profile() {
     borderColor: colors.border,
     alignItems: "center" as const,
     minWidth: 80,
+  };
+
+  const menuCard = {
+    backgroundColor: colors.card,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 16,
+    marginBottom: 10,
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 14,
   };
 
   return (
@@ -220,14 +223,13 @@ export default function Profile() {
       </View>
 
       {/* RIDES & BUILDS GALLERY */}
-      <View style={{ backgroundColor: colors.card, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 16, marginBottom: 20 }}>
+      <View style={{ backgroundColor: colors.card, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 16, marginBottom: 16 }}>
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
           <Text style={{ color: colors.text, fontSize: 18, fontWeight: "800" }}>🚗 Rides & Builds</Text>
           <TouchableOpacity onPress={() => router.push("/(tabs)/create")}>
             <Text style={{ color: colors.blue, fontSize: 13 }}>+ Add</Text>
           </TouchableOpacity>
         </View>
-
         {loadingPosts ? (
           <ActivityIndicator color={colors.blue} />
         ) : vanityPosts.length === 0 ? (
@@ -259,65 +261,109 @@ export default function Profile() {
         )}
       </View>
 
-      {/* MECHANIC DASHBOARD LINK */}
+      {/* MECHANIC MENU */}
       {isMechanic && (
-        <TouchableOpacity onPress={() => router.push("/(tabs)/mechanic")} style={actionCard}>
-          <Text style={{ color: colors.text, fontSize: 18, fontWeight: "700" }}>🏁 Mechanic Dashboard</Text>
-          <Text style={{ color: colors.textSecondary, marginTop: 4, fontSize: 13 }}>Jobs • Reviews • Earnings</Text>
+        <>
+          <TouchableOpacity
+            onPress={() => router.push("/(tabs)/mechanic")}
+            style={[menuCard, { borderColor: colors.blue + "44" }]}
+          >
+            <Text style={{ fontSize: 28 }}>🏁</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: colors.text, fontSize: 17, fontWeight: "700" }}>Dashboard</Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>Jobs near me • Quick Alert • Reviews</Text>
+            </View>
+            <Text style={{ color: colors.textMuted, fontSize: 18 }}>›</Text>
+          </TouchableOpacity>
+        </>
+      )}
+
+      {/* MY GARAGE — both roles */}
+      <TouchableOpacity
+        onPress={() => router.push("/(tabs)/(profile)/garage")}
+        style={[menuCard, { borderColor: colors.blue + "44" }]}
+      >
+        <Text style={{ fontSize: 28 }}>🚗</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: colors.text, fontSize: 17, fontWeight: "700" }}>My Garage</Text>
+          <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>Vehicles & service logs</Text>
+        </View>
+        <Text style={{ color: colors.textMuted, fontSize: 18 }}>›</Text>
+      </TouchableOpacity>
+
+      {/* POST A JOB — DIYers only */}
+      {!isMechanic && (
+        <TouchableOpacity
+          onPress={() => router.push("/(tabs)/mechanic/jobs")}
+          style={[menuCard, { borderColor: colors.blue + "44" }]}
+        >
+          <Text style={{ fontSize: 28 }}>💼</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: colors.text, fontSize: 17, fontWeight: "700" }}>Post a Job</Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>Find a mechanic near you</Text>
+          </View>
+          <Text style={{ color: colors.textMuted, fontSize: 18 }}>›</Text>
         </TouchableOpacity>
       )}
-      {isMechanic && (
-        <TouchableOpacity onPress={() => router.push("/quick-alert")} style={[actionCard, { borderColor: "#f59e0b44" }]}>
-          <Text style={{ color: colors.text, fontSize: 18, fontWeight: "700" }}>⚡ Quick Alert</Text>
-          <Text style={{ color: colors.textSecondary, marginTop: 4, fontSize: 13 }}>Send a customer a vehicle status update</Text>
-        </TouchableOpacity>
-      )}
 
-      <TouchableOpacity onPress={() => router.push("/(tabs)/mechanic/jobs")} style={[actionCard, { borderColor: "#345bff44" }]}>
-        <Text style={{ color: colors.text, fontSize: 18, fontWeight: "700" }}>💼 {isMechanic ? "Browse Jobs" : "My Job Requests"}</Text>
-        <Text style={{ color: colors.textSecondary, marginTop: 4, fontSize: 13 }}>{isMechanic ? "Find work and place bids" : "Post a job and find a mechanic"}</Text>
+      {/* MESSAGES — both roles */}
+      <TouchableOpacity
+        onPress={() => router.push("/(tabs)/messages")}
+        style={menuCard}
+      >
+        <Text style={{ fontSize: 28 }}>💬</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: colors.text, fontSize: 17, fontWeight: "700" }}>Messages</Text>
+          <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>Your conversations</Text>
+        </View>
+        <Text style={{ color: colors.textMuted, fontSize: 18 }}>›</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity onPress={() => router.push("/(tabs)/messages")} style={[actionCard, { borderColor: "#345bff44" }]}>
-        <Text style={{ color: colors.text, fontSize: 18, fontWeight: "700" }}>💬 Messages</Text>
-        <Text style={{ color: colors.textSecondary, marginTop: 4, fontSize: 13 }}>Your conversations</Text>
+      {/* LEADERBOARD — both roles */}
+      <TouchableOpacity
+        onPress={() => router.push("/(tabs)/leaderboard")}
+        style={menuCard}
+      >
+        <Text style={{ fontSize: 28 }}>🏆</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: colors.text, fontSize: 17, fontWeight: "700" }}>Leaderboard</Text>
+          <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>Top rep earners • Search users</Text>
+        </View>
+        <Text style={{ color: colors.textMuted, fontSize: 18 }}>›</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity onPress={() => router.push("/(tabs)/search")} style={actionCard}>
-        <Text style={{ color: colors.text, fontSize: 18, fontWeight: "700" }}>🔍 Search Users</Text>
-        <Text style={{ color: colors.textSecondary, marginTop: 4, fontSize: 13 }}>Find DIYers and Mechanics</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity onPress={() => router.push("/(tabs)/leaderboard")} style={actionCard}>
-        <Text style={{ color: colors.text, fontSize: 18, fontWeight: "700" }}>🏆 Leaderboard</Text>
-        <Text style={{ color: colors.textSecondary, marginTop: 4, fontSize: 13 }}>Top earners by rep points</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity onPress={() => router.push("/(tabs)/(profile)/vehicles")} style={actionCard}>
-        <Text style={{ color: colors.text, fontSize: 18, fontWeight: "700" }}>🚗 Your Vehicles</Text>
-        <Text style={{ color: colors.textSecondary, marginTop: 4, fontSize: 13 }}>View and manage your garage</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity onPress={() => router.push("/(tabs)/(profile)/logs")} style={actionCard}>
-        <Text style={{ color: colors.text, fontSize: 18, fontWeight: "700" }}>📋 Maintenance Logs</Text>
-        <Text style={{ color: colors.textSecondary, marginTop: 4, fontSize: 13 }}>All logs across all vehicles</Text>
-      </TouchableOpacity>
-
+      {/* ADMIN PANEL — admin only */}
       {user?.isAdmin && (
-        <TouchableOpacity onPress={() => router.push("/(tabs)/(profile)/admin")} style={[actionCard, { borderColor: "#f59e0b44" }]}>
-          <Text style={{ color: colors.text, fontSize: 18, fontWeight: "700" }}>🛡️ Admin Panel</Text>
-          <Text style={{ color: colors.textSecondary, marginTop: 4, fontSize: 13 }}>Manage verification requests</Text>
+        <TouchableOpacity
+          onPress={() => router.push("/(tabs)/(profile)/admin")}
+          style={[menuCard, { borderColor: "#f59e0b44" }]}
+        >
+          <Text style={{ fontSize: 28 }}>🛡️</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: colors.text, fontSize: 17, fontWeight: "700" }}>Admin Panel</Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>Manage verification requests</Text>
+          </View>
+          <Text style={{ color: colors.textMuted, fontSize: 18 }}>›</Text>
         </TouchableOpacity>
       )}
 
-      <TouchableOpacity onPress={() => router.push("/(tabs)/(profile)/settings")} style={actionCard}>
-        <Text style={{ color: colors.text, fontSize: 18, fontWeight: "700" }}>⚙️ Settings</Text>
-        <Text style={{ color: colors.textSecondary, marginTop: 4, fontSize: 13 }}>Account preferences & app settings</Text>
+      {/* SETTINGS */}
+      <TouchableOpacity
+        onPress={() => router.push("/(tabs)/(profile)/settings")}
+        style={menuCard}
+      >
+        <Text style={{ fontSize: 28 }}>⚙️</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: colors.text, fontSize: 17, fontWeight: "700" }}>Settings</Text>
+          <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>Account preferences & app settings</Text>
+        </View>
+        <Text style={{ color: colors.textMuted, fontSize: 18 }}>›</Text>
       </TouchableOpacity>
 
+      {/* LOG OUT */}
       <TouchableOpacity
         onPress={async () => await logout()}
-        style={{ backgroundColor: "#b91c1c", padding: 16, borderRadius: 14, marginTop: 10, marginBottom: 40, alignItems: "center" }}
+        style={{ backgroundColor: "#b91c1c", padding: 16, borderRadius: 14, marginTop: 6, marginBottom: 40, alignItems: "center" }}
       >
         <Text style={{ color: "white", fontWeight: "700", fontSize: 18 }}>Log Out</Text>
       </TouchableOpacity>

@@ -1,15 +1,17 @@
 import { useTheme } from "@context/ThemeContext";
 import api from "@lib/api";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
-import { ActivityIndicator, Image, RefreshControl, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Image, RefreshControl, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 
 export default function Leaderboard() {
   const { colors } = useTheme();
+  const router = useRouter();
   const [tab, setTab] = useState<"DIYER" | "MECHANIC">("DIYER");
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [search, setSearch] = useState("");
 
   const fetchLeaderboard = async (role: string) => {
     try {
@@ -21,6 +23,9 @@ export default function Leaderboard() {
 
   useFocusEffect(useCallback(() => { setLoading(true); fetchLeaderboard(tab); }, [tab]));
   const onRefresh = () => { setRefreshing(true); fetchLeaderboard(tab); };
+  const filteredUsers = search.trim()
+  ? users.filter(u => u.name?.toLowerCase().includes(search.toLowerCase()))
+  : users;
 
   const getRankColor = (index: number) => {
     if (index === 0) return "#fbbf24";
@@ -37,7 +42,7 @@ export default function Leaderboard() {
   };
 
   const renderUser = (user: any, index: number) => (
-    <View key={user.id} style={{
+  <TouchableOpacity key={user.id} onPress={() => router.push(`/(tabs)/user/${user.id}`)} style={{
       flexDirection: "row", alignItems: "center",
       backgroundColor: index < 3 ? colors.background : colors.card,
       borderRadius: 14, borderWidth: 1,
@@ -62,7 +67,7 @@ export default function Leaderboard() {
         <Text style={{ color: getRankColor(index), fontWeight: "900", fontSize: index < 3 ? 20 : 16 }}>{user.repPoints}</Text>
         <Text style={{ color: colors.textMuted, fontSize: 11 }}>rep</Text>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 
   return (
@@ -80,6 +85,15 @@ export default function Leaderboard() {
           <Text style={{ color: tab === "MECHANIC" ? "white" : colors.textMuted, fontWeight: "700" }}>🏁 Mechanics</Text>
         </TouchableOpacity>
       </View>
+      <View style={{ paddingHorizontal: 16, marginBottom: 12 }}>
+        <TextInput
+          value={search}
+          onChangeText={setSearch}
+          placeholder="Search users..."
+          placeholderTextColor={colors.textMuted}
+          style={{ backgroundColor: colors.card, color: colors.text, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, borderWidth: 1, borderColor: colors.border, fontSize: 15 }}
+        />
+        </View>
 
       {loading ? (
         <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
@@ -94,7 +108,7 @@ export default function Leaderboard() {
               <Text style={{ color: colors.textSecondary, marginTop: 8 }}>Be the first to earn rep points!</Text>
             </View>
           ) : (
-            users.map((user, index) => renderUser(user, index))
+            filteredUsers.map((user, index) => renderUser(user, index))
           )}
         </ScrollView>
       )}
