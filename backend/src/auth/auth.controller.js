@@ -165,6 +165,11 @@ export const deleteAccount = async (req, res) => {
   try {
     const userId = req.user.id;
 
+    await prisma.carShowAttendee.deleteMany({ where: { userId } });
+    await prisma.carShow.deleteMany({ where: { userId } });
+    await prisma.message.deleteMany({ where: { OR: [{ senderId: userId }, { receiverId: userId }] } });
+    await prisma.conversation.deleteMany({ where: { OR: [{ user1Id: userId }, { user2Id: userId }] } });
+    await prisma.part.deleteMany({ where: { userId } });
     await prisma.notification.deleteMany({ where: { OR: [{ recipientId: userId }, { actorId: userId }] } });
     await prisma.report.deleteMany({ where: { reporterId: userId } });
     await prisma.block.deleteMany({ where: { OR: [{ blockerId: userId }, { blockedId: userId }] } });
