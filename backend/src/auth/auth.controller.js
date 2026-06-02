@@ -176,12 +176,12 @@ export const deleteAccount = async (req, res) => {
     await prisma.like.deleteMany({ where: { userId } });
     await prisma.comment.deleteMany({ where: { userId } });
     await prisma.follow.deleteMany({ where: { OR: [{ followerId: userId }, { followingId: userId }] } });
-    await prisma.bid.deleteMany({ where: { mechanicId: userId } });
+    await prisma.bid.deleteMany({ where: { OR: [{ mechanicId: userId }, { job: { userId } }] } }); // ← fixed
     await prisma.review.deleteMany({ where: { OR: [{ reviewerId: userId }, { mechanicId: userId }] } });
     await prisma.log.deleteMany({ where: { userId } });
     await prisma.vehicle.deleteMany({ where: { userId } });
     await prisma.post.deleteMany({ where: { userId } });
-    await prisma.job.deleteMany({ where: { userId } });
+    await prisma.job.deleteMany({ where: { userId } }); // ← now safe, bids are gone
     await prisma.user.delete({ where: { id: userId } });
 
     res.json({ success: true });
