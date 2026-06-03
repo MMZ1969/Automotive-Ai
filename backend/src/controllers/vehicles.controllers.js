@@ -125,14 +125,14 @@ export const updateVehicle = async (req, res) => {
       return res.status(403).json({ message: "Unauthorized" });
     }
 
-    // Re-decode VIN if it changed
+    // Decode VIN if present (always re-decode to populate engine fields if missing)
     let vinData = {};
-    if (vin && vin.length === 17 && vin !== existing.vin) {
-      vinData = await decodeVin(vin);
+    if (vin && vin.length === 17) {
+    vinData = await decodeVin(vin);
     }
 
     const updated = await prisma.vehicle.update({
-      where: { id: vehicleId },
+      where: { id: vehicleId },   
       data: {
         year,
         make,
