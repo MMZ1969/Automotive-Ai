@@ -40,7 +40,7 @@ const decodeVin = async (vin) => {
 export const createVehicle = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { year, make, model, trim, vin, mileage, notes } = req.body;
+    const { year, make, model, trim, vin, color, mileage, notes } = req.body;
 
     // Decode VIN if provided
     let vinData = {};
@@ -60,6 +60,7 @@ export const createVehicle = async (req, res) => {
         engineCylinders: vinData.engineCylinders || null,
         displacement: vinData.displacement || null,
         driveType: vinData.driveType || null,
+        color: color || null,
         mileage: mileage || null,
         notes: notes || null,
       },
@@ -115,7 +116,7 @@ export const updateVehicle = async (req, res) => {
   try {
     const userId = req.user.id;
     const vehicleId = Number(req.params.id);
-    const { year, make, model, trim, vin, mileage, notes } = req.body;
+    const { year, make, model, trim, vin, color, mileage, notes } = req.body;
 
     const existing = await prisma.vehicle.findUnique({
       where: { id: vehicleId },
@@ -143,6 +144,7 @@ export const updateVehicle = async (req, res) => {
     engineCylinders: vinData.engineCylinders ? String(vinData.engineCylinders) : existing.engineCylinders || null,
     displacement: vinData.displacement ? String(vinData.displacement) : existing.displacement || null,
     driveType: vinData.driveType || existing.driveType || null,
+    color: color || existing.color || null,
     mileage: mileage ? Number(mileage) : existing.mileage || null,
     notes: notes || existing.notes || null,
   },

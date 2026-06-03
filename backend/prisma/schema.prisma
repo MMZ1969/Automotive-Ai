@@ -99,19 +99,24 @@ model Like {
 }
 
 model Vehicle {
-  id        Int      @id @default(autoincrement())
-  userId    Int
-  year      Int
-  make      String
-  model     String
-  trim      String?
-  vin       String?
-  mileage   Int?
-  notes     String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  logs      Log[]
-  user      User     @relation(fields: [userId], references: [id])
+  id               Int      @id @default(autoincrement())
+  userId           Int
+  year             Int
+  make             String
+  model            String
+  trim             String?
+  vin              String?
+  engine           String?
+  engineCylinders  String?
+  displacement     String?
+  driveType        String?
+  color            String?
+  mileage          Int?
+  notes            String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  logs             Log[]
+  user             User     @relation(fields: [userId], references: [id])
 }
 
 model Log {
