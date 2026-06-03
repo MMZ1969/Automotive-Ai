@@ -100,8 +100,8 @@ export default function Diagnose() {
     try {
       setLoading(true); setResult(null); setVideos([]); setScanImage(null);
       const [diagRes, videoRes] = await Promise.all([
-        api.post("/api/diagnose", { query: fullQuery }),
-        api.get(`/api/youtube?query=${encodeURIComponent(fullQuery)}`),
+       api.post("/api/diagnose", { query, vehicle: selectedVehicle || null }),
+       api.get(`/api/youtube?query=${encodeURIComponent(fullQuery)}`),
       ]);
       setResult(diagRes.data); setVideos(videoRes.data);
     } catch { console.error("DIAGNOSE ERROR"); }
@@ -141,7 +141,16 @@ export default function Diagnose() {
                 </TouchableOpacity>
               ))}
             </ScrollView>
-            {selectedVehicle && <Text style={{ color: colors.green, fontSize: 12, marginTop: 8 }}>✓ AI will use your {selectedVehicle.year} {selectedVehicle.make} {selectedVehicle.model} as context</Text>}
+            {selectedVehicle && (
+  <Text style={{ color: colors.green, fontSize: 12, marginTop: 8 }}>
+    ✓ AI will use your {selectedVehicle.year} {selectedVehicle.make} {selectedVehicle.model}{selectedVehicle.engine ? ` • ${selectedVehicle.engine}` : ""} as context
+  </Text>
+)}
+{selectedVehicle && !selectedVehicle.vin && (
+  <Text style={{ color: "#f59e0b", fontSize: 12, marginTop: 4 }}>
+    💡 Add your VIN in My Garage for even more accurate results
+  </Text>
+)}
           </View>
         )}
 
