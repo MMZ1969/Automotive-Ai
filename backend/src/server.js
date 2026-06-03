@@ -116,7 +116,7 @@ app.use("/api/messages", messagesRoutes);
 // AI Diagnosis route
 app.post("/api/diagnose", authMiddleware, async (req, res) => {
   try {
-    const { query } = req.body;
+    const { query, vehicle } = req.body;
 
     // ─── DAILY LIMIT CHECK ───────────────────────────────────────────
     const userId = req.user.id;
@@ -169,7 +169,11 @@ app.post("/api/diagnose", authMiddleware, async (req, res) => {
 5. Immediate action needed
 6. Step by step diagnosis tips
 
+${vehicle ? `Vehicle: ${vehicle.year} ${vehicle.make} ${vehicle.model}${vehicle.trim ? ` ${vehicle.trim}` : ""}${vehicle.engine ? ` | Engine: ${vehicle.engine}` : ""}${vehicle.engineCylinders ? ` ${vehicle.engineCylinders}-cyl` : ""}${vehicle.driveType ? ` | Drive: ${vehicle.driveType}` : ""}${vehicle.vin ? ` | VIN: ${vehicle.vin}` : ""}` : "No specific vehicle provided."}
+
 User's problem: "${query}"
+
+Important: Use the exact vehicle specs above to give accurate part numbers, repair procedures, and cost estimates specific to this vehicle. If no vehicle is provided, ask the user to select their vehicle for better accuracy.
 
 Respond in JSON format only, no markdown, like this:
 {
