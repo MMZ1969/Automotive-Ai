@@ -4,8 +4,10 @@ import prisma from "../lib/prisma.js";
 // Helper — decode VIN via NHTSA and return engine details
 const decodeVin = async (vin) => {
   try {
+    console.log("VIN DECODE STARTING:", vin);
     const res = await fetch(`https://vpic.nhtsa.dot.gov/api/vehicles/decodevin/${vin}?format=json`);
     const data = await res.json();
+    console.log("VIN DECODE RAW RESULTS:", JSON.stringify(data.Results?.slice(0, 5)));
     const results = data.Results;
 
     const get = (variable) => {
