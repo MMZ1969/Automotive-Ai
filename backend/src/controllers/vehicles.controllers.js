@@ -132,21 +132,21 @@ export const updateVehicle = async (req, res) => {
     }
 
     const updated = await prisma.vehicle.update({
-      where: { id: vehicleId },   
-      data: {
-        year,
-        make,
-        model,
-        trim: vinData.trim || trim || existing.trim,
-        vin: vin || existing.vin,
-        engine: vinData.engine || existing.engine,
-        engineCylinders: vinData.engineCylinders || existing.engineCylinders,
-        displacement: vinData.displacement || existing.displacement,
-        driveType: vinData.driveType || existing.driveType,
-        mileage: mileage || existing.mileage,
-        notes: notes || existing.notes,
-      },
-    });
+  where: { id: vehicleId },
+  data: {
+    year: Number(year),
+    make: String(make),
+    model: String(model),
+    trim: vinData.trim || trim || existing.trim || null,
+    vin: vin || existing.vin || null,
+    engine: vinData.engine || existing.engine || null,
+    engineCylinders: vinData.engineCylinders ? String(vinData.engineCylinders) : existing.engineCylinders || null,
+    displacement: vinData.displacement ? String(vinData.displacement) : existing.displacement || null,
+    driveType: vinData.driveType || existing.driveType || null,
+    mileage: mileage ? Number(mileage) : existing.mileage || null,
+    notes: notes || existing.notes || null,
+  },
+});
 
     res.json(updated);
   } catch (err) {
