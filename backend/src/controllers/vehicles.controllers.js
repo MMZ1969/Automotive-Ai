@@ -116,7 +116,7 @@ export const updateVehicle = async (req, res) => {
   try {
     const userId = req.user.id;
     const vehicleId = Number(req.params.id);
-    const { year, make, model, trim, vin, color, mileage, notes } = req.body;
+    const { year, make, model, trim, vin, color, mileage, notes, engine, engineCylinders, displacement, driveType } = req.body;
 
     const existing = await prisma.vehicle.findUnique({
       where: { id: vehicleId },
@@ -126,29 +126,23 @@ export const updateVehicle = async (req, res) => {
       return res.status(403).json({ message: "Unauthorized" });
     }
 
-    // Decode VIN if present (always re-decode to populate engine fields if missing)
-    let vinData = {};
-    if (vin && vin.length === 17) {
-    vinData = await decodeVin(vin);
-    }
-
     const updated = await prisma.vehicle.update({
-  where: { id: vehicleId },
-  data: {
-    year: Number(year),
-    make: String(make),
-    model: String(model),
-    trim: vinData.trim || trim || existing.trim || null,
-    vin: vin || existing.vin || null,
-    engine: vinData.engine || existing.engine || null,
-    engineCylinders: vinData.engineCylinders ? String(vinData.engineCylinders) : existing.engineCylinders || null,
-    displacement: vinData.displacement ? String(vinData.displacement) : existing.displacement || null,
-    driveType: vinData.driveType || existing.driveType || null,
-    color: color || existing.color || null,
-    mileage: mileage ? Number(mileage) : existing.mileage || null,
-    notes: notes || existing.notes || null,
-  },
-});
+      where: { id: vehicleId },
+      data: {
+        year: Number(year),
+        make: String(make),
+        model: String(model),
+        trim: trim || existing.trim || null,
+        vin: vin || existing.vin || null,
+        color: color || existing.color || null,
+        engine: engine || existing.engine || null,
+        engineCylinders: engineCylinders ? String(engineCylinders) : existing.engineCylinders || null,
+        displacement: displacement ? String(displacement) : existing.displacement || null,
+        driveType: driveType || existing.driveType || null,
+        mileage: mileage ? Number(mileage) : existing.mileage || null,
+        notes: notes || existing.notes || null,
+      },
+    });
 
     res.json(updated);
   } catch (err) {
