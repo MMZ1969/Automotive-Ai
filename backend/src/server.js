@@ -173,7 +173,13 @@ ${vehicle ? `Vehicle: ${vehicle.year} ${vehicle.make} ${vehicle.model}${vehicle.
 
 User's problem: "${query}"
 
-Important: Use the exact vehicle specs above to give accurate part numbers, repair procedures, and cost estimates specific to this vehicle. If no vehicle is provided, ask the user to select their vehicle for better accuracy.
+Important: Use the exact vehicle specs above to give accurate diagnosis, severity, and cost estimates specific to this vehicle.
+
+For repair steps: provide general guidance only — do NOT invent specific torque specs, screw counts, or exact procedures you are not certain about. Keep diagnosisSteps high level like "Remove the tail light assembly" not "Remove the 2 screws on the left side".
+
+For part numbers: NEVER provide specific part numbers. Instead mention the part name only (e.g. "tail light bulb" or "brake caliper") and set proTip to include "Bring your VIN to any auto parts store for the exact part number for your specific vehicle."
+
+If no vehicle is provided, ask the user to select their vehicle for better accuracy.
 
 Respond in JSON format only, no markdown, like this:
 {
