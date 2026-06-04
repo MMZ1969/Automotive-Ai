@@ -23,6 +23,7 @@ export default function AddVehicleScreen() {
   const [make, setMake] = useState("");
   const [model, setModel] = useState("");
   const [year, setYear] = useState("");
+  const [decodedVinData, setDecodedVinData] = useState<any>({});
   const [trim, setTrim] = useState("");
   const [color, setColor] = useState("");
   const [mileage, setMileage] = useState("");
@@ -117,6 +118,28 @@ export default function AddVehicleScreen() {
         if (v.Trim) setTrim(v.Trim);
       }
 
+      // Store decoded engine data to send on save
+      setDecodedVinData({
+        engine: v?.DisplacementL && v?.EngineCylinders
+          ? `${parseFloat(v.DisplacementL).toFixed(1)}L ${v.EngineCylinders}-Cylinder`
+          : null,
+        engineCylinders: v?.EngineCylinders || null,
+        displacement: v?.DisplacementL || null,
+        driveType: v?.DriveType || null,
+        trim: v?.Trim || null,
+      });
+
+      // Store decoded engine data to send on save
+      setDecodedVinData({
+        engine: v?.DisplacementL && v?.EngineCylinders
+          ? `${parseFloat(v.DisplacementL).toFixed(1)}L ${v.EngineCylinders}-Cylinder`
+          : null,
+        engineCylinders: v?.EngineCylinders || null,
+        displacement: v?.DisplacementL || null,
+        driveType: v?.DriveType || null,
+        trim: v?.Trim || null,
+      });
+
       Alert.alert("VIN Scanned! 🎉", `VIN: ${scannedVin}\n\nVehicle details have been filled in. Please verify and add any missing info.`);
     } catch (err) {
       console.error("VIN SCAN ERROR:", err);
@@ -143,6 +166,7 @@ export default function AddVehicleScreen() {
         mileage: mileage ? parseInt(mileage) : 0,
         vin,
         notes,
+        ...decodedVinData,
       });
       router.back();
     } catch (err) {

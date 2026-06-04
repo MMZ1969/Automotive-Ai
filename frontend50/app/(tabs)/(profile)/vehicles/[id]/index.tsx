@@ -35,6 +35,7 @@ export default function VehicleDetailsScreen() {
   const [mileage, setMileage] = useState("");
   const [vin, setVin] = useState("");
   const [notes, setNotes] = useState("");
+  const [decodedVinData, setDecodedVinData] = useState<any>({});
 
   useEffect(() => {
     if (!id) return;
@@ -93,6 +94,26 @@ export default function VehicleDetailsScreen() {
       ]
     );
   };
+const decodeVinOnFrontend = async (vinValue: string) => {
+    if (vinValue.length !== 17) return;
+    try {
+      const res = await fetch(`https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVinValues/${vinValue}?format=json`);
+      const data = await res.json();
+      const v = data.Results?.[0];
+      if (v) {
+        setDecodedVinData({
+          engine: v.DisplacementL && v.EngineCylinders
+            ? `${parseFloat(v.DisplacementL).toFixed(1)}L ${v.EngineCylinders}-Cylinder`
+            : null,
+          engineCylinders: v.EngineCylinders || null,
+          displacement: v.DisplacementL || null,
+          driveType: v.DriveType || null,
+        });
+      }
+    } catch (err) {
+      console.error("VIN DECODE ERROR:", err);
+    }
+  };
 
   const handleSave = async () => {
     if (!make.trim() || !model.trim() || !year.trim()) {
@@ -110,6 +131,7 @@ export default function VehicleDetailsScreen() {
         mileage: mileage ? parseInt(mileage) : 0,
         vin,
         notes,
+        ...decodedVinData,
       });
       setVehicle(res.data);
       setEditing(false);
@@ -255,7 +277,14 @@ export default function VehicleDetailsScreen() {
             <TextInput style={styles.input} value={mileage} onChangeText={setMileage} placeholder="50000" placeholderTextColor="#6b7280" keyboardType="numeric" />
 
             <Text style={styles.editLabel}>VIN</Text>
-            <TextInput style={styles.input} value={vin} onChangeText={setVin} placeholder="Vehicle Identification Number" placeholderTextColor="#6b7280" autoCapitalize="characters" />
+            <TextInput 
+              style={styles.input} 
+              value={vin} 
+              onChangeText={(text) => { setVin(text); decodeVinOnFrontend(text); }} 
+              placeholder="Vehicle Identification Number" 
+              placeholderTextColor="#6b7280" 
+              autoCapitalize="characters" 
+            />
 
             <Text style={styles.editLabel}>Notes</Text>
             <TextInput style={[styles.input, { height: 120, textAlignVertical: "top" }]} value={notes} onChangeText={setNotes} placeholder="Any additional notes..." placeholderTextColor="#6b7280" multiline />
