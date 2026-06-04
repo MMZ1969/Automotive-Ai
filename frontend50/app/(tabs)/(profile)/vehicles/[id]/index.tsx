@@ -54,6 +54,27 @@ export default function VehicleDetailsScreen() {
     load();
   }, [id]);
 
+  const decodeVinOnFrontend = async (vinValue: string) => {
+    if (vinValue.length !== 17) return;
+    try {
+      const res = await fetch(`https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVinValues/${vinValue}?format=json`);
+      const data = await res.json();
+      const v = data.Results?.[0];
+      if (v) {
+        setDecodedVinData({
+          engine: v.DisplacementL && v.EngineCylinders
+            ? `${parseFloat(v.DisplacementL).toFixed(1)}L ${v.EngineCylinders}-Cylinder`
+            : null,
+          engineCylinders: v.EngineCylinders || null,
+          displacement: v.DisplacementL || null,
+          driveType: v.DriveType || null,
+        });
+      }
+    } catch (err) {
+      console.error("VIN DECODE ERROR:", err);
+    }
+  };
+
   const populateFields = (data: any) => {
     setMake(data.make || "");
     setModel(data.model || "");
@@ -63,6 +84,10 @@ export default function VehicleDetailsScreen() {
     setMileage(data.mileage?.toString() || "");
     setVin(data.vin || "");
     setNotes(data.notes || "");
+    // Auto-decode VIN if present and engine data is missing
+    if (data.vin && data.vin.length === 17 && !data.engine) {
+      decodeVinOnFrontend(data.vin);
+    }
   };
 
   const openLogs = () => {
@@ -93,26 +118,6 @@ export default function VehicleDetailsScreen() {
         },
       ]
     );
-  };
-const decodeVinOnFrontend = async (vinValue: string) => {
-    if (vinValue.length !== 17) return;
-    try {
-      const res = await fetch(`https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVinValues/${vinValue}?format=json`);
-      const data = await res.json();
-      const v = data.Results?.[0];
-      if (v) {
-        setDecodedVinData({
-          engine: v.DisplacementL && v.EngineCylinders
-            ? `${parseFloat(v.DisplacementL).toFixed(1)}L ${v.EngineCylinders}-Cylinder`
-            : null,
-          engineCylinders: v.EngineCylinders || null,
-          displacement: v.DisplacementL || null,
-          driveType: v.DriveType || null,
-        });
-      }
-    } catch (err) {
-      console.error("VIN DECODE ERROR:", err);
-    }
   };
 
   const handleSave = async () => {
