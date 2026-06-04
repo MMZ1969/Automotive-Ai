@@ -9,7 +9,7 @@ import {
 } from "react-native";
 
 export default function UserProfile() {
-  const { id } = useLocalSearchParams();
+  const { id, from } = useLocalSearchParams();
   const { user: me } = useAuth();
   const { colors } = useTheme();
   const router = useRouter();
@@ -98,9 +98,9 @@ export default function UserProfile() {
         ListHeaderComponent={
           <View>
             <View style={{ paddingTop: 60, paddingHorizontal: 20, paddingBottom: 16 }}>
-              <TouchableOpacity onPress={() => router.back()}>
+              <TouchableOpacity onPress={() => from === "leaderboard" ? router.push("/(tabs)/leaderboard") : router.back()}>
                 <Text style={{ color: colors.blue, fontSize: 16 }}>← Back</Text>
-              </TouchableOpacity>
+                </TouchableOpacity>
             </View>
 
             <View style={{ alignItems: "center", paddingHorizontal: 20, paddingBottom: 24 }}>

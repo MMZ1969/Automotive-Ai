@@ -42,7 +42,7 @@ export default function Leaderboard() {
   };
 
   const renderUser = (user: any, index: number) => (
-  <TouchableOpacity key={user.id} onPress={() => router.push({ pathname: "/(tabs)/user/[id]", params: { id: user.id } })} style={{
+  <TouchableOpacity key={user.id} onPress={() => router.push({ pathname: "/(tabs)/user/[id]", params: { id: user.id, from: "leaderboard" } })} style={{
       flexDirection: "row", alignItems: "center",
       backgroundColor: index < 3 ? colors.background : colors.card,
       borderRadius: 14, borderWidth: 1,
