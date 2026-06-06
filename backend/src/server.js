@@ -272,13 +272,17 @@ Respond in JSON format only, no markdown, like this:
 
     // ─── EBAY PRICE LOOKUP ────────────────────────────────────────────
     let ebayParts = [];
+    try {
     if (parsed.parts && parsed.parts.length > 0) {
-      const ebayResults = await Promise.all(
-        parsed.parts.map((part) => getEbayPriceRange(part, vehicle))
-      );
-      ebayParts = ebayResults.filter(Boolean); // remove any nulls
-    }
-    parsed.ebayParts = ebayParts;
+    const ebayResults = await Promise.all(
+      parsed.parts.map((part) => getEbayPriceRange(part, vehicle))
+    );
+    ebayParts = ebayResults.filter(Boolean);
+      }
+    } catch (ebayErr) {
+  console.error("EBAY LOOKUP FAILED:", ebayErr.message);
+}
+parsed.ebayParts = ebayParts;
     // ─────────────────────────────────────────────────────────────────
 
     // Award +5 rep for running a diagnosis
