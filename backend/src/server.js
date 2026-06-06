@@ -92,7 +92,8 @@ async function getEbayToken() {
   );
 
   const data = await response.json();
-  return data.access_token;
+console.log("EBAY TOKEN RESPONSE:", JSON.stringify(data));
+return data.access_token;
 }
 
 // Step 2: Search eBay for a part and return a price range
