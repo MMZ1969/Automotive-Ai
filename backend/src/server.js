@@ -262,7 +262,8 @@ Respond in JSON format only, no markdown, like this:
       return res.status(500).json({ error: "AI service error", details: data });
     }
     const text = data.content[0].text;
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    const cleaned = text.replace(/```json|```/g, "").trim();
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       return res.status(500).json({ error: "Invalid AI response" });
     }
@@ -354,7 +355,8 @@ Respond in JSON format only, no markdown, like this:
       return res.status(500).json({ error: "AI service error" });
     }
     const text = data.content[0].text;
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    const cleaned = text.replace(/```json|```/g, "").trim();
+const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       return res.status(500).json({ error: "Invalid AI response" });
     }
@@ -429,7 +431,8 @@ If the image is not automotive related, return:
       return res.status(500).json({ error: "AI service error" });
     }
     const text = data.content[0].text;
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    const cleaned = text.replace(/```json|```/g, "").trim();
+const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       return res.status(500).json({ error: "Invalid AI response" });
     }

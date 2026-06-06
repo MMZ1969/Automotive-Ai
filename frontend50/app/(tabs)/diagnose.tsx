@@ -142,15 +142,15 @@ export default function Diagnose() {
               ))}
             </ScrollView>
             {selectedVehicle && (
-  <Text style={{ color: colors.green, fontSize: 12, marginTop: 8 }}>
-    ✓ AI will use your {selectedVehicle.year} {selectedVehicle.make} {selectedVehicle.model}{selectedVehicle.engine ? ` • ${selectedVehicle.engine}` : ""} as context
-  </Text>
-)}
-{selectedVehicle && !selectedVehicle.vin && (
-  <Text style={{ color: "#f59e0b", fontSize: 12, marginTop: 4 }}>
-    💡 Add your VIN in My Garage for even more accurate results
-  </Text>
-)}
+              <Text style={{ color: colors.green, fontSize: 12, marginTop: 8 }}>
+                ✓ AI will use your {selectedVehicle.year} {selectedVehicle.make} {selectedVehicle.model}{selectedVehicle.engine ? ` • ${selectedVehicle.engine}` : ""} as context
+              </Text>
+            )}
+            {selectedVehicle && !selectedVehicle.vin && (
+              <Text style={{ color: "#f59e0b", fontSize: 12, marginTop: 4 }}>
+                💡 Add your VIN in My Garage for even more accurate results
+              </Text>
+            )}
           </View>
         )}
 
@@ -212,6 +212,8 @@ export default function Diagnose() {
 
         {result && (
           <View style={{ gap: 14 }}>
+
+            {/* Summary Card */}
             <View style={{ backgroundColor: colors.card, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 16 }}>
               <Text style={{ color: colors.text, fontSize: 18, fontWeight: "700", marginBottom: 8 }}>{result.summary}</Text>
               <View style={{ flexDirection: "row", gap: 10, flexWrap: "wrap" }}>
@@ -228,11 +230,13 @@ export default function Diagnose() {
               <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 10, fontStyle: "italic" }}>⚠️ AI diagnosis is for informational purposes only. Always consult a certified mechanic for safety critical repairs.</Text>
             </View>
 
+            {/* Immediate Action */}
             <View style={{ backgroundColor: "#1a0a0a", borderRadius: 16, borderWidth: 1, borderColor: "#ef444433", padding: 16 }}>
               <Text style={{ color: "#ef4444", fontWeight: "700", fontSize: 14, marginBottom: 6 }}>⚠️ Immediate Action</Text>
               <Text style={{ color: colors.text, fontSize: 14, lineHeight: 20 }}>{result.immediateAction}</Text>
             </View>
 
+            {/* Likely Causes */}
             <View style={{ backgroundColor: colors.card, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 16 }}>
               <Text style={{ color: colors.text, fontWeight: "700", fontSize: 16, marginBottom: 12 }}>🔍 Likely Causes</Text>
               {result.causes?.map((cause: string, i: number) => (
@@ -243,6 +247,7 @@ export default function Diagnose() {
               ))}
             </View>
 
+            {/* Diagnosis Steps */}
             <View style={{ backgroundColor: colors.card, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 16 }}>
               <Text style={{ color: colors.text, fontWeight: "700", fontSize: 16, marginBottom: 12 }}>📋 Diagnosis Steps</Text>
               {result.diagnosisSteps?.map((step: string, i: number) => (
@@ -255,11 +260,51 @@ export default function Diagnose() {
               ))}
             </View>
 
+            {/* Pro Tip */}
             <View style={{ backgroundColor: colors.background, borderRadius: 16, borderWidth: 1, borderColor: colors.blue + "33", padding: 16 }}>
               <Text style={{ color: colors.blue, fontWeight: "700", fontSize: 14, marginBottom: 6 }}>💡 Pro Tip</Text>
               <Text style={{ color: colors.text, fontSize: 14, lineHeight: 20 }}>{result.proTip}</Text>
             </View>
 
+            {/* eBay Parts Section */}
+            {result.ebayParts && result.ebayParts.length > 0 && (
+              <View style={{ backgroundColor: colors.card, borderRadius: 16, borderWidth: 1, borderColor: "#e5a00d44", padding: 16 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                  <Text style={{ color: colors.text, fontWeight: "700", fontSize: 16 }}>🛒 Parts You May Need</Text>
+                </View>
+                <Text style={{ color: colors.textMuted, fontSize: 11, marginBottom: 12, fontStyle: "italic" }}>
+                  Price ranges from current eBay Motors listings. Verify part compatibility with your VIN before purchasing.
+                </Text>
+                {result.ebayParts.map((part: any, i: number) => (
+                  <TouchableOpacity
+                    key={i}
+                    onPress={() => Linking.openURL(part.ebayUrl)}
+                    style={{
+                      flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+                      backgroundColor: colors.background, borderRadius: 12, borderWidth: 1,
+                      borderColor: colors.border, padding: 12, marginBottom: 8,
+                    }}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: colors.text, fontWeight: "700", fontSize: 14, textTransform: "capitalize" }}>
+                        {part.partName}
+                      </Text>
+                      <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 2 }}>
+                        {part.listingCount} listings found
+                      </Text>
+                    </View>
+                    <View style={{ alignItems: "flex-end" }}>
+                      <Text style={{ color: "#e5a00d", fontWeight: "800", fontSize: 15 }}>
+                        ${part.priceMin} – ${part.priceMax}
+                      </Text>
+                      <Text style={{ color: colors.blue, fontSize: 11, marginTop: 2 }}>Shop on eBay →</Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+
+            {/* Repair Videos */}
             {videos.length > 0 && (
               <View style={{ backgroundColor: colors.card, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 16, marginBottom: 40 }}>
                 <Text style={{ color: colors.text, fontWeight: "700", fontSize: 16, marginBottom: 6 }}>📺 Repair Videos</Text>
@@ -276,6 +321,7 @@ export default function Diagnose() {
                 ))}
               </View>
             )}
+
           </View>
         )}
       </ScrollView>
