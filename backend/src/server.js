@@ -78,6 +78,7 @@ async function getEbayToken() {
   const credentials = Buffer.from(
     `${process.env.EBAY_APP_ID}:${process.env.EBAY_CERT_ID}`
   ).toString("base64");
+  console.log("EBAY CREDS CHECK:", `${process.env.EBAY_APP_ID}:${process.env.EBAY_CERT_ID}`.length, "chars");
 
   const response = await fetch(
     "https://api.ebay.com/identity/v1/oauth2/token",
