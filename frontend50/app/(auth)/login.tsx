@@ -100,7 +100,7 @@ export default function LoginScreen() {
 
       {/* ERROR */}
       {error && (
-        <Text style={{ color: "#f87171", marginBottom: 12, textAlign: "center" }}>{error}</Text>
+        <Text style={{ color: "#ef4444", marginBottom: 12, textAlign: "center" }}>{error}</Text>
       )}
 
       {/* NEEDS VERIFICATION */}

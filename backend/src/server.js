@@ -24,28 +24,8 @@ import uploadRoutes from "./routes/upload.js";
 import userRoutes from "./routes/user.routes.js";
 import vehiclesRoutes from "./routes/vehicles.routes.js";
 
-// Initialize Firebase Admin
-// admin.initializeApp({
-//   credential: admin.credential.cert({
-//     projectId: process.env.FIREBASE_PROJECT_ID,
-//     clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-//     privateKey: Buffer.from(process.env.FIREBASE_PRIVATE_KEY, 'base64').toString('utf8'),
-//   }),
-// });
-
 const app = express();
 app.set("trust proxy", 1);
-
-// Firebase custom token endpoint
-// app.post("/api/auth/firebase-token", authMiddleware, async (req, res) => {
-//   try {
-//     const token = await admin.auth().createCustomToken(String(req.user.id));
-//     res.json({ token });
-//   } catch (err) {
-//     console.error("FIREBASE TOKEN ERROR:", err);
-//     res.status(500).json({ error: "Could not generate Firebase token" });
-//   }
-// });
 
 app.use(helmet());
 app.use(cors());
@@ -70,22 +50,16 @@ app.use((req, res, next) => {
 // ──────────────────────────────────────────────────────────────────────────────
 
 // ─── RATE LIMITING ────────────────────────────────────────────────────────────
-
-// General API limit — 100 requests per minute
 const generalLimiter = rateLimit({
   windowMs: 1 * 60 * 1000,
   max: 100,
   message: { error: "Too many requests, please slow down." },
 });
-
-// Auth limit — 10 attempts per 15 minutes (stops brute force)
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
   message: { error: "Too many attempts. Please try again in 15 minutes." },
 });
-
-// Register limit — 5 signups per hour per IP (stops bot signups)
 const registerLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 5,
@@ -95,7 +69,87 @@ const registerLimiter = rateLimit({
 app.use("/api", generalLimiter);
 app.use("/api/auth/login", authLimiter);
 app.use("/api/auth/register", registerLimiter);
+// ─────────────────────────────────────────────────────────────────────────────
 
+// ─── EBAY HELPERS ────────────────────────────────────────────────────────────
+
+// Step 1: Get an eBay OAuth token using our App ID + Cert ID
+async function getEbayToken() {
+  const credentials = Buffer.from(
+    `${process.env.EBAY_APP_ID}:${process.env.EBAY_CERT_ID}`
+  ).toString("base64");
+
+  const response = await fetch(
+    "https://api.ebay.com/identity/v1/oauth2/token",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        Authorization: `Basic ${credentials}`,
+      },
+      body: "grant_type=client_credentials&scope=https%3A%2F%2Fapi.ebay.com%2Foauth%2Fapi_scope",
+    }
+  );
+
+  const data = await response.json();
+  return data.access_token;
+}
+
+// Step 2: Search eBay for a part and return a price range
+async function getEbayPriceRange(partName, vehicle) {
+  try {
+    const token = await getEbayToken();
+    if (!token) return null;
+
+    // Build search query: e.g. "2018 Honda Civic alternator"
+    const vehicleContext = vehicle
+      ? `${vehicle.year} ${vehicle.make} ${vehicle.model}`
+      : "";
+    const searchQuery = encodeURIComponent(
+      `${vehicleContext} ${partName}`.trim()
+    );
+
+    const response = await fetch(
+      `https://api.ebay.com/buy/browse/v1/item_summary/search?q=${searchQuery}&category_ids=6030&limit=20&filter=conditionIds:%7B1000|1500|2000|2500%7D`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+          "X-EBAY-C-MARKETPLACE-ID": "EBAY_US",
+        },
+      }
+    );
+
+    const data = await response.json();
+    const items = data.itemSummaries;
+
+    if (!items || items.length === 0) return null;
+
+    // Pull out prices and find the range
+    const prices = items
+      .map((item) => parseFloat(item.price?.value))
+      .filter((p) => !isNaN(p) && p > 0);
+
+    if (prices.length === 0) return null;
+
+    const min = Math.min(...prices);
+    const max = Math.max(...prices);
+
+    // Build a search URL so users can tap and browse on eBay
+    const ebaySearchUrl = `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(`${vehicleContext} ${partName}`.trim())}&_sacat=6030`;
+
+    return {
+      partName,
+      priceMin: min.toFixed(0),
+      priceMax: max.toFixed(0),
+      listingCount: prices.length,
+      ebayUrl: ebaySearchUrl,
+    };
+  } catch (err) {
+    console.error(`EBAY PRICE ERROR for ${partName}:`, err);
+    return null;
+  }
+}
 // ─────────────────────────────────────────────────────────────────────────────
 
 // Routes
@@ -127,8 +181,8 @@ app.post("/api/diagnose", authMiddleware, async (req, res) => {
 
     const today = new Date();
     const lastDate = userData?.lastDiagnosisDate;
-    const isNewDay = !lastDate || 
-      lastDate.toDateString() !== today.toDateString();
+    const isNewDay =
+      !lastDate || lastDate.toDateString() !== today.toDateString();
 
     if (isNewDay) {
       await prisma.user.update({
@@ -137,11 +191,12 @@ app.post("/api/diagnose", authMiddleware, async (req, res) => {
       });
     }
 
-    const currentCount = isNewDay ? 0 : (userData?.dailyDiagnoses || 0);
+    const currentCount = isNewDay ? 0 : userData?.dailyDiagnoses || 0;
 
     if (currentCount >= 5) {
-      return res.status(429).json({ 
-        error: "Daily limit reached. You get 5 free diagnoses per day. Come back tomorrow!",
+      return res.status(429).json({
+        error:
+          "Daily limit reached. You get 5 free diagnoses per day. Come back tomorrow!",
         limitReached: true,
       });
     }
@@ -156,7 +211,7 @@ app.post("/api/diagnose", authMiddleware, async (req, res) => {
       },
       body: JSON.stringify({
         model: "claude-opus-4-5",
-        max_tokens: 1000,
+        max_tokens: 1200,
         messages: [
           {
             role: "user",
@@ -168,6 +223,7 @@ app.post("/api/diagnose", authMiddleware, async (req, res) => {
 4. DIY difficulty (Easy/Medium/Hard/Professional Only)
 5. Immediate action needed
 6. Step by step diagnosis tips
+7. A list of parts the user would likely need to purchase to fix this problem
 
 ${vehicle ? `Vehicle: ${vehicle.year} ${vehicle.make} ${vehicle.model}${vehicle.trim ? ` ${vehicle.trim}` : ""}${vehicle.engine ? ` | Engine: ${vehicle.engine}` : ""}${vehicle.engineCylinders ? ` ${vehicle.engineCylinders}-cyl` : ""}${vehicle.driveType ? ` | Drive: ${vehicle.driveType}` : ""}${vehicle.vin ? ` | VIN: ${vehicle.vin}` : ""}` : "No specific vehicle provided."}
 
@@ -178,6 +234,8 @@ Important: Use the exact vehicle specs above to give accurate diagnosis, severit
 For repair steps: provide general guidance only — do NOT invent specific torque specs, screw counts, or exact procedures you are not certain about. Keep diagnosisSteps high level like "Remove the tail light assembly" not "Remove the 2 screws on the left side".
 
 For part numbers: NEVER provide specific part numbers. Instead mention the part name only (e.g. "tail light bulb" or "brake caliper") and set proTip to include "Bring your VIN to any auto parts store for the exact part number for your specific vehicle."
+
+For the parts array: list only parts the user would need to BUY (not tools). Use simple generic names like "alternator", "brake pads", "serpentine belt". Maximum 4 parts. If no parts need to be purchased (e.g. just a fluid top-up or adjustment), return an empty array.
 
 If no vehicle is provided, ask the user to select their vehicle for better accuracy.
 
@@ -190,9 +248,10 @@ Respond in JSON format only, no markdown, like this:
   "diyDifficulty": "Easy|Medium|Hard|Professional Only",
   "immediateAction": "what to do right now",
   "diagnosisSteps": ["step 1", "step 2", "step 3"],
-  "proTip": "one expert tip"
-}`
-          }
+  "proTip": "one expert tip",
+  "parts": ["part name 1", "part name 2"]
+}`,
+          },
         ],
       }),
     });
@@ -209,16 +268,27 @@ Respond in JSON format only, no markdown, like this:
     }
     const parsed = JSON.parse(jsonMatch[0]);
 
+    // ─── EBAY PRICE LOOKUP ────────────────────────────────────────────
+    let ebayParts = [];
+    if (parsed.parts && parsed.parts.length > 0) {
+      const ebayResults = await Promise.all(
+        parsed.parts.map((part) => getEbayPriceRange(part, vehicle))
+      );
+      ebayParts = ebayResults.filter(Boolean); // remove any nulls
+    }
+    parsed.ebayParts = ebayParts;
+    // ─────────────────────────────────────────────────────────────────
+
     // Award +5 rep for running a diagnosis
     try {
       await prisma.user.update({
-    where: { id: req.user.id },
-    data: { 
-    repPoints: { increment: 5 },
-    dailyDiagnoses: { increment: 1 },
-    lastDiagnosisDate: new Date(),
-  },
-});
+        where: { id: req.user.id },
+        data: {
+          repPoints: { increment: 5 },
+          dailyDiagnoses: { increment: 1 },
+          lastDiagnosisDate: new Date(),
+        },
+      });
     } catch (repErr) {
       console.error("REP AWARD ERROR:", repErr);
     }
@@ -579,12 +649,13 @@ app.get("/api/youtube", async (req, res) => {
     const response = await fetch(url);
     const data = await response.json();
 
-    const videos = data.items?.map((item) => ({
-      videoId: item.id.videoId,
-      title: item.snippet.title,
-      thumbnail: item.snippet.thumbnails.medium.url,
-      channel: item.snippet.channelTitle,
-    })) || [];
+    const videos =
+      data.items?.map((item) => ({
+        videoId: item.id.videoId,
+        title: item.snippet.title,
+        thumbnail: item.snippet.thumbnails.medium.url,
+        channel: item.snippet.channelTitle,
+      })) || [];
 
     res.json(videos);
   } catch (err) {

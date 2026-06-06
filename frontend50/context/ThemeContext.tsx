@@ -19,7 +19,9 @@ const darkColors = {
   textSecondary: "#9ca3af",
   textMuted: "#6b7280",
   blue: "#345bff",
+  blueMuted: "#1e3a8a",
   green: "#10b981",
+  greenMuted: "#064e3b",
   input: "#11131a",
 };
 
@@ -31,7 +33,9 @@ const lightColors = {
   textSecondary: "#4b5563",
   textMuted: "#9ca3af",
   blue: "#345bff",
+  blueMuted: "#dbeafe",
   green: "#10b981",
+  greenMuted: "#d1fae5",
   input: "#f3f4f6",
 };
 

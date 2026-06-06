@@ -111,7 +111,7 @@ export default function Register() {
       <View style={{ flexDirection: "row", gap: 10, marginBottom: 20 }}>
         <TouchableOpacity
           onPress={() => setRole("DIYER")}
-          style={{ flex: 1, padding: 14, borderRadius: 10, alignItems: "center", backgroundColor: role === "DIYER" ? "#064e3b" : colors.input, borderWidth: 1, borderColor: role === "DIYER" ? colors.green : colors.border }}
+          style={{ flex: 1, padding: 14, borderRadius: 10, alignItems: "center", backgroundColor: role === "DIYER" ? colors.greenMuted ?? "#064e3b" : colors.input, borderWidth: 1, borderColor: role === "DIYER" ? colors.green : colors.border }}
         >
           <Text style={{ fontSize: 28, marginBottom: 6 }}>🔧</Text>
           <Text style={{ color: colors.text, fontWeight: "bold", fontSize: 16 }}>DIYer</Text>
@@ -119,7 +119,7 @@ export default function Register() {
         </TouchableOpacity>
         <TouchableOpacity
           onPress={() => setRole("MECHANIC")}
-          style={{ flex: 1, padding: 14, borderRadius: 10, alignItems: "center", backgroundColor: role === "MECHANIC" ? "#1e3a8a" : colors.input, borderWidth: 1, borderColor: role === "MECHANIC" ? colors.blue : colors.border }}
+          style={{ flex: 1, padding: 14, borderRadius: 10, alignItems: "center", backgroundColor: role === "MECHANIC" ? colors.blueMuted ?? "#1e3a8a" : colors.input, borderWidth: 1, borderColor: role === "MECHANIC" ? colors.blue : colors.border }}
         >
           <Text style={{ fontSize: 28, marginBottom: 6 }}>🏁</Text>
           <Text style={{ color: colors.text, fontWeight: "bold", fontSize: 16 }}>Mechanic</Text>

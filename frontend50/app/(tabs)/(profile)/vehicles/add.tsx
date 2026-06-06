@@ -117,6 +117,8 @@ export default function AddVehicleScreen() {
         if (v.ModelYear) setYear(v.ModelYear);
         if (v.Trim) setTrim(v.Trim);
       }
+      
+      console.log("NHTSA RAW:", JSON.stringify(v));
 
       // Store decoded engine data to send on save
       setDecodedVinData({
