@@ -194,7 +194,7 @@ app.post("/api/diagnose", authMiddleware, async (req, res) => {
 
     const currentCount = isNewDay ? 0 : userData?.dailyDiagnoses || 0;
 
-    if (currentCount >= 5) {
+    if (currentCount >= 20) {
       return res.status(429).json({
         error:
           "Daily limit reached. You get 5 free diagnoses per day. Come back tomorrow!",

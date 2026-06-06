@@ -104,7 +104,7 @@ export default function Diagnose() {
        api.get(`/api/youtube?query=${encodeURIComponent(fullQuery)}`),
       ]);
       setResult(diagRes.data); setVideos(videoRes.data);
-    } catch { console.error("DIAGNOSE ERROR"); }
+    } catch (err: any) { console.error("DIAGNOSE ERROR", err?.response?.data || err?.message || err); }
     finally { setLoading(false); }
   };
 
