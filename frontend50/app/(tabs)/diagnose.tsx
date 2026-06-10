@@ -98,21 +98,14 @@ export default function Diagnose() {
       Alert.alert("🚗 Automotive Only", "This AI is specialized for vehicle diagnostics only."); return;
     }
     try {
-  setLoading(true); setResult(null); setVideos([]); setScanImage(null);
-  let diagRes;
-  try {
-    diagRes = await api.post("/api/diagnose", { query, vehicle: selectedVehicle || null });
-  } catch (diagErr: any) {
-    if (diagErr?.response?.status === 429) {
-      Alert.alert("Daily Limit Reached", "You get 8 free diagnoses per day. Come back tomorrow! 🚗");
-      return;
-    }
-    throw diagErr;
-  }
-  const videoRes = await api.get(`/api/youtube?query=${encodeURIComponent(fullQuery)}`);
-  setResult(diagRes.data); setVideos(videoRes.data);
-} catch { console.error("DIAGNOSE ERROR"); }
-finally { setLoading(false); }
+      setLoading(true); setResult(null); setVideos([]); setScanImage(null);
+      const [diagRes, videoRes] = await Promise.all([
+       api.post("/api/diagnose", { query, vehicle: selectedVehicle || null }),
+       api.get(`/api/youtube?query=${encodeURIComponent(fullQuery)}`),
+      ]);
+      setResult(diagRes.data); setVideos(videoRes.data);
+    } catch (err: any) { console.error("DIAGNOSE ERROR", err?.response?.data || err?.message || err); }
+    finally { setLoading(false); }
   };
 
   const severityColor = (severity: string) => {
@@ -218,14 +211,7 @@ finally { setLoading(false); }
         </TouchableOpacity>
 
         {result && (
-  <View style={{ gap: 14 }}>
-    <TouchableOpacity
-      onPress={() => { setResult(null); setVideos([]); setScanImage(null); setQuery(""); }}
-      style={{ backgroundColor: colors.card, borderRadius: 12, borderWidth: 1, borderColor: colors.border, paddingVertical: 12, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8 }}
-    >
-      <MaterialCommunityIcons name="refresh" size={18} color={colors.textSecondary} />
-      <Text style={{ color: colors.textSecondary, fontWeight: "700" }}>New Diagnosis</Text>
-    </TouchableOpacity>
+          <View style={{ gap: 14 }}>
 
             {/* Summary Card */}
             <View style={{ backgroundColor: colors.card, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 16 }}>

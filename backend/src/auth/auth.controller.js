@@ -63,7 +63,7 @@ export const register = async (req, res) => {
     });
 
     // Send verification email
-    const verifyLink = `https://automotive-ai-production.up.railway.app/api/auth/verify-email?token=${verificationToken}`;
+    const verifyLink = `automotiveai://verify-email?token=${verificationToken}`;
     await sgMail.send({
       to: email,
       from: "maz@amazmade.com",
@@ -100,7 +100,7 @@ export const login = async (req, res) => {
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    const isMatch = await bcrypt.compare(password, user.password);
+const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(400).json({ message: "Invalid credentials" });
     }
@@ -119,18 +119,18 @@ export const login = async (req, res) => {
     );
 
     res.json({
-      token,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-        profilePhoto: user.profilePhoto,
-        repPoints: user.repPoints,
-        isAdmin: user.isAdmin,
-        location: user.location,
-        isVerified: user.isVerified,
-      },
+  token,
+  user: {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    role: user.role,
+    profilePhoto: user.profilePhoto,
+    repPoints: user.repPoints,
+    isAdmin: user.isAdmin,
+    location: user.location,
+    isVerified: user.isVerified,
+  },
     });
   } catch (err) {
     console.error("LOGIN ERROR:", err);
@@ -176,12 +176,12 @@ export const deleteAccount = async (req, res) => {
     await prisma.like.deleteMany({ where: { userId } });
     await prisma.comment.deleteMany({ where: { userId } });
     await prisma.follow.deleteMany({ where: { OR: [{ followerId: userId }, { followingId: userId }] } });
-    await prisma.bid.deleteMany({ where: { OR: [{ mechanicId: userId }, { job: { userId } }] } });
+    await prisma.bid.deleteMany({ where: { OR: [{ mechanicId: userId }, { job: { userId } }] } }); // ← fixed
     await prisma.review.deleteMany({ where: { OR: [{ reviewerId: userId }, { mechanicId: userId }] } });
     await prisma.log.deleteMany({ where: { userId } });
     await prisma.vehicle.deleteMany({ where: { userId } });
     await prisma.post.deleteMany({ where: { userId } });
-    await prisma.job.deleteMany({ where: { userId } });
+    await prisma.job.deleteMany({ where: { userId } }); // ← now safe, bids are gone
     await prisma.user.delete({ where: { id: userId } });
 
     res.json({ success: true });
@@ -309,26 +309,7 @@ export const verifyEmail = async (req, res) => {
     });
 
     if (!user) {
-      return res.status(400).send(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-          <title>Verification Failed — AutoAI</title>
-          <style>
-            body { background: #050509; color: white; font-family: sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; text-align: center; padding: 20px; }
-            h1 { color: #ef4444; font-size: 32px; margin-bottom: 12px; }
-            p { color: #9ca3af; margin-bottom: 32px; }
-          </style>
-        </head>
-        <body>
-          <div>
-            <h1>❌ Link Expired</h1>
-            <p>This verification link is invalid or has already been used. Please request a new one from the app.</p>
-          </div>
-        </body>
-        </html>
-      `);
+      return res.status(400).json({ message: "Invalid or expired verification link." });
     }
 
     await prisma.user.update({
@@ -339,34 +320,25 @@ export const verifyEmail = async (req, res) => {
       },
     });
 
+    // Return token so they get logged in automatically after verifying
     const jwtToken = jwt.sign(
       { userId: user.id, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
 
-    res.send(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-        <title>Email Verified — AutoAI</title>
-        <style>
-          body { background: #050509; color: white; font-family: sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; text-align: center; padding: 20px; }
-          h1 { color: #345bff; font-size: 32px; margin-bottom: 12px; }
-          p { color: #9ca3af; margin-bottom: 32px; }
-          a { background: #345bff; color: white; padding: 16px 32px; border-radius: 12px; text-decoration: none; font-weight: bold; font-size: 18px; }
-        </style>
-      </head>
-      <body>
-        <div>
-          <h1>✅ Email Verified!</h1>
-          <p>Welcome to AutoAI! Tap below to open the app and start exploring.</p>
-          <a href="automotiveai://verified">Open AutoAI 🚗</a>
-        </div>
-      </body>
-      </html>
-    `);
+    res.json({ 
+      message: "Email verified! Welcome to AutoAI 🚗",
+      token: jwtToken,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        profilePhoto: user.profilePhoto,
+        repPoints: user.repPoints,
+      },
+    });
   } catch (err) {
     console.error("VERIFY EMAIL ERROR:", err);
     res.status(500).json({ message: "Server error" });
@@ -393,7 +365,7 @@ export const resendVerification = async (req, res) => {
       data: { verificationToken },
     });
 
-    const verifyLink = `https://automotive-ai-production.up.railway.app/api/auth/verify-email?token=${verificationToken}`;
+    const verifyLink = `automotiveai://verify-email?token=${verificationToken}`;
     await sgMail.send({
       to: email,
       from: "maz@amazmade.com",
