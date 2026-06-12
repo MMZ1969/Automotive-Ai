@@ -6,13 +6,13 @@ import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Text,
   TextInput,
   TouchableOpacity,
   View,
-  Image,
 } from "react-native";
 
 export default function ChatScreen() {
@@ -123,7 +123,7 @@ export default function ChatScreen() {
       <FlatList
         ref={flatListRef}
         data={messages}
-        keyExtractor={(item) => item.id.toString()}
+        keyExtractor={(item, index) => `${item.id}-${index}`}
         contentContainerStyle={{ padding: 16, gap: 8 }}
         ListEmptyComponent={
           <View style={{ alignItems: "center", marginTop: 60 }}>

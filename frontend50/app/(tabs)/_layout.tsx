@@ -13,8 +13,11 @@ export default function TabsLayout() {
     useCallback(() => {
       const fetchUnread = async () => {
         try {
-          const res = await api.get("/api/notifications/unread-count");
-          setUnreadCount(res.data.count);
+          const [notifRes, msgRes] = await Promise.all([
+            api.get("/api/notifications/unread-count"),
+            api.get("/api/messages/unread-count"),
+          ]);
+          setUnreadCount((notifRes.data.count || 0) + (msgRes.data.count || 0));
         } catch (err) {
           // silently fail
         }
