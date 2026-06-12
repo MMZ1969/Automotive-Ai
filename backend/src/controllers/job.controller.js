@@ -1,27 +1,17 @@
 import prisma from "../lib/prisma.js";
 import { createAndSendNotification } from "./notification.controller.js";
 
-// GET all jobs (mechanic view)
+// GET all jobs (mechanic + diyer map view)
 export const getJobs = async (req, res) => {
   try {
-    console.log("GET JOBS HIT - user:", req.user);
-
-    const all = await prisma.job.findMany();
-    console.log("RAW JOB COUNT:", all.length);
-
     const jobs = await prisma.job.findMany({
+      where: { status: "OPEN" },
       orderBy: { createdAt: "desc" },
       include: {
         poster: { select: { id: true, name: true, profilePhoto: true, role: true } },
-        bids: {
-          include: {
-            mechanic: { select: { id: true, name: true, profilePhoto: true, repPoints: true } },
-          },
-        },
+        mechanic: { select: { id: true, name: true, profilePhoto: true } },
       },
     });
-
-    console.log("JOBS WITH INCLUDES COUNT:", jobs.length);
     res.json(jobs);
   } catch (err) {
     console.error("GET JOBS ERROR:", err);
@@ -29,7 +19,7 @@ export const getJobs = async (req, res) => {
   }
 };
 
-// GET my jobs (as DIYer)
+// GET my jobs (DIYer)
 export const getMyJobs = async (req, res) => {
   try {
     const jobs = await prisma.job.findMany({
@@ -37,11 +27,7 @@ export const getMyJobs = async (req, res) => {
       orderBy: { createdAt: "desc" },
       include: {
         poster: { select: { id: true, name: true, profilePhoto: true } },
-        bids: {
-          include: {
-            mechanic: { select: { id: true, name: true, profilePhoto: true, repPoints: true } },
-          },
-        },
+        mechanic: { select: { id: true, name: true, profilePhoto: true, phone: true, email: true } },
       },
     });
     res.json(jobs);
@@ -51,31 +37,28 @@ export const getMyJobs = async (req, res) => {
   }
 };
 
-// GET my bids (as Mechanic)
+// GET my claimed jobs (Mechanic)
 export const getMyBids = async (req, res) => {
   try {
-    const bids = await prisma.bid.findMany({
+    const jobs = await prisma.job.findMany({
       where: { mechanicId: req.user.id },
       orderBy: { createdAt: "desc" },
       include: {
-        job: {
-          include: {
-            poster: { select: { id: true, name: true, profilePhoto: true } },
-          },
-        },
+        poster: { select: { id: true, name: true, profilePhoto: true, phone: true, email: true } },
+        mechanic: { select: { id: true, name: true, profilePhoto: true } },
       },
     });
-    res.json(bids);
+    res.json(jobs);
   } catch (err) {
-    console.error("GET MY BIDS ERROR:", err);
-    res.status(500).json({ error: "Failed to fetch your bids" });
+    console.error("GET MY JOBS (MECHANIC) ERROR:", err);
+    res.status(500).json({ error: "Failed to fetch your jobs" });
   }
 };
 
 // CREATE a job
 export const createJob = async (req, res) => {
   try {
-    const { title, description, vehicle, budget, location } = req.body;
+    const { title, description, vehicle, budget, location, latitude, longitude } = req.body;
     const userId = req.user.id;
 
     if (!title || !description || !vehicle) {
@@ -83,19 +66,25 @@ export const createJob = async (req, res) => {
     }
 
     const job = await prisma.job.create({
-      data: { title, description, vehicle, budget: budget ? Number(budget) : null, location, userId },
+      data: {
+        title, description, vehicle,
+        budget: budget ? Number(budget) : null,
+        location,
+        latitude: latitude ? Number(latitude) : null,
+        longitude: longitude ? Number(longitude) : null,
+        userId,
+      },
       include: {
         poster: { select: { id: true, name: true, profilePhoto: true } },
-        bids: [],
       },
     });
 
+    // Notify all mechanics
     try {
       const mechanics = await prisma.user.findMany({
         where: { role: "MECHANIC" },
         select: { id: true },
       });
-
       await Promise.all(
         mechanics
           .filter(m => m.id !== userId)
@@ -103,8 +92,8 @@ export const createJob = async (req, res) => {
             createAndSendNotification({
               recipientId: m.id,
               actorId: userId,
-              type: "bid",
-              message: `🔧 New job posted: ${title} — tap to view and bid!`,
+              type: "job",
+              message: `🔧 New job posted near you: ${title} — tap to view on the map!`,
             })
           )
       );
@@ -129,6 +118,7 @@ export const deleteJob = async (req, res) => {
     if (job.userId !== req.user.id) return res.status(403).json({ error: "Not authorized" });
 
     await prisma.bid.deleteMany({ where: { jobId: id } });
+    await prisma.review.deleteMany({ where: { jobId: id } });
     await prisma.job.delete({ where: { id } });
 
     res.json({ success: true });
@@ -138,16 +128,11 @@ export const deleteJob = async (req, res) => {
   }
 };
 
-// PLACE a bid on a job
-export const placeBid = async (req, res) => {
+// CLAIM a job (mechanic taps it on map)
+export const claimJob = async (req, res) => {
   try {
     const jobId = Number(req.params.id);
     const mechanicId = req.user.id;
-    const { message, price } = req.body;
-
-    if (!message || !price) {
-      return res.status(400).json({ error: "Message and price are required" });
-    }
 
     const job = await prisma.job.findUnique({
       where: { id: jobId },
@@ -156,99 +141,71 @@ export const placeBid = async (req, res) => {
 
     if (!job) return res.status(404).json({ error: "Job not found" });
     if (job.status !== "OPEN") return res.status(400).json({ error: "Job is no longer open" });
-    if (job.userId === mechanicId) return res.status(400).json({ error: "Cannot bid on your own job" });
+    if (job.userId === mechanicId) return res.status(400).json({ error: "Cannot claim your own job" });
+    if (job.mechanicId) return res.status(400).json({ error: "Job already claimed" });
 
-    const existing = await prisma.bid.findUnique({
-      where: { jobId_mechanicId: { jobId, mechanicId } },
-    });
-    if (existing) return res.status(400).json({ error: "You already bid on this job" });
-
-    const bid = await prisma.bid.create({
-      data: { jobId, mechanicId, message, price: Number(price) },
-      include: {
-        mechanic: { select: { id: true, name: true, profilePhoto: true, repPoints: true } },
-      },
+    // Set mechanic but keep status OPEN until DIYer confirms
+    await prisma.job.update({
+      where: { id: jobId },
+      data: { mechanicId, status: "PENDING_CONFIRM" },
     });
 
-    const mechanic = await prisma.user.findUnique({ where: { id: mechanicId }, select: { name: true } });
+    const mechanic = await prisma.user.findUnique({
+      where: { id: mechanicId },
+      select: { name: true },
+    });
+
+    // Notify the DIYer
     await createAndSendNotification({
       recipientId: job.userId,
       actorId: mechanicId,
-      type: "bid",
-      message: `${mechanic?.name || "A mechanic"} placed a bid on your job: ${job.title} 🔧`,
+      type: "job",
+      message: `🔧 ${mechanic?.name || "A mechanic"} wants to take your job: "${job.title}" — tap to confirm!`,
     });
-
-    res.json(bid);
-  } catch (err) {
-    console.error("PLACE BID ERROR:", err);
-    res.status(500).json({ error: "Failed to place bid" });
-  }
-};
-
-// ACCEPT a bid
-export const acceptBid = async (req, res) => {
-  try {
-    const bidId = Number(req.params.bidId);
-    const userId = req.user.id;
-
-    const bid = await prisma.bid.findUnique({
-      where: { id: bidId },
-      include: { job: true },
-    });
-
-    if (!bid) return res.status(404).json({ error: "Bid not found" });
-    if (bid.job.userId !== userId) return res.status(403).json({ error: "Not authorized" });
-
-    await prisma.job.update({
-      where: { id: bid.jobId },
-      data: { status: "IN_PROGRESS", acceptedBidId: bidId },
-    });
-
-    await prisma.bid.update({
-      where: { id: bidId },
-      data: { status: "ACCEPTED" },
-    });
-
-    // Get all the losing bids BEFORE we reject them so we have their mechanic IDs
-    const losingBids = await prisma.bid.findMany({
-      where: { jobId: bid.jobId, id: { not: bidId } },
-      select: { mechanicId: true },
-    });
-
-    await prisma.bid.updateMany({
-      where: { jobId: bid.jobId, id: { not: bidId } },
-      data: { status: "REJECTED" },
-    });
-
-    const poster = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { name: true, email: true, phone: true },
-    });
-
-    // Notify the WINNING mechanic
-    await createAndSendNotification({
-      recipientId: bid.mechanicId,
-      actorId: userId,
-      type: "bid_accepted",
-      message: `${poster?.name || "Someone"} accepted your bid! 🎉 Contact them at ${poster?.phone || poster?.email} to get started.`,
-    });
-
-    // Notify all the LOSING mechanics
-    await Promise.all(
-      losingBids.map(losingBid =>
-        createAndSendNotification({
-          recipientId: losingBid.mechanicId,
-          actorId: userId,
-          type: "bid_rejected",
-          message: `Another mechanic was selected for this job. Keep bidding — your next job is out there! 🔧`,
-        })
-      )
-    );
 
     res.json({ success: true });
   } catch (err) {
-    console.error("ACCEPT BID ERROR:", err);
-    res.status(500).json({ error: "Failed to accept bid" });
+    console.error("CLAIM JOB ERROR:", err);
+    res.status(500).json({ error: "Failed to claim job" });
+  }
+};
+
+// CONFIRM a mechanic (DIYer confirms after claim)
+export const confirmJob = async (req, res) => {
+  try {
+    const jobId = Number(req.params.id);
+    const userId = req.user.id;
+
+    const job = await prisma.job.findUnique({
+      where: { id: jobId },
+      include: {
+        mechanic: { select: { id: true, name: true, phone: true, email: true } },
+        poster: { select: { id: true, name: true, phone: true, email: true } },
+      },
+    });
+
+    if (!job) return res.status(404).json({ error: "Job not found" });
+    if (job.userId !== userId) return res.status(403).json({ error: "Not authorized" });
+    if (job.status !== "PENDING_CONFIRM") return res.status(400).json({ error: "Job is not pending confirmation" });
+    if (!job.mechanicId) return res.status(400).json({ error: "No mechanic to confirm" });
+
+    await prisma.job.update({
+      where: { id: jobId },
+      data: { status: "IN_PROGRESS" },
+    });
+
+    // Notify the mechanic
+    await createAndSendNotification({
+      recipientId: job.mechanicId,
+      actorId: userId,
+      type: "job",
+      message: `✅ ${job.poster.name} confirmed your claim on "${job.title}"! Contact: ${job.poster.phone || job.poster.email}`,
+    });
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("CONFIRM JOB ERROR:", err);
+    res.status(500).json({ error: "Failed to confirm job" });
   }
 };
 
@@ -261,19 +218,14 @@ export const completeJob = async (req, res) => {
     const job = await prisma.job.findUnique({
       where: { id },
       include: {
-        bids: {
-          where: { status: "ACCEPTED" },
-          include: { mechanic: { select: { id: true, name: true } } },
-        },
+        mechanic: { select: { id: true, name: true } },
         poster: { select: { id: true, name: true } },
       },
     });
 
     if (!job) return res.status(404).json({ error: "Job not found" });
 
-    // Allow either the DIYer (job poster) OR the accepted mechanic to complete
-    const acceptedBid = job.bids[0];
-    const isMechanic = acceptedBid?.mechanic?.id === userId;
+    const isMechanic = job.mechanicId === userId;
     const isDIYer = job.userId === userId;
 
     if (!isMechanic && !isDIYer) {
@@ -285,20 +237,18 @@ export const completeJob = async (req, res) => {
       data: { status: "COMPLETED" },
     });
 
-    // If mechanic completed it, notify the DIYer
-    if (isMechanic && acceptedBid) {
+    if (isMechanic && job.mechanic) {
       await createAndSendNotification({
         recipientId: job.userId,
         actorId: userId,
         type: "job_update",
-        message: `🏁 ${acceptedBid.mechanic.name} marked your job "${job.title}" as complete! Please leave a review.`,
+        message: `🏁 ${job.mechanic.name} marked your job "${job.title}" as complete! Please leave a review.`,
       });
     }
 
-    // If DIYer completed it, notify the mechanic
-    if (isDIYer && acceptedBid) {
+    if (isDIYer && job.mechanic) {
       await createAndSendNotification({
-        recipientId: acceptedBid.mechanic.id,
+        recipientId: job.mechanic.id,
         actorId: userId,
         type: "job_update",
         message: `🏁 ${job.poster.name} marked "${job.title}" as complete!`,
@@ -312,7 +262,7 @@ export const completeJob = async (req, res) => {
   }
 };
 
-// STATUS UPDATE on a job (mechanic sends preset message to customer)
+// STATUS UPDATE (mechanic sends preset message to customer)
 export const sendStatusUpdate = async (req, res) => {
   try {
     const jobId = Number(req.params.id);
@@ -321,11 +271,7 @@ export const sendStatusUpdate = async (req, res) => {
 
     const job = await prisma.job.findUnique({
       where: { id: jobId },
-      include: {
-        poster: {
-          select: { id: true, name: true, pushToken: true },
-        },
-      },
+      include: { poster: { select: { id: true, name: true } } },
     });
 
     if (!job) return res.status(404).json({ error: "Job not found" });
@@ -335,21 +281,11 @@ export const sendStatusUpdate = async (req, res) => {
       select: { name: true },
     });
 
-    const fullMessage = `🔧 ${mechanic?.name || "Your mechanic"}: ${message}`;
-
-    // 1. Save in-app notification (existing behavior)
     await createAndSendNotification({
       recipientId: job.userId,
       actorId: mechanicId,
       type: "job_update",
-      message: fullMessage,
-    });
-
-    // 2. Fire real push notification to customer's device
-    await sendPushNotification({
-      pushToken: job.poster.pushToken,
-      title: "🔧 Job Update",
-      body: message,
+      message: `🔧 ${mechanic?.name || "Your mechanic"}: ${message}`,
     });
 
     res.json({ success: true });
@@ -359,7 +295,7 @@ export const sendStatusUpdate = async (req, res) => {
   }
 };
 
-// QUICK ALERT — no job needed, mechanic sends alert to any user by ID
+// QUICK ALERT
 export const sendQuickAlert = async (req, res) => {
   try {
     const mechanicId = req.user.id;
@@ -378,10 +314,7 @@ export const sendQuickAlert = async (req, res) => {
       return res.status(403).json({ error: "Only mechanics can send quick alerts" });
     }
 
-    const customer = await prisma.user.findUnique({
-      where: { id: Number(customerId) },
-    });
-
+    const customer = await prisma.user.findUnique({ where: { id: Number(customerId) } });
     if (!customer) return res.status(404).json({ error: "Customer not found" });
 
     await createAndSendNotification({
@@ -397,3 +330,7 @@ export const sendQuickAlert = async (req, res) => {
     res.status(500).json({ error: "Failed to send quick alert" });
   }
 };
+
+// PLACEHOLDER — kept for route compatibility
+export const placeBid = async (req, res) => res.status(410).json({ error: "Bidding has been replaced by direct job claiming." });
+export const acceptBid = async (req, res) => res.status(410).json({ error: "Bidding has been replaced by direct job claiming." });

@@ -43,6 +43,7 @@ model User {
   reports               Report[]       @relation("Reporter")
   jobsPosted            Job[]          @relation("JobPoster")
   bids                  Bid[]          @relation("BidMechanic")
+  jobsClaimed           Job[]          @relation("JobMechanic")
   reviewsGiven          Review[]       @relation("ReviewGiver")
   reviewsReceived       Review[]       @relation("ReviewReceiver")
   parts                 Part[]
@@ -191,11 +192,15 @@ model Job {
   vehicle       String
   budget        Float?
   location      String?
+  latitude      Float?
+  longitude     Float?
+  mechanicId    Int?
   status        String   @default("OPEN")
   acceptedBidId Int?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   poster        User     @relation("JobPoster", fields: [userId], references: [id])
+  mechanic      User?    @relation("JobMechanic", fields: [mechanicId], references: [id])
   bids          Bid[]
   review        Review?
 }

@@ -1,7 +1,9 @@
 import express from "express";
 import {
     acceptBid,
+    claimJob,
     completeJob,
+    confirmJob,
     createJob,
     deleteJob,
     getJobs,
@@ -11,7 +13,6 @@ import {
     sendQuickAlert,
     sendStatusUpdate,
 } from "../controllers/job.controller.js";
-import authMiddleware from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
@@ -22,6 +23,8 @@ router.post("/", authMiddleware, createJob);
 router.delete("/:id", authMiddleware, deleteJob);
 router.post("/:id/bid", authMiddleware, placeBid);
 router.post("/:id/bids/:bidId/accept", authMiddleware, acceptBid);
+router.post("/:id/claim", authMiddleware, claimJob);
+router.post("/:id/confirm", authMiddleware, confirmJob);
 router.post("/:id/complete", authMiddleware, completeJob);
 router.post("/:id/status-update", authMiddleware, sendStatusUpdate);
 router.post("/quick-alert", authMiddleware, sendQuickAlert);
