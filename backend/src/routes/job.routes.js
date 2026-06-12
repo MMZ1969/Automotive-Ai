@@ -13,6 +13,7 @@ import {
     sendQuickAlert,
     sendStatusUpdate,
 } from "../controllers/job.controller.js";
+import authMiddleware from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
