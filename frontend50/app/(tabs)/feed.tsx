@@ -2,6 +2,7 @@ import { useAuth } from "@context/AuthContext";
 import { useTheme } from "@context/ThemeContext";
 import api from "@lib/api";
 import { useFocusEffect, useRouter } from "expo-router";
+import { SlidersHorizontal } from "lucide-react-native";
 import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
@@ -17,17 +18,17 @@ import {
 
 const logo = require("../../assets/autoai_icon_1024_tm.png");
 
-const MAIN_TABS = ["forYou", "following", "all"] as const;
+const MAIN_TABS = ["forYou", "following"] as const;
 type MainTab = typeof MAIN_TABS[number];
 
 const FILTERS = [
-  { key: "ALL",          label: "All Posts",   icon: "🌐" },
-  { key: "VANITY",       label: "Vanity",       icon: "🚗" },
-  { key: "QUESTION",     label: "Q&A",          icon: "🔧" },
-  { key: "SERVICE",      label: "Service",      icon: "🏁" },
-  { key: "BEFORE_AFTER", label: "Before/After", icon: "📸" },
-  { key: "CAR_SHOW",     label: "Car Shows",    icon: "🎪" },
-  { key: "NEAR_ME",      label: "Near Me",      icon: "📍" },
+  { key: "ALL",          label: "All Posts",    icon: "🌐" },
+  { key: "VANITY",       label: "Vanity",        icon: "🚗" },
+  { key: "QUESTION",     label: "Q&A",           icon: "🔧" },
+  { key: "SERVICE",      label: "Service",       icon: "🏁" },
+  { key: "BEFORE_AFTER", label: "Before/After",  icon: "📸" },
+  { key: "CAR_SHOW",     label: "Car Shows",     icon: "🎪" },
+  { key: "NEAR_ME",      label: "Near Me",       icon: "📍" },
 ] as const;
 
 type FilterKey = typeof FILTERS[number]["key"];
@@ -53,7 +54,7 @@ export default function Feed() {
     }
     try {
       const endpoint = tab === "following" ? "/api/posts/following" : "/api/posts";
-      const params = (tab === "all" || filter === "ALL") ? {} : { type: filter };
+      const params = filter === "ALL" ? {} : { type: filter };
       const res = await api.get(endpoint, { params });
       const postsWithFollow = await Promise.all(
         res.data.map(async (post: any) => {
@@ -77,11 +78,11 @@ export default function Feed() {
   const onRefresh = () => { setRefreshing(true); fetchPosts(activeTab, activeFilter); };
 
   const handleTabChange = (tab: MainTab) => {
-  setActiveTab(tab);
-  setActiveFilter("ALL"); // ✅ reset filter when switching main tabs
-  setLoading(true);
-  fetchPosts(tab, "ALL");
-};
+    setActiveTab(tab);
+    setActiveFilter("ALL");
+    setLoading(true);
+    fetchPosts(tab, "ALL");
+  };
 
   const handleFilterSelect = (filter: FilterKey) => {
     setFilterModalVisible(false);
@@ -139,7 +140,7 @@ export default function Feed() {
     }
   };
 
-  const activeFilterMeta = FILTERS.find(f => f.key === activeFilter);
+  const filterActive = activeFilter !== "ALL";
 
   if (loading) {
     return (
@@ -225,11 +226,11 @@ export default function Feed() {
           </TouchableOpacity>
         </View>
 
-        {/* ROW: FOR YOU / FOLLOWING / ALL + FILTER BUTTON */}
+        {/* TABS + FILTER BUTTON */}
         <View style={{ flexDirection: "row", alignItems: "center", borderBottomWidth: 1, borderBottomColor: colors.border }}>
-          {(["forYou", "following", "all"] as const).map((key) => {
+          {(["forYou", "following"] as const).map((key) => {
             const isActive = activeTab === key;
-            const labels: Record<string, string> = { forYou: "For You", following: "Following", all: "All" };
+            const labels: Record<string, string> = { forYou: "For You", following: "Following" };
             return (
               <TouchableOpacity
                 key={key}
@@ -243,23 +244,19 @@ export default function Feed() {
             );
           })}
 
-          {/* FILTER PILL BUTTON */}
+          {/* SLIDERS FILTER BUTTON */}
           <TouchableOpacity
             onPress={() => setFilterModalVisible(true)}
             style={{
-              flexDirection: "row", alignItems: "center", gap: 5,
-              paddingHorizontal: 12, paddingVertical: 7,
+              padding: 8,
               marginBottom: 6,
-              backgroundColor: activeFilter !== "ALL" ? colors.blue : colors.card,
-              borderRadius: 20, borderWidth: 1,
-              borderColor: activeFilter !== "ALL" ? colors.blue : colors.border,
+              backgroundColor: filterActive ? colors.blue : colors.card,
+              borderRadius: 10,
+              borderWidth: 1,
+              borderColor: filterActive ? colors.blue : colors.border,
             }}
           >
-            <Text style={{ fontSize: 13 }}>{activeFilterMeta?.icon}</Text>
-            <Text style={{ color: activeFilter !== "ALL" ? "white" : colors.textMuted, fontSize: 12, fontWeight: "600" }}>
-              {activeFilter !== "ALL" ? activeFilterMeta?.label : "Filter"}
-            </Text>
-            <Text style={{ color: activeFilter !== "ALL" ? "white" : colors.textMuted, fontSize: 10 }}>▾</Text>
+            <SlidersHorizontal size={18} color={filterActive ? "white" : colors.textMuted} strokeWidth={2.5} />
           </TouchableOpacity>
         </View>
       </View>
@@ -367,23 +364,23 @@ export default function Feed() {
             <TouchableOpacity onPress={() => router.push(`/(tabs)/post/${item.id}`)} activeOpacity={0.8}>
               <Text style={{ color: colors.text, fontSize: 15, lineHeight: 22 }}>{item.content}</Text>
               {item.imageUrls?.length > 1 ? (
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 4, marginTop: 12 }}>
-            {item.imageUrls.map((url: string, index: number) => (
-                      <Image
-                        key={index}
-                        source={{ uri: url }}
-                        style={{
-                          width: item.imageUrls.length === 2 ? "49%" : item.imageUrls.length === 3 && index === 0 ? "100%" : "49%",
-                          height: item.imageUrls.length === 2 ? 160 : item.imageUrls.length === 3 && index === 0 ? 200 : 160,
-                          borderRadius: 10,
-                        }}
-                        resizeMode="cover"
-                      />
-                    ))}
-                  </View>
-                ) : item.imageUrl ? (
-                  <Image source={{ uri: item.imageUrl }} style={{ width: "100%", height: 200, borderRadius: 12, marginTop: 12 }} resizeMode="cover" />
-                ) : null}
+                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 4, marginTop: 12 }}>
+                  {item.imageUrls.map((url: string, index: number) => (
+                    <Image
+                      key={index}
+                      source={{ uri: url }}
+                      style={{
+                        width: item.imageUrls.length === 2 ? "49%" : item.imageUrls.length === 3 && index === 0 ? "100%" : "49%",
+                        height: item.imageUrls.length === 2 ? 160 : item.imageUrls.length === 3 && index === 0 ? 200 : 160,
+                        borderRadius: 10,
+                      }}
+                      resizeMode="cover"
+                    />
+                  ))}
+                </View>
+              ) : item.imageUrl ? (
+                <Image source={{ uri: item.imageUrl }} style={{ width: "100%", height: 200, borderRadius: 12, marginTop: 12 }} resizeMode="cover" />
+              ) : null}
               {item.postType === "BEFORE_AFTER" && item.beforeImageUrl && item.afterImageUrl && (
                 <View style={{ flexDirection: "row", gap: 6, marginTop: 10 }}>
                   <View style={{ flex: 1, borderRadius: 10, overflow: "hidden" }}>
