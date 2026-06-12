@@ -241,33 +241,37 @@ export default function Feed() {
           </TouchableOpacity>
 
           {/* STEERING WHEEL CENTER */}
-          <TouchableOpacity
-            onPress={() => setFilterModalVisible(true)}
-            style={{
-              width: 44, height: 44, borderRadius: 22,
-              backgroundColor: filterActive ? colors.blue : colors.card,
-              borderWidth: 1.5,
-              borderColor: filterActive ? colors.blue : colors.border,
-              justifyContent: "center", alignItems: "center",
-              marginBottom: 6,
-            }}
-          >
-            <Svg width={24} height={24} viewBox="0 0 24 24">
-              {/* Outer ring */}
-              <Circle cx="12" cy="12" r="10" stroke={wheelColor} strokeWidth="2" fill="none" />
-              {/* Inner hub */}
-              <Circle cx="12" cy="12" r="2.5" stroke={wheelColor} strokeWidth="2" fill="none" />
-              {/* Spokes - top, bottom, left, right, diagonals */}
-              <Line x1="12" y1="2" x2="12" y2="9.5" stroke={wheelColor} strokeWidth="2" strokeLinecap="round" />
-              <Line x1="12" y1="14.5" x2="12" y2="22" stroke={wheelColor} strokeWidth="2" strokeLinecap="round" />
-              <Line x1="2" y1="12" x2="9.5" y2="12" stroke={wheelColor} strokeWidth="2" strokeLinecap="round" />
-              <Line x1="14.5" y1="12" x2="22" y2="12" stroke={wheelColor} strokeWidth="2" strokeLinecap="round" />
-              <Line x1="4.93" y1="4.93" x2="10.17" y2="10.17" stroke={wheelColor} strokeWidth="2" strokeLinecap="round" />
-              <Line x1="13.83" y1="13.83" x2="19.07" y2="19.07" stroke={wheelColor} strokeWidth="2" strokeLinecap="round" />
-              <Line x1="19.07" y1="4.93" x2="13.83" y2="10.17" stroke={wheelColor} strokeWidth="2" strokeLinecap="round" />
-              <Line x1="10.17" y1="13.83" x2="4.93" y2="19.07" stroke={wheelColor} strokeWidth="2" strokeLinecap="round" />
-            </Svg>
-          </TouchableOpacity>
+<TouchableOpacity
+  onPress={() => setFilterModalVisible(true)}
+  style={{
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 4,
+    paddingHorizontal: 8,
+  }}
+>
+  <View style={{
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: filterActive ? colors.blue : colors.card,
+    borderWidth: 1.5,
+    borderColor: filterActive ? colors.blue : colors.border,
+    justifyContent: "center", alignItems: "center",
+  }}>
+    <Svg width={22} height={22} viewBox="0 0 24 24">
+      {/* Outer ring */}
+      <Circle cx="12" cy="12" r="10" stroke={wheelColor} strokeWidth="1.8" fill="none" />
+      {/* Inner hub */}
+      <Circle cx="12" cy="12" r="2.8" stroke={wheelColor} strokeWidth="1.8" fill="none" />
+      {/* 3 spokes only - top, bottom-left, bottom-right */}
+      <Line x1="12" y1="2" x2="12" y2="9.2" stroke={wheelColor} strokeWidth="1.8" strokeLinecap="round" />
+      <Line x1="3.68" y1="17" x2="9.74" y2="13.5" stroke={wheelColor} strokeWidth="1.8" strokeLinecap="round" />
+      <Line x1="20.32" y1="17" x2="14.26" y2="13.5" stroke={wheelColor} strokeWidth="1.8" strokeLinecap="round" />
+    </Svg>
+  </View>
+  <Text style={{ color: filterActive ? colors.blue : colors.textMuted, fontSize: 9, fontWeight: "600", marginTop: 2, letterSpacing: 0.5 }}>
+    {filterActive ? "ON" : "FILTER"}
+  </Text>
+</TouchableOpacity>
 
           {/* FOLLOWING */}
           <TouchableOpacity

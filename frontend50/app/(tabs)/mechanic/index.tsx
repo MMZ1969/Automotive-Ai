@@ -39,7 +39,36 @@ export default function MechanicDashboard() {
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: 20 }}>
-      <View style={{ marginBottom: 30, marginTop: 20 }}>
+
+      {/* VERIFICATION BANNER */}
+      {!user?.isVerified && (
+        <TouchableOpacity
+          onPress={() => router.push("/(tabs)/(profile)")}
+          style={{
+            backgroundColor: "#1a1200",
+            borderWidth: 1.5,
+            borderColor: "#f59e0b",
+            borderRadius: 14,
+            padding: 16,
+            marginBottom: 20,
+            marginTop: 10,
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 12,
+          }}
+        >
+          <Text style={{ fontSize: 28 }}>🏁</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: "#fcd34d", fontSize: 15, fontWeight: "700" }}>Get Verified & Appear on the Map</Text>
+            <Text style={{ color: "#9ca3af", fontSize: 13, marginTop: 3 }}>
+              Verified mechanics show up in Near Me searches and get more job requests. Tap to apply.
+            </Text>
+          </View>
+          <Text style={{ color: "#f59e0b", fontSize: 18 }}>›</Text>
+        </TouchableOpacity>
+      )}
+
+      <View style={{ marginBottom: 30, marginTop: 10 }}>
         <Text style={{ color: colors.textSecondary, fontSize: 14, marginBottom: 4 }}>Welcome back 👋</Text>
         <Text style={{ color: colors.text, fontSize: 30, fontWeight: "bold" }}>{user?.name || "Mechanic"}</Text>
         <Text style={{ color: colors.textSecondary, marginTop: 6 }}>Automotive Intelligence</Text>
@@ -75,6 +104,7 @@ export default function MechanicDashboard() {
         <Text style={{ color: colors.text, fontSize: 18, fontWeight: "700" }}>👤 My Profile</Text>
         <Text style={{ color: colors.textSecondary, marginTop: 4, fontSize: 13 }}>View your profile and reputation</Text>
       </TouchableOpacity>
+
     </ScrollView>
   );
 }
