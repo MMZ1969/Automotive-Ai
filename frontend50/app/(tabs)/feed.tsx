@@ -2,7 +2,6 @@ import { useAuth } from "@context/AuthContext";
 import { useTheme } from "@context/ThemeContext";
 import api from "@lib/api";
 import { useFocusEffect, useRouter } from "expo-router";
-import { SlidersHorizontal } from "lucide-react-native";
 import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
@@ -15,6 +14,7 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
+import Svg, { Circle, Line } from "react-native-svg";
 
 const logo = require("../../assets/autoai_icon_1024_tm.png");
 
@@ -22,13 +22,13 @@ const MAIN_TABS = ["forYou", "following"] as const;
 type MainTab = typeof MAIN_TABS[number];
 
 const FILTERS = [
-  { key: "ALL",          label: "All Posts",    icon: "🌐" },
-  { key: "VANITY",       label: "Vanity",        icon: "🚗" },
-  { key: "QUESTION",     label: "Q&A",           icon: "🔧" },
-  { key: "SERVICE",      label: "Service",       icon: "🏁" },
-  { key: "BEFORE_AFTER", label: "Before/After",  icon: "📸" },
-  { key: "CAR_SHOW",     label: "Car Shows",     icon: "🎪" },
-  { key: "NEAR_ME",      label: "Near Me",       icon: "📍" },
+  { key: "ALL",          label: "All Posts",   icon: "🌐" },
+  { key: "VANITY",       label: "Vanity",       icon: "🚗" },
+  { key: "QUESTION",     label: "Q&A",          icon: "🔧" },
+  { key: "SERVICE",      label: "Service",      icon: "🏁" },
+  { key: "BEFORE_AFTER", label: "Before/After", icon: "📸" },
+  { key: "CAR_SHOW",     label: "Car Shows",    icon: "🎪" },
+  { key: "NEAR_ME",      label: "Near Me",      icon: "📍" },
 ] as const;
 
 type FilterKey = typeof FILTERS[number]["key"];
@@ -141,6 +141,7 @@ export default function Feed() {
   };
 
   const filterActive = activeFilter !== "ALL";
+  const wheelColor = filterActive ? "white" : colors.textMuted;
 
   if (loading) {
     return (
@@ -226,38 +227,58 @@ export default function Feed() {
           </TouchableOpacity>
         </View>
 
-        {/* TABS + FILTER BUTTON */}
+        {/* FOR YOU — STEERING WHEEL — FOLLOWING */}
         <View style={{ flexDirection: "row", alignItems: "center", borderBottomWidth: 1, borderBottomColor: colors.border }}>
-          {(["forYou", "following"] as const).map((key) => {
-            const isActive = activeTab === key;
-            const labels: Record<string, string> = { forYou: "For You", following: "Following" };
-            return (
-              <TouchableOpacity
-                key={key}
-                onPress={() => handleTabChange(key)}
-                style={{ flex: 1, paddingVertical: 10, alignItems: "center", borderBottomWidth: 2, borderBottomColor: isActive ? colors.blue : "transparent" }}
-              >
-                <Text style={{ color: isActive ? colors.text : colors.textMuted, fontSize: 14, fontWeight: isActive ? "700" : "400" }}>
-                  {labels[key]}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
 
-          {/* SLIDERS FILTER BUTTON */}
+          {/* FOR YOU */}
+          <TouchableOpacity
+            onPress={() => handleTabChange("forYou")}
+            style={{ flex: 1, paddingVertical: 10, alignItems: "center", borderBottomWidth: 2, borderBottomColor: activeTab === "forYou" ? colors.blue : "transparent" }}
+          >
+            <Text style={{ color: activeTab === "forYou" ? colors.text : colors.textMuted, fontSize: 14, fontWeight: activeTab === "forYou" ? "700" : "400" }}>
+              For You
+            </Text>
+          </TouchableOpacity>
+
+          {/* STEERING WHEEL CENTER */}
           <TouchableOpacity
             onPress={() => setFilterModalVisible(true)}
             style={{
-              padding: 8,
-              marginBottom: 6,
+              width: 44, height: 44, borderRadius: 22,
               backgroundColor: filterActive ? colors.blue : colors.card,
-              borderRadius: 10,
-              borderWidth: 1,
+              borderWidth: 1.5,
               borderColor: filterActive ? colors.blue : colors.border,
+              justifyContent: "center", alignItems: "center",
+              marginBottom: 6,
             }}
           >
-            <SlidersHorizontal size={18} color={filterActive ? "white" : colors.textMuted} strokeWidth={2.5} />
+            <Svg width={24} height={24} viewBox="0 0 24 24">
+              {/* Outer ring */}
+              <Circle cx="12" cy="12" r="10" stroke={wheelColor} strokeWidth="2" fill="none" />
+              {/* Inner hub */}
+              <Circle cx="12" cy="12" r="2.5" stroke={wheelColor} strokeWidth="2" fill="none" />
+              {/* Spokes - top, bottom, left, right, diagonals */}
+              <Line x1="12" y1="2" x2="12" y2="9.5" stroke={wheelColor} strokeWidth="2" strokeLinecap="round" />
+              <Line x1="12" y1="14.5" x2="12" y2="22" stroke={wheelColor} strokeWidth="2" strokeLinecap="round" />
+              <Line x1="2" y1="12" x2="9.5" y2="12" stroke={wheelColor} strokeWidth="2" strokeLinecap="round" />
+              <Line x1="14.5" y1="12" x2="22" y2="12" stroke={wheelColor} strokeWidth="2" strokeLinecap="round" />
+              <Line x1="4.93" y1="4.93" x2="10.17" y2="10.17" stroke={wheelColor} strokeWidth="2" strokeLinecap="round" />
+              <Line x1="13.83" y1="13.83" x2="19.07" y2="19.07" stroke={wheelColor} strokeWidth="2" strokeLinecap="round" />
+              <Line x1="19.07" y1="4.93" x2="13.83" y2="10.17" stroke={wheelColor} strokeWidth="2" strokeLinecap="round" />
+              <Line x1="10.17" y1="13.83" x2="4.93" y2="19.07" stroke={wheelColor} strokeWidth="2" strokeLinecap="round" />
+            </Svg>
           </TouchableOpacity>
+
+          {/* FOLLOWING */}
+          <TouchableOpacity
+            onPress={() => handleTabChange("following")}
+            style={{ flex: 1, paddingVertical: 10, alignItems: "center", borderBottomWidth: 2, borderBottomColor: activeTab === "following" ? colors.blue : "transparent" }}
+          >
+            <Text style={{ color: activeTab === "following" ? colors.text : colors.textMuted, fontSize: 14, fontWeight: activeTab === "following" ? "700" : "400" }}>
+              Following
+            </Text>
+          </TouchableOpacity>
+
         </View>
       </View>
 
