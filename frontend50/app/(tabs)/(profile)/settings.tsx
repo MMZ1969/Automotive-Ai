@@ -1,6 +1,7 @@
 import { useAuth } from "@context/AuthContext";
 import { useTheme } from "@context/ThemeContext";
 import api from "@lib/api";
+import Constants from "expo-constants";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
@@ -286,9 +287,9 @@ export default function Settings() {
           </View>
         </View>
         <View style={divider} />
-        <View style={row}><Text style={labelStyle}>Version</Text><Text style={valueStyle}>1.0.7</Text></View>
+        <View style={row}><Text style={labelStyle}>Version</Text><Text style={valueStyle}>{Constants.expoConfig?.version || "—"}</Text></View>
         <View style={divider} />
-        <View style={row}><Text style={labelStyle}>Build</Text><Text style={valueStyle}>20</Text></View>
+        <View style={row}><Text style={labelStyle}>Build</Text><Text style={valueStyle}>{Constants.expoConfig?.ios?.buildNumber || "—"}</Text></View>
       </View>
 
       {/* FEEDBACK SECTION */}
