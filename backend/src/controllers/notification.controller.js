@@ -93,8 +93,31 @@ export async function createAndSendNotification({ recipientId, actorId, type, po
         message,
       },
     });
-    
-    // DELETE /api/notifications/:id — delete a single notification
+
+    const recipient = await prisma.user.findUnique({
+      where: { id: recipientId },
+      select: { pushToken: true },
+    });
+
+    if (recipient?.pushToken) {
+      // Get actual unread count for the badge
+      const unreadCount = await prisma.notification.count({
+        where: { recipientId, read: false },
+      });
+
+      await sendPushNotification(
+        recipient.pushToken,
+        "AutoAI 🚗",
+        message,
+        unreadCount
+      );
+    }
+  } catch (err) {
+    console.error("CREATE NOTIFICATION ERROR:", err);
+  }
+}
+
+// DELETE /api/notifications/:id — delete a single notification
 export async function deleteNotification(req, res) {
   try {
     const id = Number(req.params.id);
@@ -123,28 +146,5 @@ export async function deleteAllNotifications(req, res) {
   } catch (err) {
     console.error("DELETE ALL NOTIFICATIONS ERROR:", err);
     res.status(500).json({ error: "Failed to clear notifications" });
-  }
-}
-
-    const recipient = await prisma.user.findUnique({
-      where: { id: recipientId },
-      select: { pushToken: true },
-    });
-
-    if (recipient?.pushToken) {
-      // Get actual unread count for the badge
-      const unreadCount = await prisma.notification.count({
-        where: { recipientId, read: false },
-      });
-
-      await sendPushNotification(
-        recipient.pushToken,
-        "AutoAI 🚗",
-        message,
-        unreadCount
-      );
-    }
-  } catch (err) {
-    console.error("CREATE NOTIFICATION ERROR:", err);
   }
 }
