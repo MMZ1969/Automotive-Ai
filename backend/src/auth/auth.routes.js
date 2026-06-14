@@ -1,5 +1,3 @@
-import express from "express";
-import authMiddleware from "../middleware/authMiddleware.js";
 import {
     changePassword,
     deleteAccount,
@@ -9,7 +7,7 @@ import {
     register,
     resendVerification,
     resetPassword,
-    verifyEmail,
+    verifyEmail
 } from "./auth.controller.js";
 
 const router = express.Router();
@@ -37,6 +35,8 @@ router.put("/change-password", authMiddleware, changePassword);
 
 // VERIFY EMAIL
 router.get("/verify-email", verifyEmail);
+
+router.get("/reset-password-redirect", resetPasswordRedirect);
 
 // RESEND VERIFICATION
 router.post("/resend-verification", resendVerification);

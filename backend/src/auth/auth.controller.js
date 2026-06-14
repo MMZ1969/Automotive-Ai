@@ -212,7 +212,7 @@ export const forgotPassword = async (req, res) => {
       },
     });
 
-    const resetLink = `automotiveai://reset-password?token=${token}`;
+    const resetLink = `https://automotive-ai-production.up.railway.app/api/auth/reset-password-redirect?token=${token}`;
 
     await sgMail.send({
       to: email,
@@ -268,6 +268,92 @@ export const resetPassword = async (req, res) => {
     res.json({ message: "Password reset successfully!" });
   } catch (err) {
     console.error("RESET PASSWORD ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// RESET PASSWORD REDIRECT (HTTPS intermediary page)
+export const resetPasswordRedirect = async (req, res) => {
+  try {
+    const { token } = req.query;
+
+    if (!token) {
+      return res.status(400).send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+          <title>Invalid Link — AutoAI</title>
+          <style>
+            body { background: #050509; color: white; font-family: sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; text-align: center; padding: 20px; }
+            h1 { color: #ef4444; font-size: 32px; margin-bottom: 12px; }
+            p { color: #9ca3af; margin-bottom: 32px; }
+          </style>
+        </head>
+        <body>
+          <div>
+            <h1>❌ Invalid Link</h1>
+            <p>This password reset link is missing required information. Please request a new one from the app.</p>
+          </div>
+        </body>
+        </html>
+      `);
+    }
+
+    const user = await prisma.user.findFirst({
+      where: {
+        resetToken: token,
+        resetTokenExpiry: { gt: new Date() },
+      },
+    });
+
+    if (!user) {
+      return res.status(400).send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+          <title>Link Expired — AutoAI</title>
+          <style>
+            body { background: #050509; color: white; font-family: sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; text-align: center; padding: 20px; }
+            h1 { color: #ef4444; font-size: 32px; margin-bottom: 12px; }
+            p { color: #9ca3af; margin-bottom: 32px; }
+          </style>
+        </head>
+        <body>
+          <div>
+            <h1>❌ Link Expired</h1>
+            <p>This password reset link is invalid or has expired. Please request a new one from the app.</p>
+          </div>
+        </body>
+        </html>
+      `);
+    }
+
+    res.send(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+        <title>Reset Password — AutoAI</title>
+        <style>
+          body { background: #050509; color: white; font-family: sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; text-align: center; padding: 20px; }
+          h1 { color: #345bff; font-size: 32px; margin-bottom: 12px; }
+          p { color: #9ca3af; margin-bottom: 32px; }
+          a { background: #345bff; color: white; padding: 16px 32px; border-radius: 12px; text-decoration: none; font-weight: bold; font-size: 18px; }
+        </style>
+      </head>
+      <body>
+        <div>
+          <h1>🔑 Reset Your Password</h1>
+          <p>Tap below to open AutoAI and set a new password.</p>
+          <a href="automotiveai://reset-password?token=${token}">Open AutoAI 🚗</a>
+        </div>
+      </body>
+      </html>
+    `);
+  } catch (err) {
+    console.error("RESET PASSWORD REDIRECT ERROR:", err);
     res.status(500).json({ message: "Server error" });
   }
 };
