@@ -1,297 +1,219 @@
 import { useAuth } from "@context/AuthContext";
 import { useTheme } from "@context/ThemeContext";
 import api from "@lib/api";
+import * as Location from "expo-location";
 import { useFocusEffect, useRouter } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
-  ActivityIndicator, Alert, FlatList, KeyboardAvoidingView, Modal,
-  Platform, RefreshControl, ScrollView, Text, TextInput, TouchableOpacity, View,
+  ActivityIndicator, Alert, KeyboardAvoidingView, Modal,
+  Platform, ScrollView, Text, TextInput, TouchableOpacity, View,
 } from "react-native";
+import MapView, { Callout, Marker, PROVIDER_GOOGLE } from "react-native-maps";
+
+const darkMapStyle = [
+  { elementType: "geometry", stylers: [{ color: "#0a0a12" }] },
+  { elementType: "labels.text.fill", stylers: [{ color: "#9ca3af" }] },
+  { elementType: "labels.text.stroke", stylers: [{ color: "#050509" }] },
+  { featureType: "road", elementType: "geometry", stylers: [{ color: "#1a1c2a" }] },
+  { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#252838" }] },
+  { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#252838" }] },
+  { featureType: "water", elementType: "geometry", stylers: [{ color: "#050509" }] },
+  { featureType: "poi", stylers: [{ visibility: "off" }] },
+  { featureType: "transit", stylers: [{ visibility: "off" }] },
+  { featureType: "administrative", elementType: "geometry", stylers: [{ color: "#252838" }] },
+];
 
 const statusColor = (status: string) => {
   switch (status) {
     case "OPEN": return "#10b981";
-    case "IN_PROGRESS": return "#f59e0b";
-    case "COMPLETED": return "#345bff";
+    case "PENDING_CONFIRM": return "#f59e0b";
+    case "IN_PROGRESS": return "#345bff";
+    case "COMPLETED": return "#6b7280";
     default: return "#6b7280";
   }
 };
-
-const StatusBadge = ({ status, colors }: { status: string; colors: any }) => (
-  <View style={{ backgroundColor: statusColor(status) + "22", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10, borderWidth: 1, borderColor: statusColor(status) }}>
-    <Text style={{ color: statusColor(status), fontSize: 11, fontWeight: "700" }}>{status}</Text>
-  </View>
-);
 
 export default function Jobs() {
   const { user, isMechanic } = useAuth();
   const { colors } = useTheme();
   const router = useRouter();
+  const mapRef = useRef<MapView>(null);
+
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [jobs, setJobs] = useState<any[]>([]);
+  const [myJobs, setMyJobs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [mechanicView, setMechanicView] = useState<"browse" | "mine">("browse");
+  const [locationError, setLocationError] = useState(false);
+  const [selectedJob, setSelectedJob] = useState<any>(null);
+  const [mechanicView, setMechanicView] = useState<"map" | "mine">("map");
 
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showBidModal, setShowBidModal] = useState(false);
-  const [showStatusModal, setShowStatusModal] = useState(false);
-  const [showReviewModal, setShowReviewModal] = useState(false);
-  const [selectedJob, setSelectedJob] = useState<any>(null);
-
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [vehicle, setVehicle] = useState("");
   const [budget, setBudget] = useState("");
-  const [location, setLocation] = useState("");
   const [creating, setCreating] = useState(false);
-  const [bidMessage, setBidMessage] = useState("");
-  const [bidPrice, setBidPrice] = useState("");
-  const [bidding, setBidding] = useState(false);
-  const [reviewRating, setReviewRating] = useState(5);
-  const [reviewComment, setReviewComment] = useState("");
-  const [submittingReview, setSubmittingReview] = useState(false);
 
-  const inputStyle = { backgroundColor: colors.background, color: colors.text, padding: 12, borderRadius: 10, borderWidth: 1, borderColor: colors.border, marginBottom: 10, fontSize: 15 };
-  const cardStyle = { backgroundColor: colors.card, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 16, marginBottom: 14 };
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [statusJob, setStatusJob] = useState<any>(null);
+
+  const inputStyle = {
+    backgroundColor: colors.background, color: colors.text,
+    padding: 12, borderRadius: 10, borderWidth: 1,
+    borderColor: colors.border, marginBottom: 10, fontSize: 15,
+  };
+
+  const initMap = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") { setLocationError(true); setLoading(false); return; }
+
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      setUserLocation({ lat: loc.coords.latitude, lng: loc.coords.longitude });
+
+      await fetchJobs();
+    } catch (err) {
+      console.error("MAP INIT ERROR:", err);
+      setLocationError(true);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchJobs = async () => {
     try {
-      const endpoint = isMechanic ? mechanicView === "browse" ? "/api/jobs" : "/api/jobs/my-bids" : "/api/jobs/mine";
-      const res = await api.get(endpoint);
-      setJobs(res.data);
-    } catch (err) { console.error("FETCH JOBS ERROR:", err); }
-    finally { setLoading(false); setRefreshing(false); }
+      const [openRes, myRes] = await Promise.all([
+        api.get("/api/jobs"),
+        isMechanic ? api.get("/api/jobs/my-bids") : api.get("/api/jobs/mine"),
+      ]);
+      setJobs(openRes.data);
+      setMyJobs(myRes.data);
+    } catch (err) {
+      console.error("FETCH JOBS ERROR:", err);
+    }
   };
 
-  useFocusEffect(useCallback(() => { fetchJobs(); }, [mechanicView]));
-  const onRefresh = () => { setRefreshing(true); fetchJobs(); };
+  useFocusEffect(useCallback(() => { initMap(); }, []));
+
+  const centerOnUser = () => {
+    if (!userLocation || !mapRef.current) return;
+    mapRef.current.animateToRegion({
+      latitude: userLocation.lat, longitude: userLocation.lng,
+      latitudeDelta: 0.1, longitudeDelta: 0.1,
+    }, 500);
+  };
 
   const handleCreateJob = async () => {
-    if (!user?.phone) {
-      Alert.alert("📞 Phone Required", "Add your phone number in Settings so mechanics can contact you.", [
-        { text: "Cancel", style: "cancel" },
-        { text: "Go to Settings", onPress: () => router.push("/(tabs)/(profile)/settings") },
-      ]);
+    if (!title.trim() || !description.trim() || !vehicle.trim()) {
+      Alert.alert("Missing fields", "Title, description and vehicle are required.");
       return;
     }
-    if (!title.trim() || !description.trim() || !vehicle.trim()) { Alert.alert("Missing fields", "Title, description and vehicle are required."); return; }
+    if (!userLocation) {
+      Alert.alert("Location needed", "Could not get your location. Please try again.");
+      return;
+    }
     try {
       setCreating(true);
-      await api.post("/api/jobs", { title, description, vehicle, budget, location });
+      await api.post("/api/jobs", {
+        title, description, vehicle,
+        budget: budget || null,
+        latitude: userLocation.lat,
+        longitude: userLocation.lng,
+      });
       setShowCreateModal(false);
-      setTitle(""); setDescription(""); setVehicle(""); setBudget(""); setLocation("");
-      fetchJobs();
-      Alert.alert("✅ Job Posted!", "Mechanics can now bid on your job.");
-    } catch { Alert.alert("Error", "Could not post job. Try again."); }
-    finally { setCreating(false); }
+      setTitle(""); setDescription(""); setVehicle(""); setBudget("");
+      await fetchJobs();
+      Alert.alert("✅ Job Posted!", "Your job is now visible on the map.");
+    } catch {
+      Alert.alert("Error", "Could not post job. Try again.");
+    } finally {
+      setCreating(false);
+    }
   };
 
-  const handlePlaceBid = async () => {
-    if (!bidMessage.trim() || !bidPrice.trim()) { Alert.alert("Missing fields", "Message and price are required."); return; }
-    try {
-      setBidding(true);
-      await api.post(`/api/jobs/${selectedJob.id}/bid`, { message: bidMessage, price: Number(bidPrice) });
-      setShowBidModal(false); setBidMessage(""); setBidPrice("");
-      fetchJobs(); Alert.alert("✅ Bid Placed!", "The DIYer will be notified.");
-    } catch (err: any) {
-      Alert.alert(err?.response?.status === 400 ? "Already Bid" : "Error", err?.response?.status === 400 ? "You already bid on this job." : "Could not place bid. Try again.");
-    } finally { setBidding(false); }
-  };
-
-  const handleAcceptBid = async (jobId: number, bidId: number) => {
-    Alert.alert("Accept Bid", "Accept this bid?", [
+  const handleClaimJob = async (job: any) => {
+    Alert.alert("Claim Job", `Claim "${job.title}"?`, [
       { text: "Cancel", style: "cancel" },
-      { text: "Accept", onPress: async () => {
-        try { await api.post(`/api/jobs/${jobId}/bids/${bidId}/accept`); fetchJobs(); Alert.alert("🎉 Accepted!", "The mechanic has been notified."); }
-        catch { Alert.alert("Error", "Could not accept bid. Try again."); }
+      { text: "Claim", onPress: async () => {
+        try {
+          await api.post(`/api/jobs/${job.id}/claim`);
+          setSelectedJob(null);
+          await fetchJobs();
+          Alert.alert("🔧 Claimed!", "The DIYer has been notified and needs to confirm.");
+        } catch (err: any) {
+          Alert.alert("Error", err?.response?.data?.error || "Could not claim job.");
+        }
       }},
     ]);
   };
 
-  const handleDeleteJob = async (jobId: number) => {
-    Alert.alert("Delete Job", "Are you sure?", [
+  const handleConfirmJob = async (job: any) => {
+    Alert.alert("Confirm Mechanic", `Confirm ${job.mechanic?.name} for "${job.title}"?`, [
       { text: "Cancel", style: "cancel" },
-      { text: "Delete", style: "destructive", onPress: async () => {
-        try { await api.delete(`/api/jobs/${jobId}`); fetchJobs(); }
-        catch { Alert.alert("Error", "Could not delete job. Try again."); }
+      { text: "Confirm", onPress: async () => {
+        try {
+          await api.post(`/api/jobs/${job.id}/confirm`);
+          await fetchJobs();
+          Alert.alert("✅ Confirmed!", "Your mechanic has been notified.");
+        } catch (err: any) {
+          Alert.alert("Error", err?.response?.data?.error || "Could not confirm.");
+        }
       }},
     ]);
   };
 
-  const handleMechanicComplete = async (job: any) => {
+  const handleCompleteJob = async (job: any) => {
     Alert.alert("Complete Job", "Mark this job as complete?", [
       { text: "Cancel", style: "cancel" },
       { text: "Complete", onPress: async () => {
-        try { await api.post(`/api/jobs/${job.id}/complete`); fetchJobs(); Alert.alert("🏁 Done!", "The customer has been notified."); }
-        catch { Alert.alert("Error", "Could not complete job. Try again."); }
+        try {
+          await api.post(`/api/jobs/${job.id}/complete`);
+          await fetchJobs();
+          Alert.alert("🏁 Done!", "Job marked as complete.");
+        } catch {
+          Alert.alert("Error", "Could not complete job.");
+        }
       }},
     ]);
   };
 
-  const handleDiyerComplete = async (job: any) => {
-    Alert.alert("Complete Job", "Mark this job as completed?", [
+  const handleDeleteJob = async (job: any) => {
+    Alert.alert("Delete Job", "Are you sure?", [
       { text: "Cancel", style: "cancel" },
-      { text: "Complete", onPress: async () => {
-        try { await api.post(`/api/jobs/${job.id}/complete`); fetchJobs(); setSelectedJob(job); setShowReviewModal(true); }
-        catch { Alert.alert("Error", "Could not complete job. Try again."); }
+      { text: "Delete", style: "destructive", onPress: async () => {
+        try {
+          await api.delete(`/api/jobs/${job.id}`);
+          await fetchJobs();
+        } catch {
+          Alert.alert("Error", "Could not delete job.");
+        }
       }},
     ]);
   };
-
-  const handleCarReady = async (job: any) => {
-    try {
-      await api.post(`/api/jobs/${job.id}/status-update`, { message: "🚗 Your vehicle is ready for pickup!" });
-      Alert.alert("✅ Sent!", "Customer has been notified their car is ready!");
-    } catch { Alert.alert("Error", "Could not send notification. Try again."); }
-  };
-
-  const handleSubmitReview = async () => {
-    if (!selectedJob) return;
-    const acceptedBid = selectedJob.bids?.find((b: any) => b.status === "ACCEPTED");
-    if (!acceptedBid) return;
-    try {
-      setSubmittingReview(true);
-      await api.post("/api/reviews", { jobId: selectedJob.id, mechanicId: acceptedBid.mechanic.id, rating: reviewRating, comment: reviewComment });
-      setShowReviewModal(false); setReviewComment(""); setReviewRating(5);
-      Alert.alert("⭐ Review Submitted!", "Thanks for rating your mechanic.");
-    } catch (err: any) {
-      if (err?.response?.status === 400) { Alert.alert("Already Reviewed", "You already reviewed this job."); setShowReviewModal(false); }
-      else { Alert.alert("Error", "Could not submit review. Try again."); }
-    } finally { setSubmittingReview(false); }
-  };
-
-  const renderBrowseCard = ({ item }: { item: any }) => (
-    <View style={cardStyle}>
-      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
-        <Text style={{ color: colors.text, fontSize: 17, fontWeight: "700", flex: 1 }}>{item.title}</Text>
-        <StatusBadge status={item.status} colors={colors} />
-      </View>
-      <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 4 }}>🚗 {item.vehicle}</Text>
-      <Text style={{ color: colors.text, fontSize: 14, lineHeight: 20, marginBottom: 8 }}>{item.description}</Text>
-      <View style={{ flexDirection: "row", gap: 16, marginBottom: 12 }}>
-        {item.budget ? <Text style={{ color: colors.green, fontSize: 13, fontWeight: "700" }}>💰 ${item.budget}</Text> : null}
-        {item.location ? <Text style={{ color: colors.textSecondary, fontSize: 13 }}>📍 {item.location}</Text> : null}
-      </View>
-      {item.poster && <Text style={{ color: colors.textMuted, fontSize: 12, marginBottom: 12 }}>Posted by {item.poster.name || "Anonymous"}</Text>}
-      {item.status === "OPEN" && (
-        <TouchableOpacity onPress={() => { setSelectedJob(item); setShowBidModal(true); }} style={{ backgroundColor: colors.blue, padding: 13, borderRadius: 10, alignItems: "center" }}>
-          <Text style={{ color: "white", fontWeight: "700" }}>🔧 Place Bid</Text>
-        </TouchableOpacity>
-      )}
-    </View>
-  );
-
-  const renderMyJobCard = ({ item }: { item: any }) => {
-    const job = item.job;
-    const isActive = job?.status === "IN_PROGRESS";
-    return (
-      <View style={cardStyle}>
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
-          <Text style={{ color: colors.text, fontSize: 17, fontWeight: "700", flex: 1 }}>{job?.title}</Text>
-          <StatusBadge status={job?.status} colors={colors} />
-        </View>
-        <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 4 }}>🚗 {job?.vehicle}</Text>
-        {job?.budget ? <Text style={{ color: colors.green, fontSize: 13, fontWeight: "700", marginBottom: 12 }}>💰 ${job?.budget}</Text> : <View style={{ marginBottom: 12 }} />}
-        {isActive && (
-          <View>
-            <TouchableOpacity onPress={() => handleCarReady(job)} style={{ backgroundColor: colors.green, padding: 14, borderRadius: 10, alignItems: "center", marginBottom: 10 }}>
-              <Text style={{ color: "white", fontWeight: "900", fontSize: 16 }}>🚗 Your car is ready!</Text>
-            </TouchableOpacity>
-            <View style={{ flexDirection: "row", gap: 10 }}>
-              <TouchableOpacity onPress={() => { setSelectedJob(job); setShowStatusModal(true); }} style={{ flex: 1, backgroundColor: "#f59e0b", padding: 12, borderRadius: 10, alignItems: "center" }}>
-                <Text style={{ color: "white", fontWeight: "700" }}>📢 Send Update</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => handleMechanicComplete(job)} style={{ flex: 1, backgroundColor: colors.blue, padding: 12, borderRadius: 10, alignItems: "center" }}>
-                <Text style={{ color: "white", fontWeight: "700" }}>🏁 Complete</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-        {job?.status === "COMPLETED" && (
-          <View style={{ backgroundColor: colors.blue + "22", padding: 10, borderRadius: 10, alignItems: "center", borderWidth: 1, borderColor: colors.blue }}>
-            <Text style={{ color: colors.blue, fontWeight: "700" }}>✅ Job Completed</Text>
-          </View>
-        )}
-      </View>
-    );
-  };
-
-  const renderDiyerCard = ({ item }: { item: any }) => (
-    <View style={cardStyle}>
-      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
-        <Text style={{ color: colors.text, fontSize: 17, fontWeight: "700", flex: 1 }}>{item.title}</Text>
-        <StatusBadge status={item.status} colors={colors} />
-      </View>
-      <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 4 }}>🚗 {item.vehicle}</Text>
-      {item.budget ? <Text style={{ color: colors.green, fontSize: 13, fontWeight: "700", marginBottom: 10 }}>💰 ${item.budget}</Text> : <View style={{ marginBottom: 10 }} />}
-
-      {item.status === "OPEN" && item.bids?.length > 0 && (
-        <View style={{ backgroundColor: colors.background, borderRadius: 10, padding: 12, marginBottom: 10 }}>
-          <Text style={{ color: colors.textSecondary, fontSize: 13, fontWeight: "700", marginBottom: 8 }}>{item.bids.length} Bid{item.bids.length !== 1 ? "s" : ""}</Text>
-          {item.bids.map((bid: any) => (
-            <View key={bid.id} style={{ borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 8, marginTop: 8 }}>
-              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                <Text style={{ color: colors.text, fontWeight: "700" }}>{bid.mechanic?.name || "Mechanic"}</Text>
-                <Text style={{ color: colors.green, fontWeight: "700" }}>${bid.price}</Text>
-              </View>
-              <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 8 }}>{bid.message}</Text>
-              <TouchableOpacity onPress={() => handleAcceptBid(item.id, bid.id)} style={{ backgroundColor: colors.green, padding: 10, borderRadius: 8, alignItems: "center" }}>
-                <Text style={{ color: "white", fontWeight: "700" }}>✅ Accept This Bid</Text>
-              </TouchableOpacity>
-            </View>
-          ))}
-        </View>
-      )}
-
-      {item.status === "OPEN" && !item.bids?.length && (
-        <Text style={{ color: colors.textMuted, fontSize: 13, marginBottom: 10 }}>⏳ Waiting for mechanics to bid...</Text>
-      )}
-
-      {item.status === "IN_PROGRESS" && (() => {
-        const accepted = item.bids?.find((b: any) => b.status === "ACCEPTED");
-        return (
-          <View>
-            {accepted && (
-              <View style={{ backgroundColor: colors.background, borderRadius: 10, padding: 12, marginBottom: 10 }}>
-                <Text style={{ color: colors.textSecondary, fontSize: 12, marginBottom: 4 }}>Your mechanic</Text>
-                <Text style={{ color: colors.text, fontWeight: "700" }}>{accepted.mechanic?.name}</Text>
-                <Text style={{ color: colors.green, fontWeight: "700" }}>${accepted.price}</Text>
-              </View>
-            )}
-            <TouchableOpacity onPress={() => handleDiyerComplete(item)} style={{ backgroundColor: colors.green, padding: 12, borderRadius: 10, alignItems: "center" }}>
-              <Text style={{ color: "white", fontWeight: "700" }}>🏁 Mark Complete</Text>
-            </TouchableOpacity>
-          </View>
-        );
-      })()}
-
-      {item.status === "OPEN" && (
-        <TouchableOpacity onPress={() => handleDeleteJob(item.id)} style={{ marginTop: 8, backgroundColor: colors.background, padding: 10, borderRadius: 10, alignItems: "center", borderWidth: 1, borderColor: "#ef444433" }}>
-          <Text style={{ color: "#ef4444", fontWeight: "700" }}>🗑️ Delete Job</Text>
-        </TouchableOpacity>
-      )}
-
-      {item.status === "COMPLETED" && (
-        <View style={{ backgroundColor: colors.blue + "22", padding: 10, borderRadius: 10, alignItems: "center", borderWidth: 1, borderColor: colors.blue }}>
-          <Text style={{ color: colors.blue, fontWeight: "700" }}>✅ Job Completed</Text>
-        </View>
-      )}
-    </View>
-  );
 
   if (loading) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background, justifyContent: "center", alignItems: "center" }}>
         <ActivityIndicator color={colors.blue} size="large" />
+        <Text style={{ color: colors.textSecondary, marginTop: 16 }}>Loading jobs map...</Text>
       </View>
     );
   }
 
-  const emptyText = isMechanic
-    ? mechanicView === "browse"
-      ? { icon: "🔍", title: "No open jobs yet", sub: "Check back soon — DIYers will post jobs here" }
-      : { icon: "🔧", title: "No active jobs yet", sub: "Jobs where your bid was accepted will appear here" }
-    : { icon: "💼", title: "No jobs posted yet", sub: "Post a job and mechanics will bid on it!" };
+  if (locationError) {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.background, justifyContent: "center", alignItems: "center", padding: 40 }}>
+        <Text style={{ fontSize: 48, marginBottom: 16 }}>📍</Text>
+        <Text style={{ color: colors.text, fontSize: 20, fontWeight: "700", textAlign: "center", marginBottom: 8 }}>Location Required</Text>
+        <Text style={{ color: colors.textSecondary, textAlign: "center", marginBottom: 24 }}>AutoAI needs your location to show jobs near you.</Text>
+        <TouchableOpacity onPress={() => router.back()} style={{ backgroundColor: colors.blue, padding: 14, borderRadius: 12, paddingHorizontal: 30 }}>
+          <Text style={{ color: "white", fontWeight: "700" }}>Go Back</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  const openJobs = jobs.filter(j => j.latitude && j.longitude);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -301,12 +223,12 @@ export default function Jobs() {
         <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1, backgroundColor: "#00000088", justifyContent: "flex-end" }}>
           <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1, justifyContent: "flex-end" }}>
             <View style={{ backgroundColor: colors.card, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20 }}>
-              <Text style={{ color: colors.text, fontSize: 22, fontWeight: "900", marginBottom: 20 }}>💼 Post a Job</Text>
+              <Text style={{ color: colors.text, fontSize: 22, fontWeight: "900", marginBottom: 4 }}>💼 Post a Job</Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 16 }}>📍 Your current location will be used as the job pin</Text>
               <TextInput placeholder="Job title" placeholderTextColor={colors.textMuted} value={title} onChangeText={setTitle} style={inputStyle} />
               <TextInput placeholder="Describe the problem..." placeholderTextColor={colors.textMuted} value={description} onChangeText={setDescription} multiline style={[inputStyle, { minHeight: 80, textAlignVertical: "top" }]} />
               <TextInput placeholder="Vehicle (e.g. 2019 Honda Civic)" placeholderTextColor={colors.textMuted} value={vehicle} onChangeText={setVehicle} style={inputStyle} />
               <TextInput placeholder="Budget (optional)" placeholderTextColor={colors.textMuted} value={budget} onChangeText={setBudget} keyboardType="numeric" style={inputStyle} />
-              <TextInput placeholder="Location (optional)" placeholderTextColor={colors.textMuted} value={location} onChangeText={setLocation} style={inputStyle} />
               <View style={{ flexDirection: "row", gap: 10, marginTop: 8, marginBottom: 30 }}>
                 <TouchableOpacity onPress={() => setShowCreateModal(false)} style={{ flex: 1, backgroundColor: colors.border, padding: 14, borderRadius: 12, alignItems: "center" }}>
                   <Text style={{ color: colors.text, fontWeight: "700" }}>Cancel</Text>
@@ -320,38 +242,19 @@ export default function Jobs() {
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* BID MODAL */}
-      <Modal visible={showBidModal} animationType="slide" transparent>
-        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1, backgroundColor: "#00000088", justifyContent: "flex-end" }}>
-          <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1, justifyContent: "flex-end" }}>
-            <View style={{ backgroundColor: colors.card, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20 }}>
-              <Text style={{ color: colors.text, fontSize: 22, fontWeight: "900", marginBottom: 4 }}>🔧 Place a Bid</Text>
-              <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 20 }}>{selectedJob?.title}</Text>
-              <TextInput placeholder="Your message to the DIYer..." placeholderTextColor={colors.textMuted} value={bidMessage} onChangeText={setBidMessage} multiline style={[inputStyle, { minHeight: 80, textAlignVertical: "top" }]} />
-              <TextInput placeholder="Your price ($)" placeholderTextColor={colors.textMuted} value={bidPrice} onChangeText={setBidPrice} keyboardType="numeric" style={inputStyle} />
-              <View style={{ flexDirection: "row", gap: 10, marginTop: 8, marginBottom: 30 }}>
-                <TouchableOpacity onPress={() => setShowBidModal(false)} style={{ flex: 1, backgroundColor: colors.border, padding: 14, borderRadius: 12, alignItems: "center" }}>
-                  <Text style={{ color: colors.text, fontWeight: "700" }}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={handlePlaceBid} disabled={bidding} style={{ flex: 1, backgroundColor: colors.blue, padding: 14, borderRadius: 12, alignItems: "center" }}>
-                  <Text style={{ color: "white", fontWeight: "700" }}>{bidding ? "Placing..." : "Place Bid"}</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </Modal>
-
       {/* STATUS UPDATE MODAL */}
       <Modal visible={showStatusModal} animationType="slide" transparent>
         <TouchableOpacity style={{ flex: 1, backgroundColor: "#00000088", justifyContent: "flex-end" }} onPress={() => setShowStatusModal(false)}>
           <View style={{ backgroundColor: colors.card, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20 }}>
             <Text style={{ color: colors.text, fontSize: 22, fontWeight: "900", marginBottom: 4 }}>📢 Send Update</Text>
-            <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 20 }}>{selectedJob?.title}</Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 20 }}>{statusJob?.title}</Text>
             {["🔧 Work is in progress on your vehicle", "🔍 Still diagnosing the issue", "💰 Estimate is ready — please call us", "⏳ Waiting on parts to arrive"].map((msg) => (
               <TouchableOpacity key={msg} onPress={async () => {
-                try { await api.post(`/api/jobs/${selectedJob.id}/status-update`, { message: msg }); setShowStatusModal(false); Alert.alert("✅ Sent!", "Customer has been notified."); }
-                catch { Alert.alert("Error", "Could not send update. Try again."); }
+                try {
+                  await api.post(`/api/jobs/${statusJob.id}/status-update`, { message: msg });
+                  setShowStatusModal(false);
+                  Alert.alert("✅ Sent!", "Customer has been notified.");
+                } catch { Alert.alert("Error", "Could not send update."); }
               }} style={{ backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border, padding: 14, borderRadius: 12, marginBottom: 10 }}>
                 <Text style={{ color: colors.text, fontSize: 15 }}>{msg}</Text>
               </TouchableOpacity>
@@ -363,42 +266,16 @@ export default function Jobs() {
         </TouchableOpacity>
       </Modal>
 
-      {/* REVIEW MODAL */}
-      <Modal visible={showReviewModal} animationType="slide" transparent>
-        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1, backgroundColor: "#00000088", justifyContent: "flex-end" }}>
-          <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1, justifyContent: "flex-end" }}>
-            <View style={{ backgroundColor: colors.card, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20 }}>
-              <Text style={{ color: colors.text, fontSize: 22, fontWeight: "900", marginBottom: 4 }}>⭐ Rate Your Mechanic</Text>
-              <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 20 }}>{selectedJob?.title}</Text>
-              <View style={{ flexDirection: "row", justifyContent: "center", gap: 12, marginBottom: 20 }}>
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <TouchableOpacity key={star} onPress={() => setReviewRating(star)}>
-                    <Text style={{ fontSize: 36 }}>{star <= reviewRating ? "⭐" : "☆"}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-              <TextInput placeholder="Leave a comment (optional)..." placeholderTextColor={colors.textMuted} value={reviewComment} onChangeText={setReviewComment} multiline style={[inputStyle, { minHeight: 80, textAlignVertical: "top" }]} />
-              <View style={{ flexDirection: "row", gap: 10, marginTop: 8, marginBottom: 30 }}>
-                <TouchableOpacity onPress={() => setShowReviewModal(false)} style={{ flex: 1, backgroundColor: colors.border, padding: 14, borderRadius: 12, alignItems: "center" }}>
-                  <Text style={{ color: colors.text, fontWeight: "700" }}>Skip</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={handleSubmitReview} disabled={submittingReview} style={{ flex: 1, backgroundColor: colors.blue, padding: 14, borderRadius: 12, alignItems: "center" }}>
-                  <Text style={{ color: "white", fontWeight: "700" }}>{submittingReview ? "Submitting..." : "Submit Review"}</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </Modal>
-
       {/* HEADER */}
-      <View style={{ paddingTop: 60, paddingHorizontal: 20, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+      <View style={{ paddingTop: 60, paddingHorizontal: 20, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: colors.border }}>
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
             <TouchableOpacity onPress={() => router.back()}>
               <Text style={{ color: colors.blue, fontSize: 16 }}>← Back</Text>
             </TouchableOpacity>
-            <Text style={{ color: colors.text, fontSize: 22, fontWeight: "900" }}>{isMechanic ? "🔧 Jobs" : "💼 My Jobs"}</Text>
+            <Text style={{ color: colors.text, fontSize: 22, fontWeight: "900" }}>
+              {isMechanic ? "🔧 Jobs" : "💼 My Jobs"}
+            </Text>
           </View>
           {!isMechanic && (
             <TouchableOpacity onPress={() => setShowCreateModal(true)} style={{ backgroundColor: colors.blue, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10 }}>
@@ -406,39 +283,197 @@ export default function Jobs() {
             </TouchableOpacity>
           )}
         </View>
-        {isMechanic && (
-          <View style={{ flexDirection: "row", backgroundColor: colors.card, borderRadius: 12, padding: 4 }}>
-            {(["browse", "mine"] as const).map((view) => (
-              <TouchableOpacity key={view} onPress={() => setMechanicView(view)} style={{ flex: 1, paddingVertical: 8, borderRadius: 10, alignItems: "center", backgroundColor: mechanicView === view ? colors.blue : "transparent" }}>
-                <Text style={{ color: mechanicView === view ? "white" : colors.textMuted, fontWeight: "700", fontSize: 14 }}>
-                  {view === "browse" ? "🔍 Browse Jobs" : "🔧 My Jobs"}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
+
+        {/* TAB TOGGLE */}
+        <View style={{ flexDirection: "row", backgroundColor: colors.card, borderRadius: 12, padding: 4 }}>
+          <TouchableOpacity onPress={() => setMechanicView("map")} style={{ flex: 1, paddingVertical: 8, borderRadius: 10, alignItems: "center", backgroundColor: mechanicView === "map" ? colors.blue : "transparent" }}>
+            <Text style={{ color: mechanicView === "map" ? "white" : colors.textMuted, fontWeight: "700", fontSize: 14 }}>🗺️ Map</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setMechanicView("mine")} style={{ flex: 1, paddingVertical: 8, borderRadius: 10, alignItems: "center", backgroundColor: mechanicView === "mine" ? colors.blue : "transparent" }}>
+            <Text style={{ color: mechanicView === "mine" ? "white" : colors.textMuted, fontWeight: "700", fontSize: 14 }}>
+              {isMechanic ? "🔧 My Jobs" : "📋 My Jobs"}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
-      {/* LIST */}
-      <FlatList
-        data={jobs}
-        keyExtractor={(item) => item.id.toString()}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.blue} />}
-        contentContainerStyle={{ padding: 16 }}
-        renderItem={isMechanic ? mechanicView === "browse" ? renderBrowseCard : renderMyJobCard : renderDiyerCard}
-        ListEmptyComponent={
-          <View style={{ alignItems: "center", marginTop: 60 }}>
-            <Text style={{ fontSize: 48 }}>{emptyText.icon}</Text>
-            <Text style={{ color: colors.text, fontSize: 18, fontWeight: "700", marginTop: 16 }}>{emptyText.title}</Text>
-            <Text style={{ color: colors.textSecondary, marginTop: 8, textAlign: "center" }}>{emptyText.sub}</Text>
-            {!isMechanic && (
-              <TouchableOpacity onPress={() => setShowCreateModal(true)} style={{ backgroundColor: colors.blue, padding: 14, borderRadius: 12, marginTop: 20, paddingHorizontal: 30 }}>
-                <Text style={{ color: "white", fontWeight: "700" }}>Post Your First Job</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        }
-      />
+      {/* MAP VIEW */}
+      {mechanicView === "map" && (
+        <View style={{ flex: 1 }}>
+          <MapView
+            ref={mapRef}
+            provider={PROVIDER_GOOGLE}
+            style={{ flex: 1 }}
+            initialRegion={{
+              latitude: userLocation?.lat || 37.78825,
+              longitude: userLocation?.lng || -122.4324,
+              latitudeDelta: 0.2,
+              longitudeDelta: 0.2,
+            }}
+            customMapStyle={darkMapStyle}
+            showsUserLocation
+            showsMyLocationButton={false}
+          >
+            {/* JOB PINS */}
+            {openJobs.map((job) => (
+              <Marker
+                key={`job-${job.id}`}
+                coordinate={{ latitude: job.latitude, longitude: job.longitude }}
+                onPress={() => setSelectedJob(job)}
+              >
+                <View style={{ backgroundColor: statusColor(job.status), borderRadius: 20, padding: 8, borderWidth: 2, borderColor: "white", alignItems: "center", justifyContent: "center" }}>
+                  <Text style={{ fontSize: 14 }}>💼</Text>
+                </View>
+                <Callout tooltip>
+                  <View style={{ backgroundColor: colors.card, borderRadius: 10, padding: 10, borderWidth: 1, borderColor: colors.border, minWidth: 140 }}>
+                    <Text style={{ color: colors.text, fontWeight: "700", fontSize: 13 }}>{job.title}</Text>
+                    <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 2 }}>🚗 {job.vehicle}</Text>
+                    {job.budget ? <Text style={{ color: colors.green, fontSize: 11, fontWeight: "700" }}>💰 ${job.budget}</Text> : null}
+                  </View>
+                </Callout>
+              </Marker>
+            ))}
+          </MapView>
+
+          {/* CENTER BUTTON */}
+          <TouchableOpacity onPress={centerOnUser} style={{ position: "absolute", bottom: selectedJob ? 260 : 24, right: 16, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 12 }}>
+            <Text style={{ fontSize: 20 }}>🎯</Text>
+          </TouchableOpacity>
+
+          {/* SELECTED JOB CARD */}
+          {selectedJob && (
+            <View style={{ position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: colors.card, borderTopLeftRadius: 20, borderTopRightRadius: 20, borderTopWidth: 1, borderColor: colors.border, padding: 20 }}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
+                <Text style={{ color: colors.text, fontSize: 18, fontWeight: "800", flex: 1 }}>{selectedJob.title}</Text>
+                <TouchableOpacity onPress={() => setSelectedJob(null)}>
+                  <Text style={{ color: colors.textMuted, fontSize: 20 }}>✕</Text>
+                </TouchableOpacity>
+              </View>
+              <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 4 }}>🚗 {selectedJob.vehicle}</Text>
+              <Text style={{ color: colors.text, fontSize: 14, lineHeight: 20, marginBottom: 8 }}>{selectedJob.description}</Text>
+              <View style={{ flexDirection: "row", gap: 16, marginBottom: 12 }}>
+                {selectedJob.budget ? <Text style={{ color: colors.green, fontSize: 13, fontWeight: "700" }}>💰 ${selectedJob.budget}</Text> : null}
+                <Text style={{ color: colors.textSecondary, fontSize: 13 }}>Posted by {selectedJob.poster?.name || "Anonymous"}</Text>
+              </View>
+
+              {/* MECHANIC: claim button */}
+              {isMechanic && selectedJob.status === "OPEN" && (
+                <TouchableOpacity onPress={() => handleClaimJob(selectedJob)} style={{ backgroundColor: colors.blue, padding: 14, borderRadius: 12, alignItems: "center", marginBottom: 8 }}>
+                  <Text style={{ color: "white", fontWeight: "700", fontSize: 16 }}>🔧 Claim This Job</Text>
+                </TouchableOpacity>
+              )}
+
+              {/* DIYER: confirm mechanic */}
+              {!isMechanic && selectedJob.status === "PENDING_CONFIRM" && selectedJob.userId === user?.id && (
+                <View>
+                  <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 8 }}>
+                    🔧 {selectedJob.mechanic?.name} wants to take this job
+                  </Text>
+                  <TouchableOpacity onPress={() => handleConfirmJob(selectedJob)} style={{ backgroundColor: colors.green, padding: 14, borderRadius: 12, alignItems: "center", marginBottom: 8 }}>
+                    <Text style={{ color: "white", fontWeight: "700", fontSize: 16 }}>✅ Confirm Mechanic</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {selectedJob.status === "IN_PROGRESS" && (
+                <View style={{ backgroundColor: colors.blue + "22", padding: 10, borderRadius: 10, alignItems: "center", borderWidth: 1, borderColor: colors.blue }}>
+                  <Text style={{ color: colors.blue, fontWeight: "700" }}>🔧 In Progress</Text>
+                </View>
+              )}
+            </View>
+          )}
+
+          {openJobs.length === 0 && (
+            <View style={{ position: "absolute", top: "35%", left: 0, right: 0, alignItems: "center", padding: 40 }}>
+              <View style={{ backgroundColor: colors.card, borderRadius: 16, padding: 24, borderWidth: 1, borderColor: colors.border, alignItems: "center" }}>
+                <Text style={{ fontSize: 40, marginBottom: 12 }}>💼</Text>
+                <Text style={{ color: colors.text, fontSize: 16, fontWeight: "700", textAlign: "center" }}>No open jobs nearby</Text>
+                <Text style={{ color: colors.textSecondary, fontSize: 13, textAlign: "center", marginTop: 8 }}>
+                  {isMechanic ? "Check back soon!" : "Tap '+ Post Job' to add one"}
+                </Text>
+              </View>
+            </View>
+          )}
+        </View>
+      )}
+
+      {/* MY JOBS LIST VIEW */}
+      {mechanicView === "mine" && (
+        <ScrollView contentContainerStyle={{ padding: 16 }}>
+          {myJobs.length === 0 ? (
+            <View style={{ alignItems: "center", marginTop: 60 }}>
+              <Text style={{ fontSize: 48 }}>💼</Text>
+              <Text style={{ color: colors.text, fontSize: 18, fontWeight: "700", marginTop: 16 }}>
+                {isMechanic ? "No claimed jobs yet" : "No jobs posted yet"}
+              </Text>
+              <Text style={{ color: colors.textSecondary, marginTop: 8, textAlign: "center" }}>
+                {isMechanic ? "Claim a job from the map!" : "Tap '+ Post Job' to get started"}
+              </Text>
+            </View>
+          ) : myJobs.map((job: any) => {
+            const j = isMechanic ? job : job;
+            return (
+              <View key={j.id} style={{ backgroundColor: colors.card, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 16, marginBottom: 14 }}>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
+                  <Text style={{ color: colors.text, fontSize: 17, fontWeight: "700", flex: 1 }}>{j.title}</Text>
+                  <View style={{ backgroundColor: statusColor(j.status) + "22", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10, borderWidth: 1, borderColor: statusColor(j.status) }}>
+                    <Text style={{ color: statusColor(j.status), fontSize: 11, fontWeight: "700" }}>{j.status}</Text>
+                  </View>
+                </View>
+                <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 4 }}>🚗 {j.vehicle}</Text>
+                {j.budget ? <Text style={{ color: colors.green, fontSize: 13, fontWeight: "700", marginBottom: 10 }}>💰 ${j.budget}</Text> : <View style={{ marginBottom: 10 }} />}
+
+                {/* DIYER: pending confirm */}
+                {!isMechanic && j.status === "PENDING_CONFIRM" && j.mechanic && (
+                  <View style={{ backgroundColor: colors.background, borderRadius: 10, padding: 12, marginBottom: 10 }}>
+                    <Text style={{ color: colors.textSecondary, fontSize: 12, marginBottom: 4 }}>Mechanic wants to claim this job</Text>
+                    <Text style={{ color: colors.text, fontWeight: "700", marginBottom: 10 }}>🔧 {j.mechanic.name}</Text>
+                    <TouchableOpacity onPress={() => handleConfirmJob(j)} style={{ backgroundColor: colors.green, padding: 12, borderRadius: 10, alignItems: "center" }}>
+                      <Text style={{ color: "white", fontWeight: "700" }}>✅ Confirm Mechanic</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                {/* IN PROGRESS actions */}
+                {j.status === "IN_PROGRESS" && (
+                  <View>
+                    {j.mechanic && (
+                      <View style={{ backgroundColor: colors.background, borderRadius: 10, padding: 12, marginBottom: 10 }}>
+                        <Text style={{ color: colors.textSecondary, fontSize: 12 }}>{isMechanic ? "Customer" : "Your mechanic"}</Text>
+                        <Text style={{ color: colors.text, fontWeight: "700" }}>{isMechanic ? j.poster?.name : j.mechanic?.name}</Text>
+                        <Text style={{ color: colors.textSecondary, fontSize: 12 }}>{isMechanic ? j.poster?.phone || j.poster?.email : j.mechanic?.phone || j.mechanic?.email}</Text>
+                      </View>
+                    )}
+                    <View style={{ flexDirection: "row", gap: 10 }}>
+                      {isMechanic && (
+                        <TouchableOpacity onPress={() => { setStatusJob(j); setShowStatusModal(true); }} style={{ flex: 1, backgroundColor: "#f59e0b", padding: 12, borderRadius: 10, alignItems: "center" }}>
+                          <Text style={{ color: "white", fontWeight: "700" }}>📢 Send Update</Text>
+                        </TouchableOpacity>
+                      )}
+                      <TouchableOpacity onPress={() => handleCompleteJob(j)} style={{ flex: 1, backgroundColor: colors.blue, padding: 12, borderRadius: 10, alignItems: "center" }}>
+                        <Text style={{ color: "white", fontWeight: "700" }}>🏁 Complete</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                )}
+
+                {/* DIYER: delete open job */}
+                {!isMechanic && j.status === "OPEN" && (
+                  <TouchableOpacity onPress={() => handleDeleteJob(j)} style={{ marginTop: 8, backgroundColor: colors.background, padding: 10, borderRadius: 10, alignItems: "center", borderWidth: 1, borderColor: "#ef444433" }}>
+                    <Text style={{ color: "#ef4444", fontWeight: "700" }}>🗑️ Delete Job</Text>
+                  </TouchableOpacity>
+                )}
+
+                {j.status === "COMPLETED" && (
+                  <View style={{ backgroundColor: colors.blue + "22", padding: 10, borderRadius: 10, alignItems: "center", borderWidth: 1, borderColor: colors.blue }}>
+                    <Text style={{ color: colors.blue, fontWeight: "700" }}>✅ Completed</Text>
+                  </View>
+                )}
+              </View>
+            );
+          })}
+        </ScrollView>
+      )}
     </View>
   );
 }
