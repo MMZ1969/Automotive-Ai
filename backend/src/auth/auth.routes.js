@@ -1,3 +1,5 @@
+import express from "express";
+import authMiddleware from "../middleware/authMiddleware.js";
 import {
     changePassword,
     deleteAccount,
@@ -7,7 +9,8 @@ import {
     register,
     resendVerification,
     resetPassword,
-    verifyEmail
+    resetPasswordRedirect,
+    verifyEmail,
 } from "./auth.controller.js";
 
 const router = express.Router();
