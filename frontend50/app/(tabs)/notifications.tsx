@@ -3,7 +3,7 @@ import api from "@lib/api";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import {
-  ActivityIndicator, FlatList, Image, RefreshControl, Text, TouchableOpacity, View
+  ActivityIndicator, Alert, FlatList, Image, RefreshControl, Text, TouchableOpacity, View
 } from "react-native";
 
 export default function Notifications() {
@@ -33,6 +33,36 @@ export default function Notifications() {
     }
   };
 
+  const handleDeleteNotification = (id: number) => {
+    Alert.alert("Delete Notification", "Delete this notification?", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Delete", style: "destructive", onPress: async () => {
+        try {
+          await api.delete(`/api/notifications/${id}`);
+          setNotifications(prev => prev.filter(n => n.id !== id));
+        } catch (err) {
+          console.error("DELETE NOTIFICATION ERROR:", err);
+          Alert.alert("Error", "Could not delete notification.");
+        }
+      }},
+    ]);
+  };
+
+  const handleClearAll = () => {
+    Alert.alert("Clear All Notifications", "This will delete all your notifications. Continue?", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Clear All", style: "destructive", onPress: async () => {
+        try {
+          await api.delete("/api/notifications");
+          setNotifications([]);
+        } catch (err) {
+          console.error("CLEAR ALL ERROR:", err);
+          Alert.alert("Error", "Could not clear notifications.");
+        }
+      }},
+    ]);
+  };
+
   const timeAgo = (date: string) => {
     const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
     if (seconds < 60) return "just now";
@@ -51,8 +81,13 @@ export default function Notifications() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <View style={{ paddingTop: 60, paddingHorizontal: 20, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+      <View style={{ paddingTop: 60, paddingHorizontal: 20, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: colors.border, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
         <Text style={{ color: colors.text, fontSize: 28, fontWeight: "900" }}>Notifications</Text>
+        {notifications.length > 0 && (
+          <TouchableOpacity onPress={handleClearAll}>
+            <Text style={{ color: colors.blue, fontSize: 14, fontWeight: "700" }}>Clear All</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       <FlatList
@@ -70,6 +105,7 @@ export default function Notifications() {
         renderItem={({ item }) => (
           <TouchableOpacity
             onPress={() => handleNotificationPress(item)}
+            onLongPress={() => handleDeleteNotification(item.id)}
             style={{
               flexDirection: "row", alignItems: "center",
               backgroundColor: item.read ? colors.card : colors.background,

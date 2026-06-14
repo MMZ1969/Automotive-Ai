@@ -7,6 +7,7 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Image,
   KeyboardAvoidingView,
@@ -54,6 +55,20 @@ export default function MessagesScreen() {
 
   const getLastMessage = (conv: any) => {
     return conv.messages?.[0];
+  };
+  const handleDeleteConversation = (id: number) => {
+    Alert.alert("Delete Conversation", "Delete this conversation and all its messages?", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Delete", style: "destructive", onPress: async () => {
+        try {
+          await api.delete(`/api/messages/conversations/${id}`);
+          setConversations(prev => prev.filter(c => c.id !== id));
+        } catch (err) {
+          console.error("DELETE CONVERSATION ERROR:", err);
+          Alert.alert("Error", "Could not delete conversation.");
+        }
+      }},
+    ]);
   };
 
   const handleSearch = async (text: string) => {
@@ -145,6 +160,7 @@ export default function MessagesScreen() {
           return (
             <TouchableOpacity
               onPress={() => router.push(`/(tabs)/chat/${item.id}`)}
+              onLongPress={() => handleDeleteConversation(item.id)}
               style={{
                 flexDirection: "row", alignItems: "center", gap: 14,
                 paddingHorizontal: 20, paddingVertical: 14,

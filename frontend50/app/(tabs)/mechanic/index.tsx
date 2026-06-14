@@ -11,18 +11,16 @@ export default function MechanicDashboard() {
   const router = useRouter();
   const [jobCount, setJobCount] = useState(0);
   const [reviewCount, setReviewCount] = useState(0);
-  const [earnings, setEarnings] = useState(0);
 
   useFocusEffect(useCallback(() => {
     const fetchStats = async () => {
       try {
-        const [bidsRes, reviewsRes] = await Promise.all([
+        const [jobsRes, reviewsRes] = await Promise.all([
           api.get("/api/jobs/my-bids"),
           api.get(`/api/reviews/${user?.id}`),
         ]);
-        const acceptedBids = bidsRes.data.filter((b: any) => b.status === "ACCEPTED" && b.job?.status === "COMPLETED");
-        setJobCount(acceptedBids.length);
-        setEarnings(acceptedBids.reduce((sum: number, b: any) => sum + b.price, 0));
+        const completedJobs = jobsRes.data.filter((j: any) => j.status === "COMPLETED");
+        setJobCount(completedJobs.length);
         setReviewCount(reviewsRes.data.total);
       } catch (err) { console.error("STATS ERROR:", err); }
     };
@@ -75,8 +73,8 @@ export default function MechanicDashboard() {
       </View>
 
       <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 20 }}>
-        {[{ label: "Jobs", value: jobCount }, { label: "Reviews", value: reviewCount }, { label: "Earnings", value: `$${earnings}` }].map((stat, i) => (
-          <View key={i} style={{ flex: 1, backgroundColor: colors.card, padding: 16, borderRadius: 14, borderWidth: 1, borderColor: colors.border, marginHorizontal: i === 1 ? 10 : 0 }}>
+        {[{ label: "Jobs Completed", value: jobCount }, { label: "Reviews", value: reviewCount }].map((stat, i) => (
+          <View key={i} style={{ flex: 1, backgroundColor: colors.card, padding: 16, borderRadius: 14, borderWidth: 1, borderColor: colors.border, marginHorizontal: i === 0 ? 0 : 10 }}>
             <Text style={{ color: colors.textSecondary, fontSize: 13 }}>{stat.label}</Text>
             <Text style={{ color: colors.text, fontSize: 26, fontWeight: "bold", marginTop: 4 }}>{stat.value}</Text>
           </View>

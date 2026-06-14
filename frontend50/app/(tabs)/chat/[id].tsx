@@ -5,6 +5,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Image,
   KeyboardAvoidingView,
@@ -84,6 +85,21 @@ export default function ChatScreen() {
 
   const otherUser = getOtherUser();
 
+  const handleDeleteConversation = () => {
+    Alert.alert("Delete Conversation", "This will permanently delete this conversation and all messages. Continue?", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Delete", style: "destructive", onPress: async () => {
+        try {
+          await api.delete(`/api/messages/conversations/${conversationId}`);
+          router.back();
+        } catch (err) {
+          console.error("DELETE CONVERSATION ERROR:", err);
+          Alert.alert("Error", "Could not delete conversation.");
+        }
+      }},
+    ]);
+  };
+
   if (loading) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background, justifyContent: "center", alignItems: "center" }}>
@@ -117,6 +133,9 @@ export default function ChatScreen() {
             </View>
           </TouchableOpacity>
         )}
+        <TouchableOpacity onPress={handleDeleteConversation} style={{ padding: 4 }}>
+          <Text style={{ fontSize: 20 }}>🗑️</Text>
+        </TouchableOpacity>
       </View>
 
       {/* MESSAGES */}
