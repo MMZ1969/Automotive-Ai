@@ -174,4 +174,29 @@ router.get("/unread-count", authMiddleware, async (req, res) => {
   }
 });
 
+// DELETE a conversation (and its messages)
+router.delete("/conversations/:id", authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const conversationId = parseInt(req.params.id);
+
+    const conversation = await prisma.conversation.findUnique({
+      where: { id: conversationId },
+    });
+
+    if (!conversation) return res.status(404).json({ error: "Conversation not found" });
+    if (conversation.user1Id !== userId && conversation.user2Id !== userId) {
+      return res.status(403).json({ error: "Not authorized" });
+    }
+
+    await prisma.message.deleteMany({ where: { conversationId } });
+    await prisma.conversation.delete({ where: { id: conversationId } });
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("DELETE CONVERSATION ERROR:", err);
+    res.status(500).json({ error: "Failed to delete conversation" });
+  }
+});
+
 export default router;

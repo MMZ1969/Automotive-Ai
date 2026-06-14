@@ -93,6 +93,38 @@ export async function createAndSendNotification({ recipientId, actorId, type, po
         message,
       },
     });
+    
+    // DELETE /api/notifications/:id — delete a single notification
+export async function deleteNotification(req, res) {
+  try {
+    const id = Number(req.params.id);
+
+    const notification = await prisma.notification.findUnique({ where: { id } });
+    if (!notification) return res.status(404).json({ error: "Notification not found" });
+    if (notification.recipientId !== req.user.id) return res.status(403).json({ error: "Not authorized" });
+
+    await prisma.notification.delete({ where: { id } });
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("DELETE NOTIFICATION ERROR:", err);
+    res.status(500).json({ error: "Failed to delete notification" });
+  }
+}
+
+// DELETE /api/notifications — clear all notifications for the user
+export async function deleteAllNotifications(req, res) {
+  try {
+    await prisma.notification.deleteMany({
+      where: { recipientId: req.user.id },
+    });
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("DELETE ALL NOTIFICATIONS ERROR:", err);
+    res.status(500).json({ error: "Failed to clear notifications" });
+  }
+}
 
     const recipient = await prisma.user.findUnique({
       where: { id: recipientId },
