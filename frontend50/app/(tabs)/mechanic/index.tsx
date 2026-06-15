@@ -41,7 +41,7 @@ export default function MechanicDashboard() {
       {/* VERIFICATION BANNER */}
       {!user?.isVerified && (
         <TouchableOpacity
-          onPress={() => router.push("/(tabs)/(profile)")}
+          onPress={() => router.push("/(tabs)/mechanic/verify")}
           style={{
             backgroundColor: "#1a1200",
             borderWidth: 1.5,
