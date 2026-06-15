@@ -5,8 +5,27 @@ import { VehicleProvider } from "@context/VehicleContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Slot, useRouter, useSegments } from "expo-router";
 import { useEffect, useState } from "react";
+import { Text, TouchableOpacity, View } from "react-native";
 
 const PUBLIC_ROUTES = ["forgot-password", "reset-password", "change-password", "guidelines"];
+
+function BannedScreen() {
+  const { logout } = useAuth();
+  return (
+    <View style={{ flex: 1, backgroundColor: "#050509", justifyContent: "center", alignItems: "center", padding: 40 }}>
+      <Text style={{ fontSize: 48, marginBottom: 16 }}>🚫</Text>
+      <Text style={{ color: "white", fontSize: 22, fontWeight: "900", textAlign: "center", marginBottom: 12 }}>
+        Account Suspended
+      </Text>
+      <Text style={{ color: "#9ca3af", fontSize: 14, textAlign: "center", marginBottom: 32 }}>
+        Your AutoAI account has been suspended for violating our community guidelines. If you believe this is a mistake, contact support at maz@amazmade.com.
+      </Text>
+      <TouchableOpacity onPress={logout} style={{ backgroundColor: "#345bff", paddingHorizontal: 32, paddingVertical: 14, borderRadius: 12 }}>
+        <Text style={{ color: "white", fontWeight: "700" }}>Log Out</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
 
 function RouteGuard() {
   const { user, loading } = useAuth();
@@ -43,6 +62,10 @@ function RouteGuard() {
       router.replace("/(tabs)/feed");
     }
   }, [user, loading, segments, onboardingChecked, hasSeenOnboarding]);
+
+  if (user?.isBanned) {
+    return <BannedScreen />;
+  }
 
   return <Slot />;
 }
