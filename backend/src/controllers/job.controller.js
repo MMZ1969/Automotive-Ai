@@ -330,7 +330,3 @@ export const sendQuickAlert = async (req, res) => {
     res.status(500).json({ error: "Failed to send quick alert" });
   }
 };
-
-// PLACEHOLDER — kept for route compatibility
-export const placeBid = async (req, res) => res.status(410).json({ error: "Bidding has been replaced by direct job claiming." });
-export const acceptBid = async (req, res) => res.status(410).json({ error: "Bidding has been replaced by direct job claiming." });
