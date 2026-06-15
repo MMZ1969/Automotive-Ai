@@ -22,6 +22,7 @@ export default function ChatScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
   const flatListRef = useRef<FlatList>(null);
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const [messages, setMessages] = useState<any[]>([]);
   const [conversation, setConversation] = useState<any>(null);
@@ -59,8 +60,10 @@ export default function ChatScreen() {
     fetchConversation();
     fetchMessages();
     // Poll for new messages every 5 seconds
-    const interval = setInterval(fetchMessages, 5000);
-    return () => clearInterval(interval);
+    pollIntervalRef.current = setInterval(fetchMessages, 5000);
+    return () => {
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+    };
   }, [conversationId]);
 
   const getOtherUser = () => {
@@ -90,6 +93,7 @@ export default function ChatScreen() {
       { text: "Cancel", style: "cancel" },
       { text: "Delete", style: "destructive", onPress: async () => {
         try {
+          if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
           await api.delete(`/api/messages/conversations/${conversationId}`);
           router.back();
         } catch (err) {
@@ -97,6 +101,34 @@ export default function ChatScreen() {
           Alert.alert("Error", "Could not delete conversation.");
         }
       }},
+    ]);
+  };
+
+  const handleBlockUser = () => {
+    if (!otherUser) return;
+    Alert.alert("Block User", `Block ${otherUser.name}? They won't be able to message you anymore.`, [
+      { text: "Cancel", style: "cancel" },
+      { text: "Block", style: "destructive", onPress: async () => {
+        try {
+          await api.post(`/api/users/${otherUser.id}/block`);
+          Alert.alert("✅ Blocked", `${otherUser.name} has been blocked.`);
+        } catch (err) {
+          console.error("BLOCK USER ERROR:", err);
+          Alert.alert("Error", "Could not block user.");
+        }
+      }},
+    ]);
+  };
+
+  const handleMenuPress = () => {
+    if (!otherUser) {
+      handleDeleteConversation();
+      return;
+    }
+    Alert.alert("Conversation Options", undefined, [
+      { text: "Cancel", style: "cancel" },
+      { text: "Block User", style: "destructive", onPress: handleBlockUser },
+      { text: "Delete Conversation", style: "destructive", onPress: handleDeleteConversation },
     ]);
   };
 
@@ -133,8 +165,8 @@ export default function ChatScreen() {
             </View>
           </TouchableOpacity>
         )}
-        <TouchableOpacity onPress={handleDeleteConversation} style={{ padding: 4 }}>
-          <Text style={{ fontSize: 20 }}>🗑️</Text>
+        <TouchableOpacity onPress={handleMenuPress} style={{ padding: 4 }}>
+          <Text style={{ fontSize: 20 }}>⋯</Text>
         </TouchableOpacity>
       </View>
 
