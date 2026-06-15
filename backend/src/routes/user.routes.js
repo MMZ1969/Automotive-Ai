@@ -1,5 +1,5 @@
 import express from "express";
-import { blockUser, getBlockedUsers, getFollowers, getFollowing, getLeaderboard, getMe, getMechanicStats, getMechanics, getUserProfile, getVerificationRequests, requestVerification, savePushToken, searchUsers, updateProfile, verifyMechanic } from "../controllers/user.controller.js";
+import { banUser, blockUser, getAllUsers, getBlockedUsers, getFollowers, getFollowing, getLeaderboard, getMe, getMechanicStats, getMechanics, getUserProfile, getVerificationRequests, requestVerification, savePushToken, searchUsers, updateProfile, verifyMechanic } from "../controllers/user.controller.js";
 import authMiddleware from "../middleware/authMiddleware.js";
 
 const router = express.Router();
