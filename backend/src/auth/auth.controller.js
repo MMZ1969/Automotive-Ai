@@ -130,8 +130,10 @@ export const login = async (req, res) => {
         isAdmin: user.isAdmin,
         location: user.location,
         isVerified: user.isVerified,
+        isBanned: user.isBanned,
       },
     });
+    
   } catch (err) {
     console.error("LOGIN ERROR:", err);
     res.status(500).json({ message: "Server error" });

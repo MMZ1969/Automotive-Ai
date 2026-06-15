@@ -450,3 +450,57 @@ export async function getMechanics(req, res) {
     res.status(500).json({ error: "Failed to fetch mechanics" });
   }
 }
+
+// POST /users/:id/ban — admin only, toggle ban status
+export async function banUser(req, res) {
+  try {
+    const adminId = req.user.id;
+    const targetId = Number(req.params.id);
+
+    const admin = await prisma.user.findUnique({ where: { id: adminId } });
+    if (!admin?.isAdmin) return res.status(403).json({ error: "Admin access required" });
+
+    if (targetId === adminId) return res.status(400).json({ error: "Cannot ban yourself" });
+
+    const target = await prisma.user.findUnique({ where: { id: targetId } });
+    if (!target) return res.status(404).json({ error: "User not found" });
+
+    const updated = await prisma.user.update({
+      where: { id: targetId },
+      data: { isBanned: !target.isBanned },
+    });
+
+    res.json({ isBanned: updated.isBanned });
+  } catch (err) {
+    console.error("BAN USER ERROR:", err);
+    res.status(500).json({ error: "Failed to update ban status" });
+  }
+}
+
+// GET /users/admin/all — admin only, list all users
+export async function getAllUsers(req, res) {
+  try {
+    const adminId = req.user.id;
+    const admin = await prisma.user.findUnique({ where: { id: adminId } });
+    if (!admin?.isAdmin) return res.status(403).json({ error: "Admin access required" });
+
+    const users = await prisma.user.findMany({
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        isVerified: true,
+        isBanned: true,
+        isAdmin: true,
+        createdAt: true,
+      },
+    });
+
+    res.json(users);
+  } catch (err) {
+    console.error("GET ALL USERS ERROR:", err);
+    res.status(500).json({ error: "Failed to fetch users" });
+  }
+}

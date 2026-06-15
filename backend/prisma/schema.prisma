@@ -24,6 +24,7 @@ model User {
   verificationToken     String?
   isAdmin               Boolean        @default(false)
   isVerified            Boolean        @default(false)
+  isBanned              Boolean        @default(false)
   verificationRequest   String?
   resetToken            String?
   resetTokenExpiry      DateTime?
