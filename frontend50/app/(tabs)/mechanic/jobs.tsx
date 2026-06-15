@@ -2,7 +2,7 @@ import { useAuth } from "@context/AuthContext";
 import { useTheme } from "@context/ThemeContext";
 import api from "@lib/api";
 import * as Location from "expo-location";
-import { useFocusEffect, useRouter } from "expo-router";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useRef, useState } from "react";
 import {
   ActivityIndicator, Alert, KeyboardAvoidingView, Modal,
@@ -37,6 +37,7 @@ export default function Jobs() {
   const { user, isMechanic } = useAuth();
   const { colors } = useTheme();
   const router = useRouter();
+  const { jobId } = useLocalSearchParams<{ jobId?: string }>();
   const mapRef = useRef<MapView>(null);
 
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -71,7 +72,24 @@ export default function Jobs() {
       const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
       setUserLocation({ lat: loc.coords.latitude, lng: loc.coords.longitude });
 
-      await fetchJobs();
+      const fetchedJobs = await fetchJobs();
+
+      // If we arrived via a job notification, center on and select that job
+      if (jobId && fetchedJobs) {
+        const target = fetchedJobs.find((j: any) => j.id === Number(jobId));
+        if (target && target.latitude && target.longitude) {
+          setSelectedJob(target);
+          setMechanicView("map");
+          setTimeout(() => {
+            mapRef.current?.animateToRegion({
+              latitude: target.latitude,
+              longitude: target.longitude,
+              latitudeDelta: 0.05,
+              longitudeDelta: 0.05,
+            }, 500);
+          }, 300);
+        }
+      }
     } catch (err) {
       console.error("MAP INIT ERROR:", err);
       setLocationError(true);
@@ -88,8 +106,10 @@ export default function Jobs() {
       ]);
       setJobs(openRes.data);
       setMyJobs(myRes.data);
+      return openRes.data;
     } catch (err) {
       console.error("FETCH JOBS ERROR:", err);
+      return null;
     }
   };
 

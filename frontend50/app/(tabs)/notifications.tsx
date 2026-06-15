@@ -29,6 +29,13 @@ export default function Notifications() {
     switch (item.type) {
       case "like": case "comment": if (item.postId) router.push(`/(tabs)/post/${item.postId}`); break;
       case "follow": if (item.actorId) router.push(`/(tabs)/user/${item.actorId}`); break;
+      case "job":
+        if (item.jobId) {
+          router.push({ pathname: "/(tabs)/mechanic/jobs", params: { jobId: item.jobId.toString() } });
+        } else {
+          router.push("/(tabs)/mechanic/jobs");
+        }
+        break;
       case "bid": case "bid_accepted": router.push("/(tabs)/mechanic/jobs"); break;
     }
   };
