@@ -261,14 +261,8 @@ export async function getMechanicStats(req, res) {
 
     const completedJobs = await prisma.job.count({
       where: {
-        acceptedBidId: { not: null },
+        mechanicId: id,
         status: "COMPLETED",
-        bids: {
-          some: {
-            mechanicId: id,
-            status: "ACCEPTED",
-          },
-        },
       },
     });
 
