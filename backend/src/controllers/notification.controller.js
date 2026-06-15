@@ -82,7 +82,7 @@ export async function markAllRead(req, res) {
 }
 
 // Helper exported for use in other controllers
-export async function createAndSendNotification({ recipientId, actorId, type, postId, message }) {
+export async function createAndSendNotification({ recipientId, actorId, type, postId, jobId, message }) {
   try {
     await prisma.notification.create({
       data: {
@@ -90,6 +90,7 @@ export async function createAndSendNotification({ recipientId, actorId, type, po
         actorId,
         type,
         postId: postId || null,
+        jobId: jobId || null,
         message,
       },
     });

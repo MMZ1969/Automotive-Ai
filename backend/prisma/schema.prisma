@@ -155,6 +155,7 @@ model Notification {
   actorId     Int
   type        String
   postId      Int?
+  jobId       Int?
   message     String
   read        Boolean  @default(false)
   createdAt   DateTime @default(now())

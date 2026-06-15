@@ -93,6 +93,7 @@ export const createJob = async (req, res) => {
               recipientId: m.id,
               actorId: userId,
               type: "job",
+              jobId: job.id,
               message: `🔧 New job posted near you: ${title} — tap to view on the map!`,
             })
           )
@@ -160,6 +161,7 @@ export const claimJob = async (req, res) => {
       recipientId: job.userId,
       actorId: mechanicId,
       type: "job",
+      jobId: job.id,
       message: `🔧 ${mechanic?.name || "A mechanic"} wants to take your job: "${job.title}" — tap to confirm!`,
     });
 
@@ -199,6 +201,7 @@ export const confirmJob = async (req, res) => {
       recipientId: job.mechanicId,
       actorId: userId,
       type: "job",
+      jobId: job.id,
       message: `✅ ${job.poster.name} confirmed your claim on "${job.title}"! Contact: ${job.poster.phone || job.poster.email}`,
     });
 
