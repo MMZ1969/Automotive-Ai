@@ -166,7 +166,7 @@ export default function ChatScreen() {
           </TouchableOpacity>
         )}
         <TouchableOpacity onPress={handleMenuPress} style={{ padding: 4 }}>
-          <Text style={{ fontSize: 20 }}>⋯</Text>
+          <Text style={{ fontSize: 24, color: colors.text, fontWeight: "900" }}>⋯</Text>
         </TouchableOpacity>
       </View>
 
