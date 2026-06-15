@@ -141,6 +141,19 @@ router.post("/conversations/:id/messages", authMiddleware, async (req, res) => {
 
     const receiverId = conversation.user1Id === userId ? conversation.user2Id : conversation.user1Id;
 
+    // Check if either user has blocked the other
+    const block = await prisma.block.findFirst({
+      where: {
+        OR: [
+          { blockerId: userId, blockedId: receiverId },
+          { blockerId: receiverId, blockedId: userId },
+        ],
+      },
+    });
+    if (block) {
+      return res.status(403).json({ error: "Cannot send message — user is blocked" });
+    }
+
     const message = await prisma.message.create({
       data: { conversationId, senderId: userId, receiverId, content },
       include: {
