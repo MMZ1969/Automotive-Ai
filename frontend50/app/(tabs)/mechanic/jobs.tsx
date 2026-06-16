@@ -57,6 +57,11 @@ export default function Jobs() {
 
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [statusJob, setStatusJob] = useState<any>(null);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [reviewJob, setReviewJob] = useState<any>(null);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState("");
+  const [submittingReview, setSubmittingReview] = useState(false);
 
   const inputStyle = {
     backgroundColor: colors.background, color: colors.text,
@@ -189,12 +194,45 @@ export default function Jobs() {
         try {
           await api.post(`/api/jobs/${job.id}/complete`);
           await fetchJobs();
-          Alert.alert("🏁 Done!", "Job marked as complete.");
+          // If mechanic, show review modal for DIYer
+          if (isMechanic) {
+            setReviewJob(job);
+            setReviewRating(5);
+            setReviewComment("");
+            setShowReviewModal(true);
+          } else {
+            Alert.alert("🏁 Done!", "Job marked as complete.");
+          }
         } catch {
           Alert.alert("Error", "Could not complete job.");
         }
       }},
     ]);
+  };
+
+  const handleSubmitMechanicReview = async () => {
+    if (!reviewJob) return;
+    try {
+      setSubmittingReview(true);
+      await api.post("/api/reviews/mechanic", {
+        jobId: reviewJob.id,
+        diyerId: reviewJob.poster?.id || reviewJob.userId,
+        rating: reviewRating,
+        comment: reviewComment,
+      });
+      setShowReviewModal(false);
+      setReviewJob(null);
+      Alert.alert("⭐ Thanks!", "Your review has been submitted.");
+    } catch (err: any) {
+      if (err?.response?.status === 400) {
+        setShowReviewModal(false);
+        Alert.alert("Already Reviewed", "You already reviewed this job.");
+      } else {
+        Alert.alert("Error", "Could not submit review.");
+      }
+    } finally {
+      setSubmittingReview(false);
+    }
   };
 
   const handleDeleteJob = async (job: any) => {
@@ -255,6 +293,53 @@ export default function Jobs() {
                 </TouchableOpacity>
                 <TouchableOpacity onPress={handleCreateJob} disabled={creating} style={{ flex: 1, backgroundColor: colors.blue, padding: 14, borderRadius: 12, alignItems: "center" }}>
                   <Text style={{ color: "white", fontWeight: "700" }}>{creating ? "Posting..." : "Post Job"}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* MECHANIC REVIEW MODAL */}
+      <Modal visible={showReviewModal} animationType="slide" transparent>
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1, backgroundColor: "#00000088", justifyContent: "flex-end" }}>
+          <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1, justifyContent: "flex-end" }}>
+            <View style={{ backgroundColor: colors.card, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20 }}>
+              <Text style={{ color: colors.text, fontSize: 22, fontWeight: "900", marginBottom: 4 }}>⭐ Rate Your Customer</Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 20 }}>{reviewJob?.title}</Text>
+              <View style={{ flexDirection: "row", justifyContent: "center", gap: 12, marginBottom: 20 }}>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <TouchableOpacity key={star} onPress={() => setReviewRating(star)}>
+                    <Text style={{ fontSize: 36 }}>{star <= reviewRating ? "⭐" : "☆"}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <TextInput
+                placeholder="Leave a comment (optional)..."
+                placeholderTextColor={colors.textMuted}
+                value={reviewComment}
+                onChangeText={setReviewComment}
+                multiline
+                style={{
+                  backgroundColor: colors.background, color: colors.text,
+                  padding: 12, borderRadius: 10, borderWidth: 1,
+                  borderColor: colors.border, marginBottom: 10,
+                  fontSize: 15, minHeight: 80, textAlignVertical: "top",
+                }}
+              />
+              <View style={{ flexDirection: "row", gap: 10, marginTop: 8, marginBottom: 30 }}>
+                <TouchableOpacity
+                  onPress={() => { setShowReviewModal(false); setReviewJob(null); }}
+                  style={{ flex: 1, backgroundColor: colors.border, padding: 14, borderRadius: 12, alignItems: "center" }}
+                >
+                  <Text style={{ color: colors.text, fontWeight: "700" }}>Skip</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={handleSubmitMechanicReview}
+                  disabled={submittingReview}
+                  style={{ flex: 1, backgroundColor: colors.blue, padding: 14, borderRadius: 12, alignItems: "center" }}
+                >
+                  <Text style={{ color: "white", fontWeight: "700" }}>{submittingReview ? "Submitting..." : "Submit Review"}</Text>
                 </TouchableOpacity>
               </View>
             </View>
