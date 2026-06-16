@@ -244,7 +244,8 @@ export const completeJob = async (req, res) => {
       await createAndSendNotification({
         recipientId: job.userId,
         actorId: userId,
-        type: "job_update",
+        type: "job_complete",
+        jobId: job.id,
         message: `🏁 ${job.mechanic.name} marked your job "${job.title}" as complete! Please leave a review.`,
       });
     }
@@ -253,8 +254,9 @@ export const completeJob = async (req, res) => {
       await createAndSendNotification({
         recipientId: job.mechanic.id,
         actorId: userId,
-        type: "job_update",
-        message: `🏁 ${job.poster.name} marked "${job.title}" as complete!`,
+        type: "job_complete",
+        jobId: job.id,
+        message: `🏁 ${job.poster.name} marked "${job.title}" as complete! Please rate your customer.`,
       });
     }
 

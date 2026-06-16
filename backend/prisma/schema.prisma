@@ -204,7 +204,7 @@ model Job {
   poster        User     @relation("JobPoster", fields: [userId], references: [id])
   mechanic      User?    @relation("JobMechanic", fields: [mechanicId], references: [id])
   bids          Bid[]
-  review        Review?
+  reviews        Review[]
 }
 
 model Bid {
@@ -224,15 +224,18 @@ model Bid {
 
 model Review {
   id         Int      @id @default(autoincrement())
-  jobId      Int      @unique
+  jobId      Int
   reviewerId Int
   mechanicId Int
   rating     Int
   comment    String?
+  reviewType String   @default("DIYER_TO_MECHANIC")
   createdAt  DateTime @default(now())
   job        Job      @relation(fields: [jobId], references: [id])
   reviewer   User     @relation("ReviewGiver", fields: [reviewerId], references: [id])
   mechanic   User     @relation("ReviewReceiver", fields: [mechanicId], references: [id])
+
+  @@unique([jobId, reviewType])
 }
 
 model Part {
