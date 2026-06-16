@@ -65,7 +65,7 @@ export default function LoginScreen() {
         resizeMode="contain"
       />
       <Text style={{ color: colors.textSecondary, fontSize: 14, marginBottom: 32 }}>
-        The social platform for car enthusiasts
+        Automotive Intelligence
       </Text>
 
       <TextInput
