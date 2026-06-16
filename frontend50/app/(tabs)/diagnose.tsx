@@ -2,7 +2,7 @@ import { useTheme } from "@context/ThemeContext";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import api from "@lib/api";
 import * as ImagePicker from "expo-image-picker";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import {
   ActivityIndicator, Alert, Image, KeyboardAvoidingView, Linking,
@@ -19,6 +19,7 @@ try {
 
 export default function Diagnose() {
   const { colors } = useTheme();
+  const router = useRouter();
   const [query, setQuery] = useState("");
   const [result, setResult] = useState<any>(null);
   const [videos, setVideos] = useState<any[]>([]);
@@ -113,6 +114,24 @@ export default function Diagnose() {
   setResult(diagRes.data); setVideos(videoRes.data);
 } catch { console.error("DIAGNOSE ERROR"); }
 finally { setLoading(false); }
+  };
+
+  const handleShareToFeed = () => {
+    if (!result) return;
+    const vehicle = selectedVehicle ? `${selectedVehicle.year} ${selectedVehicle.make} ${selectedVehicle.model}` : null;
+    const content = [
+      vehicle ? `🚗 ${vehicle}` : null,
+      `🔧 ${result.summary}`,
+      `⚠️ Severity: ${result.severity}`,
+      `💰 Est. Cost: ${result.estimatedCost}`,
+      result.proTip ? `💡 Pro Tip: ${result.proTip}` : null,
+      `\n#AutoAI #CarDiagnosis #DIY`,
+    ].filter(Boolean).join("\n");
+
+    router.push({
+      pathname: "/(tabs)/create",
+      params: { prefillContent: content },
+    });
   };
 
   const severityColor = (severity: string) => {
@@ -219,13 +238,22 @@ finally { setLoading(false); }
 
         {result && (
   <View style={{ gap: 14 }}>
-    <TouchableOpacity
-      onPress={() => { setResult(null); setVideos([]); setScanImage(null); setQuery(""); }}
-      style={{ backgroundColor: colors.card, borderRadius: 12, borderWidth: 1, borderColor: colors.border, paddingVertical: 12, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8 }}
-    >
-      <MaterialCommunityIcons name="refresh" size={18} color={colors.textSecondary} />
-      <Text style={{ color: colors.textSecondary, fontWeight: "700" }}>New Diagnosis</Text>
-    </TouchableOpacity>
+    <View style={{ flexDirection: "row", gap: 10 }}>
+      <TouchableOpacity
+        onPress={() => { setResult(null); setVideos([]); setScanImage(null); setQuery(""); }}
+        style={{ flex: 1, backgroundColor: colors.card, borderRadius: 12, borderWidth: 1, borderColor: colors.border, paddingVertical: 12, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8 }}
+      >
+        <MaterialCommunityIcons name="refresh" size={18} color={colors.textSecondary} />
+        <Text style={{ color: colors.textSecondary, fontWeight: "700" }}>New Diagnosis</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={handleShareToFeed}
+        style={{ flex: 1, backgroundColor: colors.green, borderRadius: 12, paddingVertical: 12, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8 }}
+      >
+        <MaterialCommunityIcons name="share-variant" size={18} color="white" />
+        <Text style={{ color: "white", fontWeight: "700" }}>Share to Feed</Text>
+      </TouchableOpacity>
+    </View>
 
             {/* Summary Card */}
             <View style={{ backgroundColor: colors.card, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 16 }}>

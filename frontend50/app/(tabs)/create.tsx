@@ -3,7 +3,7 @@ import { useTheme } from "@context/ThemeContext";
 import api from "@lib/api";
 import { ensureFirebaseAuth } from "@lib/firebaseAuth";
 import * as ImagePicker from "expo-image-picker";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { getDownloadURL, ref, uploadBytesResumable } from "firebase/storage";
 import { useState } from "react";
 import {
@@ -19,7 +19,8 @@ export default function CreatePostScreen() {
   const { colors } = useTheme();
   const router = useRouter();
 
-  const [content, setContent] = useState("");
+  const { prefillContent } = useLocalSearchParams<{ prefillContent?: string }>();
+  const [content, setContent] = useState(prefillContent || "");
   const [submitting, setSubmitting] = useState(false);
   const [postType, setPostType] = useState<"VANITY" | "QUESTION" | "SERVICE" | "BEFORE_AFTER">("VANITY");
   const [servicePrice, setServicePrice] = useState("");
