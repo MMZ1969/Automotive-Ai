@@ -240,6 +240,21 @@ export default function Jobs() {
     }
   };
 
+  const handleCancelJob = async (job: any) => {
+    Alert.alert("Cancel Job", "This will release the mechanic and reopen the job. Continue?", [
+      { text: "No", style: "cancel" },
+      { text: "Yes, Cancel", style: "destructive", onPress: async () => {
+        try {
+          await api.post(`/api/jobs/${job.id}/cancel`);
+          await fetchJobs();
+          Alert.alert("✅ Cancelled", "Your job is back on the map for mechanics to claim.");
+        } catch (err: any) {
+          Alert.alert("Error", err?.response?.data?.error || "Could not cancel job.");
+        }
+      }},
+    ]);
+  };
+
   const handleDeleteJob = async (job: any) => {
     Alert.alert("Delete Job", "Are you sure?", [
       { text: "Cancel", style: "cancel" },
@@ -538,9 +553,14 @@ export default function Jobs() {
                   <View style={{ backgroundColor: colors.background, borderRadius: 10, padding: 12, marginBottom: 10 }}>
                     <Text style={{ color: colors.textSecondary, fontSize: 12, marginBottom: 4 }}>Mechanic wants to claim this job</Text>
                     <Text style={{ color: colors.text, fontWeight: "700", marginBottom: 10 }}>🔧 {j.mechanic.name}</Text>
-                    <TouchableOpacity onPress={() => handleConfirmJob(j)} style={{ backgroundColor: colors.green, padding: 12, borderRadius: 10, alignItems: "center" }}>
-                      <Text style={{ color: "white", fontWeight: "700" }}>✅ Confirm Mechanic</Text>
-                    </TouchableOpacity>
+                    <View style={{ flexDirection: "row", gap: 10 }}>
+                      <TouchableOpacity onPress={() => handleConfirmJob(j)} style={{ flex: 1, backgroundColor: colors.green, padding: 12, borderRadius: 10, alignItems: "center" }}>
+                        <Text style={{ color: "white", fontWeight: "700" }}>✅ Confirm</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => handleCancelJob(j)} style={{ flex: 1, backgroundColor: colors.background, padding: 12, borderRadius: 10, alignItems: "center", borderWidth: 1, borderColor: "#ef444433" }}>
+                        <Text style={{ color: "#ef4444", fontWeight: "700" }}>❌ Cancel</Text>
+                      </TouchableOpacity>
+                    </View>
                   </View>
                 )}
 
@@ -563,6 +583,11 @@ export default function Jobs() {
                       <TouchableOpacity onPress={() => handleCompleteJob(j)} style={{ flex: 1, backgroundColor: colors.blue, padding: 12, borderRadius: 10, alignItems: "center" }}>
                         <Text style={{ color: "white", fontWeight: "700" }}>🏁 Complete</Text>
                       </TouchableOpacity>
+                      {!isMechanic && (
+                        <TouchableOpacity onPress={() => handleCancelJob(j)} style={{ flex: 1, backgroundColor: colors.background, padding: 12, borderRadius: 10, alignItems: "center", borderWidth: 1, borderColor: "#ef444433" }}>
+                          <Text style={{ color: "#ef4444", fontWeight: "700" }}>❌ Cancel</Text>
+                        </TouchableOpacity>
+                      )}
                     </View>
                   </View>
                 )}
