@@ -36,6 +36,12 @@ export default function Notifications() {
           router.push("/(tabs)/mechanic/jobs");
         }
         break;
+      case "job_complete":
+        router.push("/(tabs)/mechanic/jobs");
+        break;
+      case "job_update":
+        router.push("/(tabs)/mechanic/jobs");
+        break;
       case "bid": case "bid_accepted": router.push("/(tabs)/mechanic/jobs"); break;
     }
   };
