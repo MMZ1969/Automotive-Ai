@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -34,7 +35,8 @@ export default function NearMe() {
   const [loading, setLoading] = useState(true);
   const [selectedPin, setSelectedPin] = useState<MechanicPin | null>(null);
   const [locationError, setLocationError] = useState(false);
-
+  const [searchQuery, setSearchQuery] = useState("");
+  
   useEffect(() => { initMap(); }, []);
 
   const initMap = async () => {
@@ -131,6 +133,25 @@ export default function NearMe() {
         </View>
       </View>
 
+      {/* SEARCH BAR */}
+      <View style={{ paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: colors.card, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1, borderColor: colors.border }}>
+          <Text style={{ fontSize: 16 }}>🔍</Text>
+          <TextInput
+            placeholder="Search mechanics by name or location..."
+            placeholderTextColor={colors.textMuted}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            style={{ flex: 1, color: colors.text, fontSize: 14 }}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery("")}>
+              <Text style={{ color: colors.textMuted, fontSize: 16 }}>✕</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+
       <View style={{ flex: 1 }}>
         <MapView
           ref={mapRef}
@@ -146,7 +167,10 @@ export default function NearMe() {
           showsUserLocation
           showsMyLocationButton={false}
         >
-          {mechanics.map((mechanic) => (
+          {mechanics.filter(m =>
+            m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            m.location.toLowerCase().includes(searchQuery.toLowerCase())
+          ).map((mechanic) => (
             <Marker
               key={mechanic.id}
               coordinate={{ latitude: mechanic.lat, longitude: mechanic.lng }}
@@ -216,7 +240,10 @@ export default function NearMe() {
       </View>
 
       {/* NO MECHANICS OVERLAY */}
-      {mechanics.length === 0 && !loading && (
+      {mechanics.filter(m =>
+        m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        m.location.toLowerCase().includes(searchQuery.toLowerCase())
+      ).length === 0 && !loading && (
         <View style={{ position: "absolute", top: "40%", left: 0, right: 0, alignItems: "center", padding: 40 }}>
           <View style={{ backgroundColor: colors.card, borderRadius: 16, padding: 24, borderWidth: 1, borderColor: colors.border, alignItems: "center" }}>
             <Text style={{ fontSize: 40, marginBottom: 12 }}>🔧</Text>
