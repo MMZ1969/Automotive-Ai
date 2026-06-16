@@ -334,7 +334,7 @@ export const sendQuickAlert = async (req, res) => {
     console.error("QUICK ALERT ERROR:", err);
     res.status(500).json({ error: "Failed to send quick alert" });
   }
-
+};
   // CANCEL a job (DIYer cancels after claiming/confirming)
 export const cancelJob = async (req, res) => {
   try {
@@ -375,5 +375,4 @@ export const cancelJob = async (req, res) => {
     console.error("CANCEL JOB ERROR:", err);
     res.status(500).json({ error: "Failed to cancel job" });
   }
-};
 };
