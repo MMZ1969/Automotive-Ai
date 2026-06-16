@@ -152,6 +152,11 @@ export const me = async (req, res) => {
         role: true,
         profilePhoto: true,
         repPoints: true,
+        isVerified: true,
+        isBanned: true,
+        isAdmin: true,
+        location: true,
+        phone: true,
       },
     });
 
