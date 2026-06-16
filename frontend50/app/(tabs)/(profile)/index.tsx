@@ -293,17 +293,30 @@ export default function Profile() {
 
       {/* POST A JOB — DIYers only */}
       {!isMechanic && (
-        <TouchableOpacity
-          onPress={() => router.push("/(tabs)/mechanic/jobs")}
-          style={[menuCard, { borderColor: colors.blue + "44" }]}
-        >
-          <Text style={{ fontSize: 28 }}>💼</Text>
-          <View style={{ flex: 1 }}>
-            <Text style={{ color: colors.text, fontSize: 17, fontWeight: "700" }}>Post a Job</Text>
-            <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>Find a mechanic near you</Text>
-          </View>
-          <Text style={{ color: colors.textMuted, fontSize: 18 }}>›</Text>
-        </TouchableOpacity>
+        <>
+          <TouchableOpacity
+            onPress={() => router.push("/(tabs)/mechanic/jobs")}
+            style={[menuCard, { borderColor: colors.blue + "44" }]}
+          >
+            <Text style={{ fontSize: 28 }}>💼</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: colors.text, fontSize: 17, fontWeight: "700" }}>Post a Job</Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>Find a mechanic near you</Text>
+            </View>
+            <Text style={{ color: colors.textMuted, fontSize: 18 }}>›</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => router.push("/(tabs)/diyer/jobs")}
+            style={[menuCard, { borderColor: colors.blue + "44" }]}
+          >
+            <Text style={{ fontSize: 28 }}>📋</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: colors.text, fontSize: 17, fontWeight: "700" }}>Job History</Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>View all your past and active jobs</Text>
+            </View>
+            <Text style={{ color: colors.textMuted, fontSize: 18 }}>›</Text>
+          </TouchableOpacity>
+        </>
       )}
 
       {/* MESSAGES — both roles */}

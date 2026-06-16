@@ -54,6 +54,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="user/[id]" options={{ href: null }} />
       <Tabs.Screen name="mechanic/jobs" options={{ href: null }} />
       <Tabs.Screen name="mechanic/verify" options={{ href: null }} />
+      <Tabs.Screen name="diyer/jobs" options={{ href: null }} />
       <Tabs.Screen name="mechanic/reviews" options={{ href: null }} />
       <Tabs.Screen name="create" options={{ href: null }} />
       <Tabs.Screen name="followers" options={{ href: null }} />
