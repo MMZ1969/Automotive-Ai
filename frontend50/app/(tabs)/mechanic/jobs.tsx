@@ -37,7 +37,7 @@ export default function Jobs() {
   const { user, isMechanic } = useAuth();
   const { colors } = useTheme();
   const router = useRouter();
-  const { jobId } = useLocalSearchParams<{ jobId?: string }>();
+  const { jobId, tab } = useLocalSearchParams<{ jobId?: string; tab?: string }>();
   const mapRef = useRef<MapView>(null);
 
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -78,6 +78,11 @@ export default function Jobs() {
       setUserLocation({ lat: loc.coords.latitude, lng: loc.coords.longitude });
 
       const fetchedJobs = await fetchJobs();
+
+      // If we arrived via a job_complete notification, switch to My Jobs tab
+      if (tab === "mine") {
+        setMechanicView("mine");
+      }
 
       // If we arrived via a job notification, center on and select that job
       if (jobId && fetchedJobs) {

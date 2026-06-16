@@ -37,7 +37,7 @@ export default function Notifications() {
         }
         break;
       case "job_complete":
-        router.push("/(tabs)/mechanic/jobs");
+        router.push({ pathname: "/(tabs)/mechanic/jobs", params: { tab: "mine" } });
         break;
       case "job_update":
         router.push("/(tabs)/mechanic/jobs");
