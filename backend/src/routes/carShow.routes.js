@@ -108,6 +108,30 @@ router.post("/:id/attend", authMiddleware, async (req, res) => {
       await prisma.carShowAttendee.create({
         data: { carShowId, userId },
       });
+
+      // Notify the show organizer
+      try {
+        const show = await prisma.carShow.findUnique({
+          where: { id: carShowId },
+          select: { userId: true, name: true },
+        });
+        const attendee = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { name: true },
+        });
+        if (show && show.userId !== userId) {
+          const { createAndSendNotification } = await import("../controllers/notification.controller.js");
+          await createAndSendNotification({
+            recipientId: show.userId,
+            actorId: userId,
+            type: "car_show",
+            message: `🚗 ${attendee?.name || "Someone"} is going to your car show: "${show.name}"!`,
+          });
+        }
+      } catch (notifErr) {
+        console.error("CAR SHOW NOTIFY ERROR:", notifErr);
+      }
+
       return res.json({ attending: true });
     }
   } catch (err) {
