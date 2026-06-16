@@ -334,4 +334,46 @@ export const sendQuickAlert = async (req, res) => {
     console.error("QUICK ALERT ERROR:", err);
     res.status(500).json({ error: "Failed to send quick alert" });
   }
+
+  // CANCEL a job (DIYer cancels after claiming/confirming)
+export const cancelJob = async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const userId = req.user.id;
+
+    const job = await prisma.job.findUnique({
+      where: { id },
+      include: {
+        mechanic: { select: { id: true, name: true } },
+        poster: { select: { id: true, name: true } },
+      },
+    });
+
+    if (!job) return res.status(404).json({ error: "Job not found" });
+    if (job.userId !== userId) return res.status(403).json({ error: "Not authorized" });
+    if (job.status === "COMPLETED") return res.status(400).json({ error: "Cannot cancel a completed job" });
+
+    const previousMechanicId = job.mechanicId;
+
+    await prisma.job.update({
+      where: { id },
+      data: { status: "OPEN", mechanicId: null },
+    });
+
+    // Notify the mechanic if there was one
+    if (previousMechanicId && job.mechanic) {
+      await createAndSendNotification({
+        recipientId: previousMechanicId,
+        actorId: userId,
+        type: "job_update",
+        message: `❌ ${job.poster.name} cancelled the job "${job.title}". It's back on the map.`,
+      });
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("CANCEL JOB ERROR:", err);
+    res.status(500).json({ error: "Failed to cancel job" });
+  }
+};
 };

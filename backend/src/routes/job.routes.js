@@ -1,5 +1,6 @@
 import express from "express";
 import {
+    cancelJob,
     claimJob,
     completeJob,
     confirmJob,
@@ -22,6 +23,7 @@ router.post("/", authMiddleware, createJob);
 router.delete("/:id", authMiddleware, deleteJob);
 router.post("/:id/claim", authMiddleware, claimJob);
 router.post("/:id/confirm", authMiddleware, confirmJob);
+router.post("/:id/cancel", authMiddleware, cancelJob);
 router.post("/:id/complete", authMiddleware, completeJob);
 router.post("/:id/status-update", authMiddleware, sendStatusUpdate);
 router.post("/quick-alert", authMiddleware, sendQuickAlert);
