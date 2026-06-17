@@ -1,7 +1,7 @@
 import { useAuth } from "@context/AuthContext";
 import { useTheme } from "@context/ThemeContext";
 import api from "@lib/api";
-import { useFocusEffect, useRouter } from "expo-router";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
@@ -34,6 +34,23 @@ const FILTERS = [
 
 type FilterKey = typeof FILTERS[number]["key"];
 
+function HashtagText({ text, colors, onHashtagPress }: { text: string; colors: any; onHashtagPress: (tag: string) => void }) {
+  const parts = text.split(/(#\w+)/g);
+  return (
+    <Text style={{ color: colors.text, fontSize: 15, lineHeight: 22 }}>
+      {parts.map((part, i) =>
+        part.startsWith("#") ? (
+          <Text key={i} style={{ color: colors.blue, fontWeight: "600" }} onPress={() => onHashtagPress(part)}>
+            {part}
+          </Text>
+        ) : (
+          <Text key={i}>{part}</Text>
+        )
+      )}
+    </Text>
+  );
+}
+
 export default function Feed() {
   const router = useRouter();
   const { user } = useAuth();
@@ -41,6 +58,7 @@ export default function Feed() {
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [suggestions, setSuggestions] = useState<any[]>([]);
+  const { hashtag } = useLocalSearchParams<{ hashtag?: string }>();
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<MainTab>("forYou");
   const [activeFilter, setActiveFilter] = useState<FilterKey>("ALL");
@@ -56,7 +74,8 @@ export default function Feed() {
     }
     try {
       const endpoint = tab === "following" ? "/api/posts/following" : "/api/posts";
-      const params = filter === "ALL" ? {} : { type: filter };
+      const params: any = filter === "ALL" ? {} : { type: filter };
+      if (hashtag) params.search = hashtag;
       const res = await api.get(endpoint, { params });
       const postsWithFollow = await Promise.all(
         res.data.map(async (post: any) => {
@@ -296,11 +315,21 @@ export default function Feed() {
         data={posts}
         keyExtractor={(item) => item.id.toString()}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.blue} />}
-        ListHeaderComponent={suggestions.length > 0 ? (
-          <View style={{ paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-            <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: "700", letterSpacing: 1, paddingHorizontal: 16, marginBottom: 10 }}>
-              PEOPLE YOU MAY KNOW
-            </Text>
+        ListHeaderComponent={(
+          <View>
+            {hashtag && (
+              <View style={{ backgroundColor: colors.blue + "22", borderBottomWidth: 1, borderBottomColor: colors.blue + "44", padding: 16, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                <Text style={{ color: colors.blue, fontWeight: "700", fontSize: 15 }}>{hashtag}</Text>
+                <TouchableOpacity onPress={() => router.replace("/(tabs)/feed")}>
+                  <Text style={{ color: colors.textMuted, fontSize: 14 }}>✕ Clear</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+            {!hashtag && suggestions.length > 0 && (
+              <View style={{ paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+                <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: "700", letterSpacing: 1, paddingHorizontal: 16, marginBottom: 10 }}>
+                  PEOPLE YOU MAY KNOW
+                </Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 12 }}>
               {suggestions.map((s: any) => (
                 <TouchableOpacity
@@ -323,7 +352,9 @@ export default function Feed() {
               ))}
             </ScrollView>
           </View>
-        ) : null}
+            )}
+          </View>
+        )}
         ListEmptyComponent={
           <View style={{ alignItems: "center", marginTop: 80 }}>
             <Text style={{ fontSize: 48 }}>🔧</Text>
@@ -420,7 +451,11 @@ export default function Feed() {
             )}
 
             <TouchableOpacity onPress={() => router.push(`/(tabs)/post/${item.id}`)} activeOpacity={0.8}>
-              <Text style={{ color: colors.text, fontSize: 15, lineHeight: 22 }}>{item.content}</Text>
+              <HashtagText
+                text={item.content}
+                colors={colors}
+                onHashtagPress={(tag) => router.push({ pathname: "/(tabs)/feed", params: { hashtag: tag } })}
+              />
               {item.imageUrls?.length > 1 ? (
                 <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 4, marginTop: 12 }}>
                   {item.imageUrls.map((url: string, index: number) => (
