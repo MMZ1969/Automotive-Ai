@@ -252,6 +252,28 @@ export default function Jobs() {
     }
   };
 
+  const handleReportJob = (job: any) => {
+    Alert.alert("Report Job", "Why are you reporting this job?", [
+      { text: "Spam", onPress: () => submitReport(job, "Spam") },
+      { text: "Inappropriate", onPress: () => submitReport(job, "Inappropriate content") },
+      { text: "Fake listing", onPress: () => submitReport(job, "Fake listing") },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  };
+
+  const submitReport = async (job: any, reason: string) => {
+    try {
+      await api.post(`/api/jobs/${job.id}/report`, { reason });
+      Alert.alert("✅ Reported", "Thanks for keeping AutoAI safe.");
+    } catch (err: any) {
+      if (err?.response?.status === 400) {
+        Alert.alert("Already Reported", "You already reported this job.");
+      } else {
+        Alert.alert("Error", "Could not submit report.");
+      }
+    }
+  };
+
   const handleCancelJob = async (job: any) => {
     Alert.alert("Cancel Job", "This will release the mechanic and reopen the job. Continue?", [
       { text: "No", style: "cancel" },
@@ -516,6 +538,14 @@ export default function Jobs() {
                 <View style={{ backgroundColor: colors.blue + "22", padding: 10, borderRadius: 10, alignItems: "center", borderWidth: 1, borderColor: colors.blue }}>
                   <Text style={{ color: colors.blue, fontWeight: "700" }}>🔧 In Progress</Text>
                 </View>
+              )}
+              {selectedJob.poster?.id !== user?.id && (
+                <TouchableOpacity
+                  onPress={() => handleReportJob(selectedJob)}
+                  style={{ marginTop: 8, padding: 10, alignItems: "center" }}
+                >
+                  <Text style={{ color: colors.textMuted, fontSize: 12 }}>🚨 Report this job</Text>
+                </TouchableOpacity>
               )}
             </View>
           )}
