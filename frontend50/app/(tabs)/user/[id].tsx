@@ -131,6 +131,24 @@ export default function UserProfile() {
                 </Text>
               </View>
 
+              {/* LOCATION + BUSINESS HOURS */}
+              {isMechanic && (profile?.location || profile?.businessHours) && (
+                <View style={{ marginTop: 12, backgroundColor: colors.card, borderRadius: 12, borderWidth: 1, borderColor: colors.border, padding: 12, alignSelf: "stretch" }}>
+                  {profile?.location && (
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: profile?.businessHours ? 6 : 0 }}>
+                      <Text style={{ fontSize: 14 }}>📍</Text>
+                      <Text style={{ color: colors.textSecondary, fontSize: 13 }}>{profile.location}</Text>
+                    </View>
+                  )}
+                  {profile?.businessHours && (
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                      <Text style={{ fontSize: 14 }}>🕐</Text>
+                      <Text style={{ color: colors.textSecondary, fontSize: 13 }}>{profile.businessHours}</Text>
+                    </View>
+                  )}
+                </View>
+              )}
+
               {isMechanic && mechanicStats && (
                 <View style={{ marginTop: 16, backgroundColor: colors.card, borderRadius: 16, borderWidth: 1, borderColor: colors.blue + "33", padding: 16, width: "100%", flexDirection: "row", justifyContent: "space-around" }}>
                   <View style={{ alignItems: "center" }}>
