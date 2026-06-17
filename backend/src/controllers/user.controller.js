@@ -44,6 +44,7 @@ export async function updateProfile(req, res) {
     if (req.body.role !== undefined) data.role = req.body.role;
     if (req.body.profilePhoto !== undefined) data.profilePhoto = req.body.profilePhoto;
     if (req.body.location !== undefined) data.location = req.body.location;
+    if (req.body.businessHours !== undefined) data.businessHours = req.body.businessHours;
 
 
     if (email) {
