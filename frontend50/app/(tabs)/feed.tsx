@@ -10,6 +10,7 @@ import {
   Image,
   Modal,
   RefreshControl,
+  ScrollView,
   Text,
   TouchableOpacity,
   View
@@ -39,6 +40,7 @@ export default function Feed() {
   const { colors } = useTheme();
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [suggestions, setSuggestions] = useState<any[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<MainTab>("forYou");
   const [activeFilter, setActiveFilter] = useState<FilterKey>("ALL");
@@ -74,7 +76,10 @@ export default function Feed() {
     }
   };
 
-  useFocusEffect(useCallback(() => { fetchPosts(activeTab, activeFilter); }, [activeTab, activeFilter]));
+  useFocusEffect(useCallback(() => {
+    fetchPosts(activeTab, activeFilter);
+    api.get("/api/users/suggestions").then(res => setSuggestions(res.data)).catch(() => {});
+  }, [activeTab, activeFilter]));
   const onRefresh = () => { setRefreshing(true); fetchPosts(activeTab, activeFilter); };
 
   const handleTabChange = (tab: MainTab) => {
@@ -291,6 +296,34 @@ export default function Feed() {
         data={posts}
         keyExtractor={(item) => item.id.toString()}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.blue} />}
+        ListHeaderComponent={suggestions.length > 0 ? (
+          <View style={{ paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+            <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: "700", letterSpacing: 1, paddingHorizontal: 16, marginBottom: 10 }}>
+              PEOPLE YOU MAY KNOW
+            </Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 12 }}>
+              {suggestions.map((s: any) => (
+                <TouchableOpacity
+                  key={s.id}
+                  onPress={() => router.push(`/(tabs)/user/${s.id}`)}
+                  style={{ alignItems: "center", width: 72 }}
+                >
+                  <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: colors.border, overflow: "hidden", justifyContent: "center", alignItems: "center", borderWidth: 2, borderColor: s.role === "MECHANIC" ? colors.blue : colors.green, marginBottom: 6 }}>
+                    {s.profilePhoto ? (
+                      <Image source={{ uri: s.profilePhoto }} style={{ width: 52, height: 52 }} />
+                    ) : (
+                      <Text style={{ color: colors.text, fontSize: 20, fontWeight: "700" }}>{s.name?.[0]?.toUpperCase()}</Text>
+                    )}
+                  </View>
+                  <Text style={{ color: colors.text, fontSize: 11, fontWeight: "600", textAlign: "center" }} numberOfLines={1}>{s.name}</Text>
+                  <Text style={{ color: s.role === "MECHANIC" ? colors.blue : colors.green, fontSize: 10, marginTop: 1 }}>
+                    {s.role === "MECHANIC" ? "🔧 Mechanic" : "🚗 DIYer"}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        ) : null}
         ListEmptyComponent={
           <View style={{ alignItems: "center", marginTop: 80 }}>
             <Text style={{ fontSize: 48 }}>🔧</Text>
