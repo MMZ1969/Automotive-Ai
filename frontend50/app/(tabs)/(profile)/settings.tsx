@@ -32,6 +32,10 @@ export default function Settings() {
   const [newLocation, setNewLocation] = useState(user?.location || "");
   const [savingLocation, setSavingLocation] = useState(false);
 
+  const [editingBusinessHours, setEditingBusinessHours] = useState(false);
+  const [newBusinessHours, setNewBusinessHours] = useState(user?.businessHours || "");
+  const [savingBusinessHours, setSavingBusinessHours] = useState(false);
+
   const [showVerifyModal, setShowVerifyModal] = useState(false);
   const [licenseNumber, setLicenseNumber] = useState("");
   const [shopName, setShopName] = useState("");
@@ -76,6 +80,19 @@ export default function Settings() {
       Alert.alert("Error", "Could not update location. Try again.");
     } finally {
       setSavingLocation(false);
+    }
+  };
+
+  const handleSaveBusinessHours = async () => {
+    try {
+      setSavingBusinessHours(true);
+      await api.put("/api/users/me", { businessHours: newBusinessHours.trim() });
+      setEditingBusinessHours(false);
+      Alert.alert("✅ Business hours updated!");
+    } catch (err) {
+      Alert.alert("Error", "Could not update business hours. Try again.");
+    } finally {
+      setSavingBusinessHours(false);
     }
   };
 
@@ -243,6 +260,31 @@ export default function Settings() {
                 <Text style={labelStyle}>📍 Service Area</Text>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                   <Text style={valueStyle}>{user?.location || "Add location"}</Text>
+                  <Text style={{ color: colors.blue, fontSize: 13 }}>Edit</Text>
+                </View>
+              </TouchableOpacity>
+            )}
+            {/* BUSINESS HOURS */}
+            <View style={divider} />
+            {editingBusinessHours ? (
+              <View style={{ padding: 16 }}>
+                <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 4 }}>Business Hours</Text>
+                <Text style={{ color: colors.textMuted, fontSize: 11, marginBottom: 8 }}>e.g. Mon-Fri 8am-6pm, Sat 9am-3pm</Text>
+                <TextInput value={newBusinessHours} onChangeText={setNewBusinessHours} style={{ ...inputStyle, borderColor: colors.blue }} autoFocus placeholder="Mon-Fri 8am-6pm" placeholderTextColor={colors.textMuted} />
+                <View style={{ flexDirection: "row", gap: 10 }}>
+                  <TouchableOpacity onPress={handleSaveBusinessHours} disabled={savingBusinessHours} style={{ flex: 1, backgroundColor: colors.blue, padding: 12, borderRadius: 10, alignItems: "center" }}>
+                    <Text style={{ color: "white", fontWeight: "700" }}>{savingBusinessHours ? "Saving..." : "Save"}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => { setEditingBusinessHours(false); setNewBusinessHours(user?.businessHours || ""); }} style={{ flex: 1, backgroundColor: colors.card, padding: 12, borderRadius: 10, alignItems: "center", borderWidth: 1, borderColor: colors.border }}>
+                    <Text style={{ color: colors.textSecondary, fontWeight: "700" }}>Cancel</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <TouchableOpacity style={row} onPress={() => setEditingBusinessHours(true)}>
+                <Text style={labelStyle}>🕐 Business Hours</Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <Text style={valueStyle}>{user?.businessHours || "Add hours"}</Text>
                   <Text style={{ color: colors.blue, fontSize: 13 }}>Edit</Text>
                 </View>
               </TouchableOpacity>
