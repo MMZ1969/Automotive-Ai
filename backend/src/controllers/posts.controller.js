@@ -4,8 +4,10 @@ import { createAndSendNotification } from "./notification.controller.js";
 // GET all posts
 export const getAllPosts = async (req, res) => {
   try {
-    const { type } = req.query;
-    const where = type && type !== "ALL" ? { postType: type } : {};
+    const { type, search } = req.query;
+    const where = {};
+    if (type && type !== "ALL") where.postType = type;
+    if (search) where.content = { contains: search, mode: "insensitive" };
     const posts = await prisma.post.findMany({
       where,
       orderBy: [
