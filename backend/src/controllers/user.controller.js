@@ -172,6 +172,8 @@ export async function getUserProfile(req, res) {
         profilePhoto: true,
         repPoints: true,
         isVerified: true,
+        location: true,
+        businessHours: true,
         createdAt: true,
         _count: {
           select: {
