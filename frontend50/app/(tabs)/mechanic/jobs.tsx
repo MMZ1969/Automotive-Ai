@@ -144,16 +144,28 @@ export default function Jobs() {
     }
     try {
       setCreating(true);
-      await api.post("/api/jobs", {
+      const res = await api.post("/api/jobs", {
         title, description, vehicle,
         budget: budget || null,
         latitude: userLocation.lat,
         longitude: userLocation.lng,
       });
+      const job = res.data;
       setShowCreateModal(false);
       setTitle(""); setDescription(""); setVehicle(""); setBudget("");
       await fetchJobs();
-      Alert.alert("✅ Job Posted!", "Your job is now visible on the map.");
+      setMechanicView("map");
+      setTimeout(() => {
+        if (job.latitude && job.longitude) {
+          mapRef.current?.animateToRegion({
+            latitude: job.latitude,
+            longitude: job.longitude,
+            latitudeDelta: 0.05,
+            longitudeDelta: 0.05,
+          }, 500);
+          setSelectedJob(job);
+        }
+      }, 300);
     } catch {
       Alert.alert("Error", "Could not post job. Try again.");
     } finally {
