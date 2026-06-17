@@ -512,7 +512,14 @@ export default function Jobs() {
               <Text style={{ color: colors.text, fontSize: 14, lineHeight: 20, marginBottom: 8 }}>{selectedJob.description}</Text>
               <View style={{ flexDirection: "row", gap: 16, marginBottom: 12 }}>
                 {selectedJob.budget ? <Text style={{ color: colors.green, fontSize: 13, fontWeight: "700" }}>💰 ${selectedJob.budget}</Text> : null}
-                <Text style={{ color: colors.textSecondary, fontSize: 13 }}>Posted by {selectedJob.poster?.name || "Anonymous"}</Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  <Text style={{ color: colors.textSecondary, fontSize: 13 }}>Posted by {selectedJob.poster?.name || "Anonymous"}</Text>
+                  {selectedJob.poster?.phone && (
+                    <View style={{ backgroundColor: colors.green + "22", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, borderWidth: 1, borderColor: colors.green }}>
+                      <Text style={{ color: colors.green, fontSize: 10, fontWeight: "700" }}>✓ Phone Verified</Text>
+                    </View>
+                  )}
+                </View>
               </View>
 
               {/* MECHANIC: claim button */}
@@ -612,7 +619,14 @@ export default function Jobs() {
                     {j.mechanic && (
                       <View style={{ backgroundColor: colors.background, borderRadius: 10, padding: 12, marginBottom: 10 }}>
                         <Text style={{ color: colors.textSecondary, fontSize: 12 }}>{isMechanic ? "Customer" : "Your mechanic"}</Text>
-                        <Text style={{ color: colors.text, fontWeight: "700" }}>{isMechanic ? j.poster?.name : j.mechanic?.name}</Text>
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                          <Text style={{ color: colors.text, fontWeight: "700" }}>{isMechanic ? j.poster?.name : j.mechanic?.name}</Text>
+                          {isMechanic && j.poster?.phone && (
+                            <View style={{ backgroundColor: colors.green + "22", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, borderWidth: 1, borderColor: colors.green }}>
+                              <Text style={{ color: colors.green, fontSize: 10, fontWeight: "700" }}>✓ Phone</Text>
+                            </View>
+                          )}
+                        </View>
                         <Text style={{ color: colors.textSecondary, fontSize: 12 }}>{isMechanic ? j.poster?.phone || j.poster?.email : j.mechanic?.phone || j.mechanic?.email}</Text>
                       </View>
                     )}
