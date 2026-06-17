@@ -376,3 +376,42 @@ export const cancelJob = async (req, res) => {
     res.status(500).json({ error: "Failed to cancel job" });
   }
 };
+
+// GET /users/suggestions — people you may know
+export async function getSuggestions(req, res) {
+  try {
+    const userId = req.user.id;
+
+    // Get IDs of people already following
+    const following = await prisma.follow.findMany({
+      where: { followerId: userId },
+      select: { followingId: true },
+    });
+    const followingIds = following.map(f => f.followingId);
+    followingIds.push(userId); // exclude self
+
+    const suggestions = await prisma.user.findMany({
+      where: {
+        id: { notIn: followingIds },
+        emailVerified: true,
+        isBanned: false,
+      },
+      orderBy: { repPoints: "desc" },
+      take: 10,
+      select: {
+        id: true,
+        name: true,
+        profilePhoto: true,
+        role: true,
+        isVerified: true,
+        repPoints: true,
+        location: true,
+      },
+    });
+
+    res.json(suggestions);
+  } catch (err) {
+    console.error("GET SUGGESTIONS ERROR:", err);
+    res.status(500).json({ error: "Failed to fetch suggestions" });
+  }
+}

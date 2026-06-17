@@ -1,5 +1,5 @@
 import express from "express";
-import { banUser, blockUser, getAllUsers, getBlockedUsers, getFollowers, getFollowing, getLeaderboard, getMe, getMechanicStats, getMechanics, getUserProfile, getVerificationRequests, requestVerification, savePushToken, searchUsers, updateProfile, verifyMechanic } from "../controllers/user.controller.js";
+import { banUser, blockUser, getAllUsers, getBlockedUsers, getFollowers, getFollowing, getLeaderboard, getMe, getMechanicStats, getMechanics, getSuggestions, getUserProfile, getVerificationRequests, requestVerification, savePushToken, searchUsers, updateProfile, verifyMechanic } from "../controllers/user.controller.js";
 import prisma from "../lib/prisma.js";
 import authMiddleware from "../middleware/authMiddleware.js";
 
@@ -9,6 +9,7 @@ router.get("/leaderboard", authMiddleware, getLeaderboard);
 router.get("/me", authMiddleware, getMe);
 router.put("/me", authMiddleware, updateProfile);
 router.get("/search", authMiddleware, searchUsers);
+router.get("/suggestions", authMiddleware, getSuggestions);
 router.get("/blocked", authMiddleware, getBlockedUsers);
 router.get("/mechanics", authMiddleware, getMechanics);
 router.get("/admin/all", authMiddleware, getAllUsers);
