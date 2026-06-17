@@ -178,13 +178,13 @@ model Block {
 model Report {
   id         Int      @id @default(autoincrement())
   reporterId Int
-  postId     Int
+  postId     Int?
+  jobId      Int?
   reason     String
   createdAt  DateTime @default(now())
   reporter   User     @relation("Reporter", fields: [reporterId], references: [id])
-  post       Post     @relation(fields: [postId], references: [id])
-
-  @@unique([reporterId, postId])
+  post       Post?    @relation(fields: [postId], references: [id])
+  job        Job?     @relation(fields: [jobId], references: [id])
 }
 
 model Job {
@@ -206,6 +206,7 @@ model Job {
   mechanic      User?    @relation("JobMechanic", fields: [mechanicId], references: [id])
   bids          Bid[]
   reviews        Review[]
+  reports        Report[]
 }
 
 model Bid {

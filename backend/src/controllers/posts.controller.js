@@ -269,6 +269,53 @@ export const reportPost = async (req, res) => {
   }
 };
 
+// REPORT JOB
+export const reportJob = async (req, res) => {
+  try {
+    const jobId = Number(req.params.id);
+    const reporterId = req.user.id;
+    const { reason } = req.body;
+
+    if (!reason || reason.trim() === "") {
+      return res.status(400).json({ error: "Reason is required" });
+    }
+
+    const job = await prisma.job.findUnique({ where: { id: jobId } });
+    if (!job) return res.status(404).json({ error: "Job not found" });
+
+    const existing = await prisma.report.findFirst({
+      where: { reporterId, jobId },
+    });
+    if (existing) {
+      return res.status(400).json({ error: "You already reported this job" });
+    }
+
+    await prisma.report.create({
+      data: { reporterId, jobId, reason },
+    });
+
+    // Notify admin
+    const admins = await prisma.user.findMany({
+      where: { isAdmin: true },
+      select: { id: true },
+    });
+    const { createAndSendNotification } = await import("./notification.controller.js");
+    await Promise.all(admins.map(admin =>
+      createAndSendNotification({
+        recipientId: admin.id,
+        actorId: reporterId,
+        type: "job_update",
+        message: `🚨 Job reported: "${job.title}" — Reason: ${reason}`,
+      })
+    ));
+
+    res.json({ success: true, message: "Job reported successfully" });
+  } catch (err) {
+    console.error("REPORT JOB ERROR:", err);
+    res.status(500).json({ error: "Failed to report job" });
+  }
+};
+
 // SEARCH POSTS
 export const searchPosts = async (req, res) => {
   try {
