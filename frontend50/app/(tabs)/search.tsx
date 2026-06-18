@@ -1,10 +1,10 @@
 import { useAuth } from "@context/AuthContext";
 import { useTheme } from "@context/ThemeContext";
 import api from "@lib/api";
-import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useState } from "react";
 import {
-  ActivityIndicator, FlatList, Image, Text, TextInput, TouchableOpacity, View,
+  ActivityIndicator, FlatList, Image, ScrollView, Text, TextInput, TouchableOpacity, View,
 } from "react-native";
 
 export default function Search() {
@@ -17,6 +17,11 @@ export default function Search() {
   const [searched, setSearched] = useState(false);
   const [following, setFollowing] = useState<Record<number, boolean>>({});
   const [searchType, setSearchType] = useState<"users" | "posts">("posts");
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+
+  useFocusEffect(useCallback(() => {
+    api.get("/api/users/suggestions").then(res => setSuggestions(res.data)).catch(() => {});
+  }, []));
 
   const handleSearch = async (text: string) => {
     setQuery(text);
@@ -70,7 +75,7 @@ export default function Search() {
 
         <TextInput
           value={query} onChangeText={handleSearch}
-          placeholder={searchType === "posts" ? "Search posts..." : "Search by name or email..."}
+          placeholder={searchType === "posts" ? "Search posts..." : "Search by name..."}
           placeholderTextColor={colors.textMuted} autoCapitalize="none"
           style={{ backgroundColor: colors.card, color: colors.text, paddingHorizontal: 16, paddingVertical: 12, borderRadius: 12, borderWidth: 1, borderColor: colors.border, fontSize: 16 }}
         />
@@ -85,23 +90,55 @@ export default function Search() {
           data={results}
           keyExtractor={(item) => item.id.toString()}
           ListEmptyComponent={
-            <View style={{ alignItems: "center", marginTop: 80 }}>
-              {searched ? (
-                <>
-                  <Text style={{ fontSize: 48 }}>🔧</Text>
-                  <Text style={{ color: colors.text, fontSize: 20, fontWeight: "bold", marginTop: 16 }}>No {searchType === "posts" ? "posts" : "users"} found</Text>
-                  <Text style={{ color: colors.textSecondary, marginTop: 8 }}>Try a different search term</Text>
-                </>
-              ) : (
-                <>
-                  <Text style={{ fontSize: 48 }}>{searchType === "posts" ? "🔧" : "👥"}</Text>
-                  <Text style={{ color: colors.text, fontSize: 20, fontWeight: "bold", marginTop: 16 }}>{searchType === "posts" ? "Search Posts" : "Find People"}</Text>
-                  <Text style={{ color: colors.textSecondary, marginTop: 8, textAlign: "center", paddingHorizontal: 40 }}>
-                    {searchType === "posts" ? "Search for car questions, builds, and tips" : "Search for DIYers and Mechanics to follow"}
-                  </Text>
-                </>
-              )}
-            </View>
+            searched ? (
+              <View style={{ alignItems: "center", marginTop: 80 }}>
+                <Text style={{ fontSize: 48 }}>🔧</Text>
+                <Text style={{ color: colors.text, fontSize: 20, fontWeight: "bold", marginTop: 16 }}>No {searchType === "posts" ? "posts" : "users"} found</Text>
+                <Text style={{ color: colors.textSecondary, marginTop: 8 }}>Try a different search term</Text>
+              </View>
+            ) : searchType === "users" ? (
+              <ScrollView contentContainerStyle={{ padding: 16 }}>
+                {suggestions.length > 0 ? (
+                  <>
+                    <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: "700", letterSpacing: 1, marginBottom: 14 }}>PEOPLE YOU MAY KNOW</Text>
+                    {suggestions.map((s: any) => (
+                      <TouchableOpacity
+                        key={s.id}
+                        onPress={() => router.push(`/(tabs)/user/${s.id}`)}
+                        style={{ flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: colors.card, borderRadius: 14, borderWidth: 1, borderColor: colors.border, padding: 14, marginBottom: 10 }}
+                      >
+                        <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: colors.border, overflow: "hidden", justifyContent: "center", alignItems: "center", borderWidth: 2, borderColor: s.role === "MECHANIC" ? colors.blue : colors.green }}>
+                          {s.profilePhoto ? (
+                            <Image source={{ uri: s.profilePhoto }} style={{ width: 48, height: 48 }} />
+                          ) : (
+                            <Text style={{ color: colors.text, fontSize: 18, fontWeight: "700" }}>{s.name?.[0]?.toUpperCase()}</Text>
+                          )}
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ color: colors.text, fontWeight: "700", fontSize: 15 }}>{s.name}</Text>
+                          <Text style={{ color: s.role === "MECHANIC" ? colors.blue : colors.green, fontSize: 12, marginTop: 2 }}>
+                            {s.role === "MECHANIC" ? "🏁 Mechanic" : "🔧 DIYer"}
+                          </Text>
+                        </View>
+                        <Text style={{ color: colors.textSecondary }}>→</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </>
+                ) : (
+                  <View style={{ alignItems: "center", marginTop: 60 }}>
+                    <Text style={{ fontSize: 48 }}>👥</Text>
+                    <Text style={{ color: colors.text, fontSize: 20, fontWeight: "bold", marginTop: 16 }}>Find People</Text>
+                    <Text style={{ color: colors.textSecondary, marginTop: 8, textAlign: "center", paddingHorizontal: 40 }}>Search for DIYers and Mechanics to follow</Text>
+                  </View>
+                )}
+              </ScrollView>
+            ) : (
+              <View style={{ alignItems: "center", marginTop: 80 }}>
+                <Text style={{ fontSize: 48 }}>🔧</Text>
+                <Text style={{ color: colors.text, fontSize: 20, fontWeight: "bold", marginTop: 16 }}>Search Posts</Text>
+                <Text style={{ color: colors.textSecondary, marginTop: 8, textAlign: "center", paddingHorizontal: 40 }}>Search for car questions, builds, and tips</Text>
+              </View>
+            )
           }
           renderItem={({ item }) => searchType === "users" ? (
             <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: colors.card, marginHorizontal: 16, marginTop: 12, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 16 }}>

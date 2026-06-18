@@ -10,7 +10,6 @@ import {
   Image,
   Modal,
   RefreshControl,
-  ScrollView,
   Text,
   TouchableOpacity,
   View
@@ -57,7 +56,6 @@ export default function Feed() {
   const { colors } = useTheme();
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [suggestions, setSuggestions] = useState<any[]>([]);
   const { hashtag } = useLocalSearchParams<{ hashtag?: string }>();
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<MainTab>("forYou");
@@ -97,8 +95,8 @@ export default function Feed() {
 
   useFocusEffect(useCallback(() => {
     fetchPosts(activeTab, activeFilter);
-    api.get("/api/users/suggestions").then(res => setSuggestions(res.data)).catch(() => {});
   }, [activeTab, activeFilter]));
+
   const onRefresh = () => { setRefreshing(true); fetchPosts(activeTab, activeFilter); };
 
   const handleTabChange = (tab: MainTab) => {
@@ -265,37 +263,29 @@ export default function Feed() {
           </TouchableOpacity>
 
           {/* STEERING WHEEL CENTER */}
-<TouchableOpacity
-  onPress={() => setFilterModalVisible(true)}
-  style={{
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 4,
-    paddingHorizontal: 8,
-  }}
->
-  <View style={{
-    width: 40, height: 40, borderRadius: 20,
-    backgroundColor: filterActive ? colors.blue : colors.card,
-    borderWidth: 1.5,
-    borderColor: filterActive ? colors.blue : colors.border,
-    justifyContent: "center", alignItems: "center",
-  }}>
-    <Svg width={22} height={22} viewBox="0 0 24 24">
-      {/* Outer ring */}
-      <Circle cx="12" cy="12" r="10" stroke={wheelColor} strokeWidth="1.8" fill="none" />
-      {/* Inner hub */}
-      <Circle cx="12" cy="12" r="2.8" stroke={wheelColor} strokeWidth="1.8" fill="none" />
-      {/* 3 spokes only - top, bottom-left, bottom-right */}
-      <Line x1="12" y1="2" x2="12" y2="9.2" stroke={wheelColor} strokeWidth="1.8" strokeLinecap="round" />
-      <Line x1="3.68" y1="17" x2="9.74" y2="13.5" stroke={wheelColor} strokeWidth="1.8" strokeLinecap="round" />
-      <Line x1="20.32" y1="17" x2="14.26" y2="13.5" stroke={wheelColor} strokeWidth="1.8" strokeLinecap="round" />
-    </Svg>
-  </View>
-  <Text style={{ color: filterActive ? colors.blue : colors.textMuted, fontSize: 9, fontWeight: "600", marginTop: 2, letterSpacing: 0.5 }}>
-    {filterActive ? "ON" : "FILTER"}
-  </Text>
-</TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => setFilterModalVisible(true)}
+            style={{ alignItems: "center", justifyContent: "center", marginBottom: 4, paddingHorizontal: 8 }}
+          >
+            <View style={{
+              width: 40, height: 40, borderRadius: 20,
+              backgroundColor: filterActive ? colors.blue : colors.card,
+              borderWidth: 1.5,
+              borderColor: filterActive ? colors.blue : colors.border,
+              justifyContent: "center", alignItems: "center",
+            }}>
+              <Svg width={22} height={22} viewBox="0 0 24 24">
+                <Circle cx="12" cy="12" r="10" stroke={wheelColor} strokeWidth="1.8" fill="none" />
+                <Circle cx="12" cy="12" r="2.8" stroke={wheelColor} strokeWidth="1.8" fill="none" />
+                <Line x1="12" y1="2" x2="12" y2="9.2" stroke={wheelColor} strokeWidth="1.8" strokeLinecap="round" />
+                <Line x1="3.68" y1="17" x2="9.74" y2="13.5" stroke={wheelColor} strokeWidth="1.8" strokeLinecap="round" />
+                <Line x1="20.32" y1="17" x2="14.26" y2="13.5" stroke={wheelColor} strokeWidth="1.8" strokeLinecap="round" />
+              </Svg>
+            </View>
+            <Text style={{ color: filterActive ? colors.blue : colors.textMuted, fontSize: 9, fontWeight: "600", marginTop: 2, letterSpacing: 0.5 }}>
+              {filterActive ? "ON" : "FILTER"}
+            </Text>
+          </TouchableOpacity>
 
           {/* FOLLOWING */}
           <TouchableOpacity
@@ -324,34 +314,6 @@ export default function Feed() {
                   <Text style={{ color: colors.textMuted, fontSize: 14 }}>✕ Clear</Text>
                 </TouchableOpacity>
               </View>
-            )}
-            {!hashtag && suggestions.length > 0 && (
-              <View style={{ paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-                <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: "700", letterSpacing: 1, paddingHorizontal: 16, marginBottom: 10 }}>
-                  PEOPLE YOU MAY KNOW
-                </Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 12 }}>
-              {suggestions.map((s: any) => (
-                <TouchableOpacity
-                  key={s.id}
-                  onPress={() => router.push(`/(tabs)/user/${s.id}`)}
-                  style={{ alignItems: "center", width: 72 }}
-                >
-                  <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: colors.border, overflow: "hidden", justifyContent: "center", alignItems: "center", borderWidth: 2, borderColor: s.role === "MECHANIC" ? colors.blue : colors.green, marginBottom: 6 }}>
-                    {s.profilePhoto ? (
-                      <Image source={{ uri: s.profilePhoto }} style={{ width: 52, height: 52 }} />
-                    ) : (
-                      <Text style={{ color: colors.text, fontSize: 20, fontWeight: "700" }}>{s.name?.[0]?.toUpperCase()}</Text>
-                    )}
-                  </View>
-                  <Text style={{ color: colors.text, fontSize: 11, fontWeight: "600", textAlign: "center" }} numberOfLines={1}>{s.name}</Text>
-                  <Text style={{ color: s.role === "MECHANIC" ? colors.blue : colors.green, fontSize: 10, marginTop: 1 }}>
-                    {s.role === "MECHANIC" ? "🔧 Mechanic" : "🚗 DIYer"}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
             )}
           </View>
         )}
