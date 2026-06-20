@@ -73,6 +73,9 @@ export default function Leaderboard() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <View style={{ paddingTop: 60, paddingHorizontal: 20, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+        <TouchableOpacity onPress={() => router.back()} style={{ marginBottom: 12 }}>
+          <Text style={{ color: colors.blue, fontSize: 16 }}>← Back</Text>
+        </TouchableOpacity>
         <Text style={{ color: colors.text, fontSize: 28, fontWeight: "900" }}>🏆 Leaderboard</Text>
         <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 4 }}>Top earners by rep points</Text>
       </View>
