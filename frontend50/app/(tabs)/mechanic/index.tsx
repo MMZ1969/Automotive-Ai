@@ -6,7 +6,7 @@ import { useCallback, useState } from "react";
 import { Alert, ScrollView, Switch, Text, TouchableOpacity, View } from "react-native";
 
 export default function MechanicDashboard() {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const { colors } = useTheme();
   const router = useRouter();
   const [jobCount, setJobCount] = useState(0);
@@ -26,7 +26,12 @@ export default function MechanicDashboard() {
       setTogglingAvailability(false);
     }
   };
-  
+
+  // Refresh live user status (verified, role, etc.) every time the dashboard focuses
+  useFocusEffect(useCallback(() => {
+    refreshUser();
+  }, []));
+
   useFocusEffect(useCallback(() => {
     const fetchStats = async () => {
       try {
@@ -115,7 +120,7 @@ export default function MechanicDashboard() {
           disabled={togglingAvailability}
         />
       </TouchableOpacity>
-      
+
       <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 20 }}>
         {[{ label: "Jobs Completed", value: jobCount }, { label: "Reviews", value: reviewCount }].map((stat, i) => (
           <View key={i} style={{ flex: 1, backgroundColor: colors.card, padding: 16, borderRadius: 14, borderWidth: 1, borderColor: colors.border, marginHorizontal: i === 0 ? 0 : 10 }}>

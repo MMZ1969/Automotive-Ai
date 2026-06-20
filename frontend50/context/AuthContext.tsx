@@ -11,6 +11,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   register: (data: any) => Promise<void>;
   logout: () => void;
+  refreshUser: () => Promise<void>;
   isMechanic: boolean;
   isDIYer: boolean;
   updateProfilePhoto: (url: string) => Promise<void>;
@@ -21,10 +22,9 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 // ─── PUSH TOKEN HELPER ────────────────────────────────────────────────────────
-// Gets the device's Expo push token and saves it to the backend
 const registerPushToken = async () => {
   try {
-    if (!Device.isDevice) return; // Push doesn't work in simulators
+    if (!Device.isDevice) return;
 
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;
@@ -34,15 +34,13 @@ const registerPushToken = async () => {
       finalStatus = status;
     }
 
-    if (finalStatus !== "granted") return; // User denied permission
+    if (finalStatus !== "granted") return;
 
     const tokenData = await Notifications.getExpoPushTokenAsync();
     const pushToken = tokenData.data;
 
-    // Save to backend
     await api.put("/api/users/me", { pushToken });
 
-    // Android needs a notification channel
     if (Platform.OS === "android") {
       Notifications.setNotificationChannelAsync("default", {
         name: "default",
@@ -52,7 +50,6 @@ const registerPushToken = async () => {
     }
   } catch (err) {
     console.error("PUSH TOKEN ERROR:", err);
-    // Never crash the app if push setup fails
   }
 };
 
@@ -75,7 +72,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             const freshUser = res.data;
             await AsyncStorage.setItem("user", JSON.stringify(freshUser));
             setUser(freshUser);
-            // Re-register push token on session restore too
             await registerPushToken();
           } catch (err) {
             console.error("AUTH RESTORE: could not refresh user", err);
@@ -90,6 +86,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     restoreSession();
   }, []);
 
+  // ─── REFRESH USER (re-pulls live status: verified, role, location, etc.) ───
+  const refreshUser = async () => {
+    try {
+      const res = await api.get("/api/users/me");
+      const freshUser = res.data;
+      if (freshUser) {
+        await AsyncStorage.setItem("user", JSON.stringify(freshUser));
+        setUser(freshUser);
+      }
+    } catch (err) {
+      console.error("AUTH: refreshUser failed", err);
+    }
+  };
+
   const login = async (email: string, password: string) => {
     delete api.defaults.headers.common["Authorization"];
     try {
@@ -100,7 +110,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       await AsyncStorage.setItem("user", JSON.stringify(userObj));
       api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
       setUser(userObj);
-      // Register push token after login
       await registerPushToken();
     } catch (err) {
       console.error("AUTH LOGIN ERROR:", err);
@@ -187,6 +196,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         login,
         register,
         logout,
+        refreshUser,
         isMechanic,
         isDIYer,
         updateProfilePhoto,

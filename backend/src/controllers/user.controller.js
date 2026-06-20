@@ -17,6 +17,10 @@ export async function getMe(req, res) {
         isAdmin: true,
         location: true,
         createdAt: true,
+        isVerified: true,
+        isBanned: true,
+        isAvailable: true,
+        businessHours: true,
       },
     });
 
