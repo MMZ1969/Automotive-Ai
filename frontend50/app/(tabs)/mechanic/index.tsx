@@ -3,7 +3,7 @@ import { useTheme } from "@context/ThemeContext";
 import api from "@lib/api";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
-import { Alert, ScrollView, Switch, Text, TouchableOpacity, View } from "react-native";
+import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 
 export default function MechanicDashboard() {
   const { user, refreshUser } = useAuth();
@@ -11,21 +11,6 @@ export default function MechanicDashboard() {
   const router = useRouter();
   const [jobCount, setJobCount] = useState(0);
   const [reviewCount, setReviewCount] = useState(0);
-  const [isAvailable, setIsAvailable] = useState(user?.isAvailable ?? true);
-  const [togglingAvailability, setTogglingAvailability] = useState(false);
-
-  const handleToggleAvailability = async () => {
-    try {
-      setTogglingAvailability(true);
-      const res = await api.post("/api/users/availability");
-      setIsAvailable(res.data.isAvailable);
-    } catch (err) {
-      console.error("TOGGLE AVAILABILITY ERROR:", err);
-      Alert.alert("Error", "Could not update availability.");
-    } finally {
-      setTogglingAvailability(false);
-    }
-  };
 
   // Refresh live user status (verified, role, etc.) every time the dashboard focuses
   useFocusEffect(useCallback(() => {
@@ -91,35 +76,6 @@ export default function MechanicDashboard() {
         <Text style={{ color: colors.text, fontSize: 30, fontWeight: "bold" }}>{user?.name || "Mechanic"}</Text>
         <Text style={{ color: colors.textSecondary, marginTop: 6 }}>Automotive Intelligence</Text>
       </View>
-
-      {/* AVAILABILITY TOGGLE */}
-      <TouchableOpacity
-        onPress={handleToggleAvailability}
-        disabled={togglingAvailability}
-        style={{
-          backgroundColor: isAvailable ? "#06402b" : colors.card,
-          borderRadius: 14, borderWidth: 1,
-          borderColor: isAvailable ? colors.green : colors.border,
-          padding: 16, marginBottom: 16,
-          flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-        }}
-      >
-        <View>
-          <Text style={{ color: isAvailable ? colors.green : colors.text, fontWeight: "700", fontSize: 16 }}>
-            {isAvailable ? "🟢 Available for Jobs" : "🔴 Not Available"}
-          </Text>
-          <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>
-            {isAvailable ? "Customers can find and contact you" : "You won't appear as available on the map"}
-          </Text>
-        </View>
-        <Switch
-          value={isAvailable}
-          onValueChange={handleToggleAvailability}
-          trackColor={{ false: colors.border, true: colors.green }}
-          thumbColor="white"
-          disabled={togglingAvailability}
-        />
-      </TouchableOpacity>
 
       <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 20 }}>
         {[{ label: "Jobs Completed", value: jobCount }, { label: "Reviews", value: reviewCount }].map((stat, i) => (
