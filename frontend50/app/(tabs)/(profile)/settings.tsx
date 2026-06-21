@@ -298,13 +298,23 @@ export default function Settings() {
         <>
           <Text style={sectionTitle}>Verification</Text>
           <View style={card}>
-            <TouchableOpacity style={row} onPress={() => setShowVerifyModal(true)}>
-              <View>
-                <Text style={labelStyle}>⭐ Get Verified</Text>
-                <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 2 }}>Submit credentials for a verified badge</Text>
+            {user?.isVerified ? (
+              <View style={row}>
+                <View>
+                  <Text style={labelStyle}>✅ Verified Mechanic</Text>
+                  <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 2 }}>Your credentials are verified</Text>
+                </View>
+                <Text style={{ color: colors.green, fontSize: 13 }}>Active</Text>
               </View>
-              <Text style={{ color: colors.blue, fontSize: 13 }}>Apply →</Text>
-            </TouchableOpacity>
+            ) : (
+              <TouchableOpacity style={row} onPress={() => setShowVerifyModal(true)}>
+                <View>
+                  <Text style={labelStyle}>⭐ Get Verified</Text>
+                  <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 2 }}>Submit credentials for a verified badge</Text>
+                </View>
+                <Text style={{ color: colors.blue, fontSize: 13 }}>Apply →</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </>
       )}

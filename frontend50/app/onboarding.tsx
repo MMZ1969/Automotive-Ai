@@ -7,9 +7,11 @@ import { Dimensions, FlatList, Text, TouchableOpacity, View } from "react-native
 const { width } = Dimensions.get("window");
 
 const SLIDES = [
-  { id: "1", emoji: "🚗", title: "Welcome to AutoAI™", subtitle: "The social platform built exclusively for car enthusiasts, DIYers, and professional mechanics." },
-  { id: "2", emoji: "🔧", title: "Get Help. Share Builds.", subtitle: "Post questions, show off your ride, and connect with mechanics who can get the job done." },
-  { id: "3", emoji: "🤖", title: "AI-Powered Diagnostics", subtitle: "Describe your car problem and get instant AI diagnosis — severity, causes, costs, and repair steps." },
+  { id: "1", emoji: "🚗", title: "Welcome to AutoAI™", subtitle: "Your AI co-pilot for cars — plus a community of enthusiasts, DIYers, and pro mechanics, all in one place." },
+  { id: "2", emoji: "🤖", title: "AI Diagnostics", subtitle: "Describe a problem (or just speak it) and get an instant diagnosis: likely causes, severity, repair steps, suggested parts, and how-to videos." },
+  { id: "3", emoji: "📣", title: "Community Feed", subtitle: "Share your builds, follow other gearheads, join local car shows, and climb the rep leaderboard." },
+  { id: "4", emoji: "🛒", title: "Parts & Jobs", subtitle: "Buy and sell parts in the marketplace. DIYers can post jobs and hire help — mechanics can find work nearby." },
+  { id: "5", emoji: "🏁", title: "Mechanics: Get Verified", subtitle: "A pro? Submit your credentials to earn the verified badge, appear on the Near Me map, and land more job requests." },
 ];
 
 export default function OnboardingScreen() {

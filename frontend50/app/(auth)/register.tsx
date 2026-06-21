@@ -127,6 +127,16 @@ export default function Register() {
         </TouchableOpacity>
       </View>
 
+      {/* MECHANIC VERIFICATION NOTE */}
+      {role === "MECHANIC" && (
+        <View style={{ backgroundColor: colors.blueMuted ?? "#1e3a8a", borderWidth: 1, borderColor: colors.blue, borderRadius: 10, padding: 14, marginTop: -8, marginBottom: 20 }}>
+          <Text style={{ color: colors.text, fontSize: 13, fontWeight: "700", marginBottom: 4 }}>🏁 Get the Verified Badge</Text>
+          <Text style={{ color: colors.textSecondary, fontSize: 12, lineHeight: 19 }}>
+            After signing up, apply for verification in Settings to earn the verified badge, appear on the Near Me map, and get more job requests from drivers near you.
+          </Text>
+        </View>
+      )}
+
       {/* TERMS */}
       <TouchableOpacity onPress={() => setAgreedToTerms(!agreedToTerms)} style={{ flexDirection: "row", alignItems: "flex-start", marginBottom: 20, gap: 12 }}>
         <View style={{ width: 24, height: 24, borderRadius: 6, borderWidth: 2, borderColor: agreedToTerms ? colors.blue : colors.border, backgroundColor: agreedToTerms ? colors.blue : "transparent", justifyContent: "center", alignItems: "center", marginTop: 2 }}>
