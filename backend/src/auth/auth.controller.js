@@ -19,6 +19,20 @@ const isProfane = (text) => {
   return BANNED_WORDS.some(word => lower.includes(word));
 };
 
+// Shared password strength check — one source of truth for all password rules
+const validatePassword = (password) => {
+  if (!password || password.length < 8) {
+    return "Password must be at least 8 characters.";
+  }
+  if (!/[0-9]/.test(password)) {
+    return "Password must contain at least one number.";
+  }
+  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+    return "Password must contain at least one special character (!@#$%^&* etc).";
+  }
+  return null;
+};
+
 // REGISTER
 export const register = async (req, res) => {
   try {
@@ -32,14 +46,9 @@ export const register = async (req, res) => {
       return res.status(400).json({ message: "Username must be between 2 and 30 characters." });
     }
 
-    if (!password || password.length < 8) {
-      return res.status(400).json({ message: "Password must be at least 8 characters." });
-    }
-    if (!/[0-9]/.test(password)) {
-      return res.status(400).json({ message: "Password must contain at least one number." });
-    }
-    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
-      return res.status(400).json({ message: "Password must contain at least one special character (!@#$%^&* etc)." });
+    const passwordError = validatePassword(password);
+    if (passwordError) {
+      return res.status(400).json({ message: passwordError });
     }
 
     const existing = await prisma.user.findUnique({ where: { email } });
@@ -250,6 +259,10 @@ export const resetPassword = async (req, res) => {
   try {
     const { token, newPassword } = req.body;
 
+    const passwordError = validatePassword(newPassword);
+    if (passwordError) {
+      return res.status(400).json({ message: passwordError });
+    }
     const user = await prisma.user.findFirst({
       where: {
         resetToken: token,
@@ -376,6 +389,11 @@ export const changePassword = async (req, res) => {
     const isMatch = await bcrypt.compare(currentPassword, user.password);
     if (!isMatch) {
       return res.status(400).json({ message: "Current password is incorrect." });
+    }
+
+    const passwordError = validatePassword(newPassword);
+    if (passwordError) {
+      return res.status(400).json({ message: passwordError });
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
