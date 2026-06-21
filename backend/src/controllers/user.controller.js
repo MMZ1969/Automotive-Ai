@@ -441,7 +441,6 @@ export async function getMechanics(req, res) {
       where: {
         role: "MECHANIC",
         location: { not: null },
-        isAvailable: { not: false }, // hide ONLY mechanics who explicitly toggled off
       },
       select: {
         id: true,
@@ -450,7 +449,6 @@ export async function getMechanics(req, res) {
         repPoints: true,
         location: true,
         isVerified: true,
-        isAvailable: true, // so the frontend can show status if you want
       },
     });
     res.json(mechanics);
