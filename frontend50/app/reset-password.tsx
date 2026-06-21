@@ -14,7 +14,9 @@ export default function ResetPasswordScreen() {
 
   const handleReset = async () => {
     if (!newPassword.trim() || !confirmPassword.trim()) { Alert.alert("Missing fields", "Please fill in all fields."); return; }
-    if (newPassword.length < 6) { Alert.alert("Too short", "Password must be at least 6 characters."); return; }
+    if (newPassword.length < 8) { Alert.alert("Too short", "Password must be at least 8 characters."); return; }
+    if (!/[0-9]/.test(newPassword)) { Alert.alert("Add a number", "Password must contain at least one number."); return; }
+    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(newPassword)) { Alert.alert("Add a special character", "Password must contain at least one special character (!@#$%^&* etc)."); return; }
     if (newPassword !== confirmPassword) { Alert.alert("Passwords don't match", "Please make sure both passwords match."); return; }
     if (!token) { Alert.alert("Invalid link", "This reset link is invalid or expired."); return; }
     try {
@@ -41,7 +43,8 @@ export default function ResetPasswordScreen() {
       <View style={{ flex: 1, padding: 24 }}>
         <Text style={{ fontSize: 48, textAlign: "center", marginBottom: 16 }}>🔐</Text>
         <Text style={{ color: colors.text, fontSize: 22, fontWeight: "900", textAlign: "center", marginBottom: 8 }}>Set New Password</Text>
-        <Text style={{ color: colors.textSecondary, fontSize: 15, textAlign: "center", marginBottom: 32 }}>Enter your new password below.</Text>
+        <Text style={{ color: colors.textSecondary, fontSize: 15, textAlign: "center", marginBottom: 8 }}>Enter your new password below.</Text>
+        <Text style={{ color: colors.textMuted, fontSize: 13, textAlign: "center", marginBottom: 32 }}>Must be at least 8 characters, with a number and a special character (!@#$%^&* etc).</Text>
 
         <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 8 }}>New Password</Text>
         <TextInput value={newPassword} onChangeText={setNewPassword} placeholder="Enter new password" placeholderTextColor={colors.textMuted} secureTextEntry style={inputStyle} />
