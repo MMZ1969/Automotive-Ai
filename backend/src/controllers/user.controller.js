@@ -438,9 +438,10 @@ export async function getVerificationRequests(req, res) {
 export async function getMechanics(req, res) {
   try {
     const mechanics = await prisma.user.findMany({
-      where: { 
+      where: {
         role: "MECHANIC",
         location: { not: null },
+        isAvailable: { not: false }, // hide ONLY mechanics who explicitly toggled off
       },
       select: {
         id: true,
@@ -449,6 +450,7 @@ export async function getMechanics(req, res) {
         repPoints: true,
         location: true,
         isVerified: true,
+        isAvailable: true, // so the frontend can show status if you want
       },
     });
     res.json(mechanics);
