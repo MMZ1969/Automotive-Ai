@@ -27,6 +27,7 @@ export default function Profile() {
   const [loadingPosts, setLoadingPosts] = useState(true);
   const [followerCount, setFollowerCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
+  const [unreadMessages, setUnreadMessages] = useState(0);
 
   const fetchVanityPosts = async () => {
     try {
@@ -52,10 +53,20 @@ export default function Profile() {
     }
   }, [user?.id]);
 
+  const fetchUnreadMessages = async () => {
+    try {
+      const res = await api.get("/api/messages/unread-count");
+      setUnreadMessages(res.data.count || 0);
+    } catch (err) {
+      // silently fail — badge just won't show
+    }
+  };
+
   useFocusEffect(
     useCallback(() => {
       fetchVanityPosts();
       fetchStats();
+      fetchUnreadMessages();
     }, [fetchStats])
   );
 
@@ -329,6 +340,22 @@ export default function Profile() {
           <Text style={{ color: colors.text, fontSize: 17, fontWeight: "700" }}>Messages</Text>
           <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>Your conversations</Text>
         </View>
+        {unreadMessages > 0 && (
+          <View style={{
+            backgroundColor: "#ef4444",
+            borderRadius: 12,
+            minWidth: 24,
+            height: 24,
+            justifyContent: "center",
+            alignItems: "center",
+            paddingHorizontal: 7,
+            marginRight: 6,
+          }}>
+            <Text style={{ color: "white", fontSize: 12, fontWeight: "700" }}>
+              {unreadMessages > 99 ? "99+" : unreadMessages}
+            </Text>
+          </View>
+        )}
         <Text style={{ color: colors.textMuted, fontSize: 18 }}>›</Text>
       </TouchableOpacity>
 

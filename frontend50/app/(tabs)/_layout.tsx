@@ -5,25 +5,56 @@ import { Tabs, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { Text, View } from "react-native";
 
+// Small reusable red count badge for tab icons
+function TabBadge({ count }: { count: number }) {
+  if (!count || count <= 0) return null;
+  return (
+    <View
+      style={{
+        position: "absolute",
+        top: -4,
+        right: -6,
+        backgroundColor: "#ef4444",
+        borderRadius: 8,
+        minWidth: 16,
+        height: 16,
+        justifyContent: "center",
+        alignItems: "center",
+        paddingHorizontal: 3,
+      }}
+    >
+      <Text style={{ color: "white", fontSize: 10, fontWeight: "700" }}>
+        {count > 99 ? "99+" : count}
+      </Text>
+    </View>
+  );
+}
+
 export default function TabsLayout() {
   const { user } = useAuth();
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [notifCount, setNotifCount] = useState(0);
+  const [messageCount, setMessageCount] = useState(0);
 
   useFocusEffect(
     useCallback(() => {
-      const fetchUnread = async () => {
+      // Fetch the two counts INDEPENDENTLY so one failing endpoint
+      // can't silently take the other down (the old Promise.all problem).
+      const fetchCounts = async () => {
         try {
-          const [notifRes, msgRes] = await Promise.all([
-            api.get("/api/notifications/unread-count"),
-            api.get("/api/messages/unread-count"),
-          ]);
-          setUnreadCount((notifRes.data.count || 0) + (msgRes.data.count || 0));
+          const notifRes = await api.get("/api/notifications/unread-count");
+          setNotifCount(notifRes.data.count || 0);
         } catch (err) {
-          // silently fail
+          // notifications count fetch failed — leave it as-is
+        }
+        try {
+          const msgRes = await api.get("/api/messages/unread-count");
+          setMessageCount(msgRes.data.count || 0);
+        } catch (err) {
+          // messages count fetch failed — leave it as-is
         }
       };
-      fetchUnread();
-      const interval = setInterval(fetchUnread, 30000);
+      fetchCounts();
+      const interval = setInterval(fetchCounts, 30000);
       return () => clearInterval(interval);
     }, [])
   );
@@ -118,24 +149,8 @@ export default function TabsLayout() {
                 size={size}
                 color={focused ? "#ef4444" : "#6b7280"}
               />
-              {unreadCount > 0 && (
-                <View style={{
-                  position: "absolute",
-                  top: -4,
-                  right: -6,
-                  backgroundColor: "#ef4444",
-                  borderRadius: 8,
-                  minWidth: 16,
-                  height: 16,
-                  justifyContent: "center",
-                  alignItems: "center",
-                  paddingHorizontal: 3,
-                }}>
-                  <Text style={{ color: "white", fontSize: 10, fontWeight: "700" }}>
-                    {unreadCount > 99 ? "99+" : unreadCount}
-                  </Text>
-                </View>
-              )}
+              {/* Bell now badges NOTIFICATIONS only — matches what's in the Alerts screen */}
+              <TabBadge count={notifCount} />
             </View>
           ),
         }}
@@ -145,11 +160,15 @@ export default function TabsLayout() {
         options={{
           title: "Profile",
           tabBarIcon: ({ focused, size }) => (
-            <MaterialCommunityIcons
-              name="account-circle"
-              size={size}
-              color={focused ? "#345bff" : "#6b7280"}
-            />
+            <View>
+              <MaterialCommunityIcons
+                name="account-circle"
+                size={size}
+                color={focused ? "#345bff" : "#6b7280"}
+              />
+              {/* Profile badges unread MESSAGES — the path users take to reach them */}
+              <TabBadge count={messageCount} />
+            </View>
           ),
         }}
       />
