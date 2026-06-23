@@ -241,6 +241,9 @@ For the parts array: list only parts the user would need to BUY (not tools). Use
 
 If no vehicle is provided, ask the user to select their vehicle for better accuracy.
 
+IMPORTANT: If the user's input is clearly NOT about a vehicle or automotive issue (e.g. cooking, trivia, anything unrelated to cars, trucks, or motorcycles), do NOT attempt a diagnosis. Instead respond ONLY with this exact JSON, nothing else:
+{"error": "not_automotive"}
+
 Respond in JSON format only, no markdown, like this:
 {
   "summary": "brief one line summary",
@@ -270,6 +273,11 @@ Respond in JSON format only, no markdown, like this:
       return res.status(500).json({ error: "Invalid AI response" });
     }
     const parsed = JSON.parse(jsonMatch[0]);
+
+    // If the AI judged the input non-automotive, bail BEFORE awarding rep or counting a diagnosis
+    if (parsed.error === "not_automotive") {
+      return res.json({ error: "not_automotive" });
+    }
 
     // ─── EBAY PRICE LOOKUP ────────────────────────────────────────────
     let ebayParts = [];
