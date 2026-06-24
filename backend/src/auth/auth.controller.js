@@ -1,10 +1,13 @@
-import sgMail from "@sendgrid/mail";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
+import { Resend } from "resend";
 import prisma from "../lib/prisma.js";
 
-sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+// Sender — must be on the Resend-verified domain (send.amazmade.com)
+const FROM_EMAIL = "AutoAI <noreply@send.amazmade.com>";
 
 // Simple profanity filter — no external package needed
 const BANNED_WORDS = [
@@ -73,9 +76,9 @@ export const register = async (req, res) => {
 
     // Send verification email
     const verifyLink = `https://automotive-ai-production.up.railway.app/api/auth/verify-email?token=${verificationToken}`;
-    await sgMail.send({
+    const { error } = await resend.emails.send({
       to: email,
-      from: "maz@amazmade.com",
+      from: FROM_EMAIL,
       subject: "Verify Your AutoAI Account 🚗",
       html: `
         <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; background: #050509; color: white; padding: 32px; border-radius: 16px;">
@@ -88,6 +91,7 @@ export const register = async (req, res) => {
         </div>
       `,
     });
+    if (error) throw error;
 
     res.json({
       message: "Account created! Please check your email to verify your account.",
@@ -230,9 +234,9 @@ export const forgotPassword = async (req, res) => {
 
     const resetLink = `https://automotive-ai-production.up.railway.app/api/auth/reset-password-redirect?token=${token}`;
 
-    await sgMail.send({
+    const { error } = await resend.emails.send({
       to: email,
-      from: "maz@amazmade.com",
+      from: FROM_EMAIL,
       subject: "Reset Your AutoAI Password 🔧",
       html: `
         <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; background: #050509; color: white; padding: 32px; border-radius: 16px;">
@@ -246,6 +250,7 @@ export const forgotPassword = async (req, res) => {
         </div>
       `,
     });
+    if (error) throw error;
 
     res.json({ message: "If that email exists, a reset link has been sent." });
   } catch (err) {
@@ -505,9 +510,9 @@ export const resendVerification = async (req, res) => {
     });
 
     const verifyLink = `https://automotive-ai-production.up.railway.app/api/auth/verify-email?token=${verificationToken}`;
-    await sgMail.send({
+    const { error } = await resend.emails.send({
       to: email,
-      from: "maz@amazmade.com",
+      from: FROM_EMAIL,
       subject: "Verify Your AutoAI Account 🚗",
       html: `
         <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; background: #050509; color: white; padding: 32px; border-radius: 16px;">
@@ -520,6 +525,7 @@ export const resendVerification = async (req, res) => {
         </div>
       `,
     });
+    if (error) throw error;
 
     res.json({ message: "Verification email sent!" });
   } catch (err) {
