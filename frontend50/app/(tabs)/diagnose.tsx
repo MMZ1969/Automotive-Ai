@@ -91,13 +91,8 @@ export default function Diagnose() {
 
   const handleDiagnose = async () => {
     if (!query.trim()) return;
-    const carKeywords = ["car","truck","vehicle","engine","motor","transmission","brake","tire","oil","coolant","battery","alternator","starter","noise","vibrat","shak","stall","mechanic","repair","fix"];
-    const isCarRelated = carKeywords.some(k => query.toLowerCase().includes(k));
     const vehicleContext = selectedVehicle ? `Vehicle: ${selectedVehicle.year} ${selectedVehicle.make} ${selectedVehicle.model}. ` : "";
     const fullQuery = vehicleContext + query;
-    if (!isCarRelated && !selectedVehicle) {
-      Alert.alert("🚗 Automotive Only", "This AI is specialized for vehicle diagnostics only."); return;
-    }
     try {
   setLoading(true); setResult(null); setVideos([]); setScanImage(null);
   let diagRes;
@@ -109,6 +104,10 @@ export default function Diagnose() {
       return;
     }
     throw diagErr;
+  }
+  if (diagRes.data.error === "not_automotive") {
+    Alert.alert("🚗 Automotive Only", "I can only help with vehicle problems. Try describing a car issue — a noise, a leak, a warning light, or a part like \"valve cover gasket.\"");
+    return;
   }
   const videoRes = await api.get(`/api/youtube?query=${encodeURIComponent(fullQuery)}`);
   setResult(diagRes.data); setVideos(videoRes.data);
