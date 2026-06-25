@@ -36,10 +36,19 @@ const validatePassword = (password) => {
   return null;
 };
 
+// Basic email format check — blocks garbage like "Capshaw" or "Lukas@789"
+const isValidEmail = (email) =>
+  typeof email === "string" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+
 // REGISTER
 export const register = async (req, res) => {
   try {
-    const { email, password, name, role } = req.body;
+    const { password, name, role } = req.body;
+    const email = (req.body.email || "").trim();
+
+    if (!isValidEmail(email)) {
+      return res.status(400).json({ message: "Please enter a valid email address." });
+    }
 
     if (isProfane(name)) {
       return res.status(400).json({ message: "Username contains inappropriate language. Please choose a different name." });
@@ -54,7 +63,9 @@ export const register = async (req, res) => {
       return res.status(400).json({ message: passwordError });
     }
 
-    const existing = await prisma.user.findUnique({ where: { email } });
+    const existing = await prisma.user.findFirst({
+      where: { email: { equals: email, mode: "insensitive" } },
+    });
     if (existing) {
       return res.status(400).json({ message: "Email already in use" });
     }
