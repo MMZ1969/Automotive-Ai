@@ -1,4 +1,5 @@
 import express from "express";
+import { sendPushNotification } from "../controllers/notification.controller.js";
 import prisma from "../lib/prisma.js";
 import authMiddleware from "../middleware/authMiddleware.js";
 
