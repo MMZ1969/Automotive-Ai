@@ -1,9 +1,10 @@
 import api from "@lib/api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import Constants from "expo-constants";
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { Platform } from "react-native";
+import { AppState, Platform } from "react-native";
 
 interface AuthContextType {
   user: any;
@@ -26,6 +27,15 @@ const registerPushToken = async () => {
   try {
     if (!Device.isDevice) return;
 
+    // Android needs a channel set up before tokens/notifications behave.
+    if (Platform.OS === "android") {
+      await Notifications.setNotificationChannelAsync("default", {
+        name: "default",
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 250, 250, 250],
+      });
+    }
+
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;
 
@@ -34,20 +44,29 @@ const registerPushToken = async () => {
       finalStatus = status;
     }
 
-    if (finalStatus !== "granted") return;
+    if (finalStatus !== "granted") {
+      console.log("PUSH: permission not granted, skipping token registration");
+      return;
+    }
 
-    const tokenData = await Notifications.getExpoPushTokenAsync();
+    // ── THE FIX ──
+    // getExpoPushTokenAsync() needs the EAS projectId on real store builds.
+    // Without it, it throws on device builds and the token is never saved
+    // (which is exactly why every user had a null pushToken). Pull it from
+    // app config, with a hardcoded fallback so it can never be undefined.
+    const projectId =
+      Constants?.expoConfig?.extra?.eas?.projectId ??
+      (Constants as any)?.easConfig?.projectId ??
+      "6f942beb-c59e-4d1a-b4b0-8317a2566f21";
+
+    const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
     const pushToken = tokenData.data;
+
+    console.log("PUSH: got token", pushToken);
 
     await api.put("/api/users/me", { pushToken });
 
-    if (Platform.OS === "android") {
-      Notifications.setNotificationChannelAsync("default", {
-        name: "default",
-        importance: Notifications.AndroidImportance.MAX,
-        vibrationPattern: [0, 250, 250, 250],
-      });
-    }
+    console.log("PUSH: token saved to backend");
   } catch (err) {
     console.error("PUSH TOKEN ERROR:", err);
   }
@@ -57,6 +76,23 @@ const registerPushToken = async () => {
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+
+  // ─── CLEAR APP ICON BADGE ───────────────────────────────────────────────
+  // The red number on the app icon is an OS-level badge, separate from the
+  // in-app alerts. Push notifications set it, but nothing clears it — so it
+  // gets "stuck" (e.g. a "2" with no matching alerts inside). This zeroes it
+  // on launch and every time the app returns to the foreground.
+  useEffect(() => {
+    Notifications.setBadgeCountAsync(0);
+
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") {
+        Notifications.setBadgeCountAsync(0);
+      }
+    });
+
+    return () => sub.remove();
+  }, []);
 
   useEffect(() => {
     const restoreSession = async () => {
@@ -118,25 +154,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const register = async (data: any) => {
-  try {
-    const res = await api.post("/api/auth/register", data);
-    if (res.data.needsVerification) {
-      const error: any = new Error("Verification required");
-      error.needsVerification = true;
-      throw error;
+    try {
+      const res = await api.post("/api/auth/register", data);
+      if (res.data.needsVerification) {
+        const error: any = new Error("Verification required");
+        error.needsVerification = true;
+        throw error;
+      }
+      const token = res.data.token;
+      const userObj = res.data.user;
+      await AsyncStorage.setItem("token", token);
+      await AsyncStorage.setItem("user", JSON.stringify(userObj));
+      api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+      setUser(userObj);
+      await registerPushToken();
+    } catch (err) {
+      console.error("AUTH REGISTER ERROR:", err);
+      throw err;
     }
-    const token = res.data.token;
-    const userObj = res.data.user;
-    await AsyncStorage.setItem("token", token);
-    await AsyncStorage.setItem("user", JSON.stringify(userObj));
-    api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-    setUser(userObj);
-    await registerPushToken();
-  } catch (err) {
-    console.error("AUTH REGISTER ERROR:", err);
-    throw err;
-  }
-};
+  };
 
   const logout = async () => {
     try {
