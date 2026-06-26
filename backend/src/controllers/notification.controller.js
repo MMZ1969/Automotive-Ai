@@ -1,3 +1,4 @@
+import { sendPushNotification } from "../controllers/notification.controller.js";
 import prisma from "../lib/prisma.js";
 
 // Helper function to send push notification

@@ -167,6 +167,33 @@ router.post("/conversations/:id/messages", authMiddleware, async (req, res) => {
       data: { updatedAt: new Date() },
     });
 
+    // ── Push the message to the recipient's phone ──
+    // Uses sendPushNotification directly (NOT createAndSendNotification),
+    // so messages push WITHOUT creating a bell notification — keeps the
+    // bell = alerts / Profile = messages split intact.
+    try {
+      const recipient = await prisma.user.findUnique({
+        where: { id: receiverId },
+        select: { pushToken: true },
+      });
+
+      if (recipient?.pushToken) {
+        // Badge = recipient's total unread messages
+        const unreadCount = await prisma.message.count({
+          where: { receiverId, read: false },
+        });
+
+        await sendPushNotification(
+          recipient.pushToken,
+          `${message.sender.name} 💬`,
+          content.length > 80 ? content.slice(0, 80) + "…" : content,
+          unreadCount
+        );
+      }
+    } catch (pushErr) {
+      console.error("MESSAGE PUSH ERROR:", pushErr);
+    }
+
     res.status(201).json(message);
   } catch (err) {
     console.error("SEND MESSAGE ERROR:", err);
