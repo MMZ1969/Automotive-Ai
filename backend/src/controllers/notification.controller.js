@@ -1,7 +1,7 @@
 import prisma from "../lib/prisma.js";
 
 // Helper function to send push notification
-async function sendPushNotification(pushToken, title, body, badgeCount = 1) {
+export async function sendPushNotification(pushToken, title, body, badgeCount = 1) {
   if (!pushToken || !pushToken.startsWith("ExponentPushToken")) return;
 
   try {
