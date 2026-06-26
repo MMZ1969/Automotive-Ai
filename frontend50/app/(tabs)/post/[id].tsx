@@ -7,6 +7,7 @@ import {
   ActivityIndicator, Alert, FlatList, Image, KeyboardAvoidingView,
   Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View,
 } from "react-native";
+import RichText from "../../../components/RichText";
 
 export default function PostDetail() {
   const { id } = useLocalSearchParams();
@@ -200,7 +201,12 @@ export default function PostDetail() {
                 <Text style={{ color: colors.textMuted, fontSize: 12, marginLeft: "auto" }}>{new Date(post?.createdAt).toLocaleDateString()}</Text>
               </TouchableOpacity>
 
-              <Text style={{ color: colors.text, fontSize: 16, lineHeight: 24, marginBottom: 12 }}>{post?.content}</Text>
+              <RichText
+                text={post?.content}
+                colors={colors}
+                baseStyle={{ color: colors.text, fontSize: 16, lineHeight: 24, marginBottom: 12 }}
+                onHashtagPress={(tag) => router.push({ pathname: "/(tabs)/feed", params: { hashtag: tag } })}
+              />
 
               {post?.imageUrl && (
                 <Image source={{ uri: post.imageUrl }} style={{ width: "100%", height: 250, borderRadius: 12, marginBottom: 12 }} resizeMode="cover" />
@@ -253,7 +259,12 @@ export default function PostDetail() {
                   <Text style={{ color: colors.blue, fontWeight: "700" }}>{item.user?.name || "Anonymous"}</Text>
                   <Text style={{ color: colors.textMuted, fontSize: 11, marginLeft: "auto" }}>{new Date(item.createdAt).toLocaleDateString()}</Text>
                 </TouchableOpacity>
-                <Text style={{ color: colors.text, fontSize: 14, paddingLeft: 36, marginBottom: 8 }}>{item.content}</Text>
+                <RichText
+                  text={item.content}
+                  colors={colors}
+                  baseStyle={{ color: colors.text, fontSize: 14, paddingLeft: 36, marginBottom: 8 }}
+                  onHashtagPress={(tag) => router.push({ pathname: "/(tabs)/feed", params: { hashtag: tag } })}
+                />
                 <TouchableOpacity onPress={() => { setReplyingTo(isReplying ? null : item); setReplyText(""); setTimeout(() => replyInputRef.current?.focus(), 100); }} style={{ paddingLeft: 36 }}>
                   <Text style={{ color: isReplying ? "#ef4444" : colors.textMuted, fontSize: 12, fontWeight: "700" }}>
                     {isReplying ? "✕ Cancel" : `💬 Reply${replies.length > 0 ? ` (${replies.length})` : ""}`}
@@ -272,7 +283,12 @@ export default function PostDetail() {
                         <Text style={{ color: colors.blue, fontWeight: "700", fontSize: 13 }}>{reply.user?.name || "Anonymous"}</Text>
                         <Text style={{ color: colors.textMuted, fontSize: 10, marginLeft: "auto" }}>{new Date(reply.createdAt).toLocaleDateString()}</Text>
                       </TouchableOpacity>
-                      <Text style={{ color: colors.text, fontSize: 13, paddingLeft: 30 }}>{reply.content}</Text>
+                      <RichText
+                        text={reply.content}
+                        colors={colors}
+                        baseStyle={{ color: colors.text, fontSize: 13, paddingLeft: 30 }}
+                        onHashtagPress={(tag) => router.push({ pathname: "/(tabs)/feed", params: { hashtag: tag } })}
+                      />
                     </View>
                   ))}
                 </View>

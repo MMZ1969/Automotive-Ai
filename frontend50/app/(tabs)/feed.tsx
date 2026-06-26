@@ -15,6 +15,7 @@ import {
   View
 } from "react-native";
 import Svg, { Circle, Line } from "react-native-svg";
+import RichText from "../../components/RichText";
 
 const logo = require("../../assets/autoai_icon_1024_tm.png");
 
@@ -413,11 +414,12 @@ export default function Feed() {
             )}
 
             <TouchableOpacity onPress={() => router.push(`/(tabs)/post/${item.id}`)} activeOpacity={0.8}>
-              <HashtagText
-                text={item.content}
-                colors={colors}
-                onHashtagPress={(tag) => router.push({ pathname: "/(tabs)/feed", params: { hashtag: tag } })}
-              />
+              <RichText
+                  text={item.content}
+                  colors={colors}
+                  baseStyle={{ color: colors.text, fontSize: 15, lineHeight: 22 }}
+                  onHashtagPress={(tag) => router.push({ pathname: "/(tabs)/feed", params: { hashtag: tag } })}
+                />
               {item.imageUrls?.length > 1 ? (
                 <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 4, marginTop: 12 }}>
                   {item.imageUrls.map((url: string, index: number) => (
