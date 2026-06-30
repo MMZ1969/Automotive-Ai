@@ -1,10 +1,8 @@
 import admin from "firebase-admin";
 
-// Normalize the private key no matter how Railway stored it:
-// strip wrapping quotes, then convert any literal \n into real newlines.
 let privateKey = process.env.FIREBASE_PRIVATE_KEY || "";
-privateKey = privateKey.replace(/^["']|["']$/g, "");   // remove wrapping quotes if present
-privateKey = privateKey.replace(/\\n/g, "\n");          // turn literal \n into real line breaks
+privateKey = privateKey.replace(/^["']|["']$/g, "");
+privateKey = privateKey.replace(/\\n/g, "\n");
 
 if (!admin.apps.length) {
   admin.initializeApp({
@@ -14,4 +12,15 @@ if (!admin.apps.length) {
       privateKey,
     }),
   });
+}
+
+export async function getFirebaseToken(req, res) {
+  try {
+    const userId = req.user.id;
+    const token = await admin.auth().createCustomToken(String(userId));
+    res.json({ token });
+  } catch (err) {
+    console.error("FIREBASE TOKEN ERROR:", err);
+    res.status(500).json({ error: "Could not generate Firebase token" });
+  }
 }
