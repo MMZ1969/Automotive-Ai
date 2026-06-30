@@ -4,6 +4,13 @@ let privateKey = process.env.FIREBASE_PRIVATE_KEY || "";
 privateKey = privateKey.replace(/^["']|["']$/g, "");
 privateKey = privateKey.replace(/\\n/g, "\n");
 
+// ── TEMP DIAGNOSTIC — remove after ──
+console.log("KEY STARTS:", JSON.stringify(privateKey.slice(0, 40)));
+console.log("KEY ENDS:", JSON.stringify(privateKey.slice(-40)));
+console.log("KEY LENGTH:", privateKey.length);
+console.log("HAS REAL NEWLINES:", privateKey.includes("\n"));
+
+
 if (!admin.apps.length) {
   admin.initializeApp({
     credential: admin.credential.cert({
