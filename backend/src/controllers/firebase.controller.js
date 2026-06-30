@@ -1,15 +1,10 @@
 import admin from "firebase-admin";
 
-let privateKey = process.env.FIREBASE_PRIVATE_KEY || "";
-privateKey = privateKey.replace(/^["']|["']$/g, "");
-privateKey = privateKey.replace(/\\n/g, "\n");
-
-// ── TEMP DIAGNOSTIC — remove after ──
-console.log("KEY STARTS:", JSON.stringify(privateKey.slice(0, 40)));
-console.log("KEY ENDS:", JSON.stringify(privateKey.slice(-40)));
-console.log("KEY LENGTH:", privateKey.length);
-console.log("HAS REAL NEWLINES:", privateKey.includes("\n"));
-
+// The key is stored Base64-encoded in Railway — decode it back to a real PEM.
+const privateKey = Buffer.from(
+  process.env.FIREBASE_PRIVATE_KEY || "",
+  "base64"
+).toString("utf8");
 
 if (!admin.apps.length) {
   admin.initializeApp({
@@ -21,6 +16,7 @@ if (!admin.apps.length) {
   });
 }
 
+// POST /api/auth/firebase-token
 export async function getFirebaseToken(req, res) {
   try {
     const userId = req.user.id;
