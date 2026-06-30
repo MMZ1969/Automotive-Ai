@@ -1,17 +1,18 @@
 import express from "express";
 import rateLimit from "express-rate-limit";
+import { getFirebaseToken } from "../controllers/firebase.controller.js";
 import authMiddleware from "../middleware/authMiddleware.js";
 import {
-    changePassword,
-    deleteAccount,
-    forgotPassword,
-    login,
-    me,
-    register,
-    resendVerification,
-    resetPassword,
-    resetPasswordRedirect,
-    verifyEmail,
+  changePassword,
+  deleteAccount,
+  forgotPassword,
+  login,
+  me,
+  register,
+  resendVerification,
+  resetPassword,
+  resetPasswordRedirect,
+  verifyEmail,
 } from "./auth.controller.js";
 
 const router = express.Router();
@@ -62,5 +63,5 @@ router.get("/reset-password-redirect", resetPasswordRedirect);
 
 // RESEND VERIFICATION
 router.post("/resend-verification", emailActionLimiter, resendVerification);
-
+router.post("/firebase-token", authMiddleware, getFirebaseToken);
 export default router;

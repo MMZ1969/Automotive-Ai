@@ -57,8 +57,11 @@ async function main() {
   console.log(`DEAD - junk/test email: ${deadJunk.length}  ← likely noise`);
   console.log("═════════════════════════════════════════\n");
 
+  // Format createdAt as a clean YYYY-MM-DD date for easy column scanning
+  const fmtDate = (d) => new Date(d).toISOString().slice(0, 10);
+
   const line = (u) =>
-    `#${u.id} | ${u.emailVerified ? "✓" : "✗"} | act:${u.activity} ` +
+    `#${u.id} | ${u.emailVerified ? "✓" : "✗"} | ${fmtDate(u.createdAt)} | act:${u.activity} ` +
     `(p${u.c.posts} c${u.c.comments} l${u.c.likes} m${u.c.messagesSent} j${u.c.jobsPosted} b${u.c.bids} v${u.c.vehicles} f${u.c.following}) ` +
     `| ${u.role} | ${u.email}`;
 
