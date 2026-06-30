@@ -1,17 +1,11 @@
 import admin from "firebase-admin";
 
-// The key is stored Base64-encoded in Railway — decode it back to a real PEM.
-const privateKey = Buffer.from(
-  process.env.FIREBASE_PRIVATE_KEY || "",
-  "base64"
-).toString("utf8");
-
 if (!admin.apps.length) {
   admin.initializeApp({
     credential: admin.credential.cert({
       projectId: process.env.FIREBASE_PROJECT_ID,
       clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey,
+      privateKey: (process.env.FIREBASE_PRIVATE_KEY || "").replace(/\\n/g, "\n"),
     }),
   });
 }
