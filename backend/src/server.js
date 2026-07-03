@@ -233,7 +233,7 @@ User's problem: "${query}"
 
 Important: Use the exact vehicle specs above to give accurate diagnosis, severity, and cost estimates specific to this vehicle.
 
-For repair steps: provide general guidance only — do NOT invent specific torque specs, screw counts, or exact procedures you are not certain about. Keep diagnosisSteps high level like "Remove the tail light assembly" not "Remove the 2 screws on the left side".
+For repair steps: give the actual, specific procedure — including bolt patterns, tightening sequences, and standard torque specs when you know them for this vehicle. Do NOT default to vague guidance ("remove the assembly") when you can give the real steps ("remove the 4 mounting bolts in a reverse-star pattern, torque to 89 in-lbs"). Only add a verification note (e.g. "confirm torque spec — this varies by engine option") when the exact value genuinely differs across trims/engines for THIS vehicle, or when the vehicle info provided is incomplete. Never tell the user to "consult a repair manual," "check AllData/Mitchell," or "look this up elsewhere" as your primary answer — give your best specific answer first, and only suggest double-checking as a secondary note when warranted.
 
 For part numbers: NEVER provide specific part numbers. Instead mention the part name only (e.g. "tail light bulb" or "brake caliper") and set proTip to include "Bring your VIN to any auto parts store for the exact part number for your specific vehicle."
 
