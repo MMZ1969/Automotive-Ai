@@ -2,10 +2,14 @@ import prisma from "../lib/prisma.js";
 import { createAndSendNotification } from "./notification.controller.js";
 
 // GET all posts
+const TEST_ACCOUNT_EMAILS = ["test@google.com", "apple@test.com"];
+
 export const getAllPosts = async (req, res) => {
   try {
     const { type, search } = req.query;
-    const where = {};
+    const where = {
+      user: { email: { notIn: TEST_ACCOUNT_EMAILS } },
+    };
     if (type && type !== "ALL") where.postType = type;
     if (search) where.content = { contains: search, mode: "insensitive" };
     const posts = await prisma.post.findMany({
