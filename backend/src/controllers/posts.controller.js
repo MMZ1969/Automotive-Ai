@@ -85,7 +85,6 @@ export const createPost = async (req, res) => {
     });
 
 res.json(post);
-    res.json(post);
   } catch (err) {
     console.error("CREATE POST ERROR:", err);
     res.status(500).json({ error: "Failed to create post" });

@@ -12,7 +12,7 @@ import {
   resendVerification,
   resetPassword,
   resetPasswordRedirect,
-  verifyEmail,
+  verifyEmailCode,
 } from "./auth.controller.js";
 
 const router = express.Router();
@@ -56,8 +56,15 @@ router.post("/reset-password", resetPassword);
 // CHANGE PASSWORD
 router.put("/change-password", authMiddleware, changePassword);
 
-// VERIFY EMAIL
-router.get("/verify-email", verifyEmail);
+// VERIFY EMAIL CODE
+const verifyLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  message: { message: "Too many attempts. Please try again later." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+router.post("/verify-email", verifyLimiter, verifyEmailCode);
 
 router.get("/reset-password-redirect", resetPasswordRedirect);
 

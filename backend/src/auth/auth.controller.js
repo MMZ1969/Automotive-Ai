@@ -72,7 +72,8 @@ export const register = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const verificationToken = crypto.randomBytes(32).toString("hex");
+    const verificationCode = crypto.randomInt(100000, 999999).toString();
+    const verificationCodeExpiry = new Date(Date.now() + 1000 * 60 * 15); // 15 min
 
     const user = await prisma.user.create({
       data: {
@@ -81,24 +82,24 @@ export const register = async (req, res) => {
         name,
         role: role || "DIYER",
         emailVerified: false,
-        verificationToken,
+        verificationToken: verificationCode,
+        verificationCodeExpiry,
       },
     });
 
-    // Send verification email
-    const verifyLink = `https://automotive-ai-production.up.railway.app/api/auth/verify-email?token=${verificationToken}`;
+    // Send verification code email
     const { error } = await resend.emails.send({
       to: email,
       from: FROM_EMAIL,
-      subject: "Verify Your AutoAI Account 🚗",
+      subject: "Your AutoAI Verification Code 🚗",
       html: `
         <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; background: #050509; color: white; padding: 32px; border-radius: 16px;">
           <h2 style="color: #345bff;">AutoAI™</h2>
-          <p>Welcome to Automotive AI! One last step — verify your email to activate your account.</p>
-          <a href="${verifyLink}" style="display: inline-block; background: #345bff; color: white; padding: 14px 28px; border-radius: 12px; text-decoration: none; font-weight: bold; margin: 20px 0;">
-            Verify My Email
-          </a>
-          <p style="color: #6b7280; font-size: 13px;">If you didn't create an account, ignore this email.</p>
+          <p>Welcome to Automotive AI! Enter this code in the app to activate your account:</p>
+          <div style="background: #111; border: 2px solid #345bff; border-radius: 12px; padding: 20px; text-align: center; margin: 20px 0;">
+            <span style="font-size: 36px; font-weight: bold; letter-spacing: 8px; color: #345bff;">${verificationCode}</span>
+          </div>
+          <p style="color: #6b7280; font-size: 13px;">This code expires in 15 minutes. If you didn't create an account, ignore this email.</p>
         </div>
       `,
     });
@@ -426,36 +427,32 @@ export const changePassword = async (req, res) => {
   }
 };
 
-// VERIFY EMAIL
-export const verifyEmail = async (req, res) => {
+// VERIFY EMAIL CODE
+export const verifyEmailCode = async (req, res) => {
   try {
-    const { token } = req.query;
+    const { email, code } = req.body;
 
-    const user = await prisma.user.findFirst({
-      where: { verificationToken: token },
-    });
+    if (!email || !code) {
+      return res.status(400).json({ message: "Email and code are required." });
+    }
+
+    const user = await prisma.user.findUnique({ where: { email } });
 
     if (!user) {
-      return res.status(400).send(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-          <title>Verification Failed — AutoAI</title>
-          <style>
-            body { background: #050509; color: white; font-family: sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; text-align: center; padding: 20px; }
-            h1 { color: #ef4444; font-size: 32px; margin-bottom: 12px; }
-            p { color: #9ca3af; margin-bottom: 32px; }
-          </style>
-        </head>
-        <body>
-          <div>
-            <h1>❌ Link Expired</h1>
-            <p>This verification link is invalid or has already been used. Please request a new one from the app.</p>
-          </div>
-        </body>
-        </html>
-      `);
+      return res.status(400).json({ message: "Invalid code." });
+    }
+
+    if (user.emailVerified) {
+      return res.status(400).json({ message: "Email already verified!" });
+    }
+
+    if (
+      !user.verificationToken ||
+      user.verificationToken !== code ||
+      !user.verificationCodeExpiry ||
+      user.verificationCodeExpiry < new Date()
+    ) {
+      return res.status(400).json({ message: "Invalid or expired code. Please request a new one." });
     }
 
     await prisma.user.update({
@@ -463,6 +460,7 @@ export const verifyEmail = async (req, res) => {
       data: {
         emailVerified: true,
         verificationToken: null,
+        verificationCodeExpiry: null,
       },
     });
 
@@ -472,34 +470,28 @@ export const verifyEmail = async (req, res) => {
       { expiresIn: "7d" }
     );
 
-    res.send(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-        <title>Email Verified — AutoAI</title>
-        <style>
-          body { background: #050509; color: white; font-family: sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; text-align: center; padding: 20px; }
-          h1 { color: #345bff; font-size: 32px; margin-bottom: 12px; }
-          p { color: #9ca3af; margin-bottom: 32px; }
-          a { background: #345bff; color: white; padding: 16px 32px; border-radius: 12px; text-decoration: none; font-weight: bold; font-size: 18px; }
-        </style>
-      </head>
-      <body>
-        <div>
-          <h1>✅ Email Verified!</h1>
-          <p>Welcome to AutoAI! Tap below to open the app and start exploring.</p>
-          <a href="automotiveai://verified">Open AutoAI 🚗</a>
-        </div>
-      </body>
-      </html>
-    `);
+    res.json({
+      message: "Email verified!",
+      token: jwtToken,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        profilePhoto: user.profilePhoto,
+        repPoints: user.repPoints,
+        isAdmin: user.isAdmin,
+        location: user.location,
+        isVerified: user.isVerified,
+        isBanned: user.isBanned,
+      },
+    });
   } catch (err) {
-    console.error("VERIFY EMAIL ERROR:", err);
+    console.error("VERIFY EMAIL CODE ERROR:", err);
     res.status(500).json({ message: "Server error" });
   }
 };
-
+      
 // RESEND VERIFICATION EMAIL
 export const resendVerification = async (req, res) => {
   try {
@@ -514,25 +506,26 @@ export const resendVerification = async (req, res) => {
       return res.status(400).json({ message: "Email already verified!" });
     }
 
-    const verificationToken = crypto.randomBytes(32).toString("hex");
+    const verificationCode = crypto.randomInt(100000, 999999).toString();
+    const verificationCodeExpiry = new Date(Date.now() + 1000 * 60 * 15);
+
     await prisma.user.update({
       where: { email },
-      data: { verificationToken },
+      data: { verificationToken: verificationCode, verificationCodeExpiry },
     });
 
-    const verifyLink = `https://automotive-ai-production.up.railway.app/api/auth/verify-email?token=${verificationToken}`;
     const { error } = await resend.emails.send({
       to: email,
       from: FROM_EMAIL,
-      subject: "Verify Your AutoAI Account 🚗",
+      subject: "Your AutoAI Verification Code 🚗",
       html: `
         <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; background: #050509; color: white; padding: 32px; border-radius: 16px;">
           <h2 style="color: #345bff;">AutoAI™</h2>
-          <p>Here's your new verification link. Tap below to activate your account.</p>
-          <a href="${verifyLink}" style="display: inline-block; background: #345bff; color: white; padding: 14px 28px; border-radius: 12px; text-decoration: none; font-weight: bold; margin: 20px 0;">
-            Verify My Email
-          </a>
-          <p style="color: #6b7280; font-size: 13px;">If you didn't create an account, ignore this email.</p>
+          <p>Here's your new verification code. Enter it in the app to activate your account:</p>
+          <div style="background: #111; border: 2px solid #345bff; border-radius: 12px; padding: 20px; text-align: center; margin: 20px 0;">
+            <span style="font-size: 36px; font-weight: bold; letter-spacing: 8px; color: #345bff;">${verificationCode}</span>
+          </div>
+          <p style="color: #6b7280; font-size: 13px;">This code expires in 15 minutes. If you didn't create an account, ignore this email.</p>
         </div>
       `,
     });
