@@ -91,12 +91,9 @@ export default function TabsLayout() {
       <Tabs.Screen name="create" options={{ href: null }} />
       <Tabs.Screen name="followers" options={{ href: null }} />
       <Tabs.Screen name="near-me" options={{ href: null }} />
-      <Tabs.Screen name="admin" options={{ href: null }} />
-      <Tabs.Screen name="(profile)/admin" options={{ href: null }} />
       <Tabs.Screen name="car-show" options={{ href: null }} />
       <Tabs.Screen name="messages" options={{ href: null }} />
       <Tabs.Screen name="chat/[id]" options={{ href: null }} />
-      <Tabs.Screen name="(profile)/garage" options={{ href: null }} />
 
       {/* VISIBLE TABS */}
       <Tabs.Screen

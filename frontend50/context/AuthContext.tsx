@@ -3,8 +3,9 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
+import { router } from "expo-router";
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { AppState, Platform } from "react-native";
+import { AppState, DeviceEventEmitter, Platform } from "react-native";
 
 interface AuthContextType {
   user: any;
@@ -94,6 +95,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return () => sub.remove();
   }, []);
 
+  // ─── SESSION EXPIRED LISTENER ───────────────────────────────────────────
+  // Fired once by the api.ts interceptor when any request 401s. This is the
+  // single source of truth for logging the user out and redirecting — avoids
+  // every in-flight request (notif poll, message poll, etc.) independently
+  // clearing storage and logging duplicate errors.
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener("session-expired", () => {
+      setUser(null);
+      router.replace("/(auth)/login");
+    });
+    return () => sub.remove();
+  }, []);
+
   useEffect(() => {
     const restoreSession = async () => {
       try {
@@ -110,7 +124,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             setUser(freshUser);
             await registerPushToken();
           } catch (err) {
-            console.error("AUTH RESTORE: could not refresh user", err);
+            // 401 is now handled globally by the interceptor + session-expired
+            // listener above. Any other error here (network blip, etc.) just
+            // leaves the cached user in place.
           }
         }
       } catch (err) {

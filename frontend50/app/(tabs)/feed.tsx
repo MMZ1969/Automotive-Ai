@@ -245,9 +245,11 @@ export default function Feed() {
               <Text style={{ color: colors.blue, fontSize: 10, fontWeight: "600", letterSpacing: 1.5 }}>AUTOMOTIVE INTELLIGENCE</Text>
             </View>
           </View>
-          <TouchableOpacity onPress={() => router.push("/(tabs)/search")} style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 10 }}>
-            <Text style={{ fontSize: 20 }}>🔍</Text>
-          </TouchableOpacity>
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
+            <TouchableOpacity onPress={() => router.push("/(tabs)/search")} style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 10 }}>
+              <Text style={{ fontSize: 20 }}>🔍</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* FOR YOU — STEERING WHEEL — FOLLOWING */}

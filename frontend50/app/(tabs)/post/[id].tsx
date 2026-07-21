@@ -4,8 +4,10 @@ import api from "@lib/api";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator, Alert, FlatList, Image, KeyboardAvoidingView,
-  Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View,
+  ActivityIndicator, Alert,
+  Dimensions,
+  FlatList, Image, KeyboardAvoidingView,
+  Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View
 } from "react-native";
 import RichText from "../../../components/RichText";
 
@@ -24,6 +26,9 @@ export default function PostDetail() {
   const [replyingTo, setReplyingTo] = useState<any>(null);
   const [replyText, setReplyText] = useState("");
   const [submittingReply, setSubmittingReply] = useState(false);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const screenWidth = Dimensions.get("window").width;
+  const carouselWidth = screenWidth - 32 - 32; // matches the card's outer margin(16) + padding(16) on each side
   const replyInputRef = useRef<TextInput>(null);
 
   const fetchPost = async () => {
@@ -208,9 +213,46 @@ export default function PostDetail() {
                 onHashtagPress={(tag) => router.push({ pathname: "/(tabs)/feed", params: { hashtag: tag } })}
               />
 
-              {post?.imageUrl && (
-                <Image source={{ uri: post.imageUrl }} style={{ width: "100%", height: 250, borderRadius: 12, marginBottom: 12 }} resizeMode="cover" />
-              )}
+              {(() => {
+  const images = post?.imageUrls?.length > 0 ? post.imageUrls : (post?.imageUrl ? [post.imageUrl] : []);
+  if (images.length === 0) return null;
+
+  if (images.length === 1) {
+    return (
+      <Image source={{ uri: images[0] }} style={{ width: "100%", height: 250, borderRadius: 12, marginBottom: 12 }} resizeMode="cover" />
+    );
+  }
+
+  return (
+    <View style={{ marginBottom: 12 }}>
+      <FlatList
+        data={images}
+        keyExtractor={(_, index) => index.toString()}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        onMomentumScrollEnd={(e) => {
+          const index = Math.round(e.nativeEvent.contentOffset.x / carouselWidth);
+          setActiveImageIndex(index);
+        }}
+        renderItem={({ item }) => (
+          <Image source={{ uri: item }} style={{ width: carouselWidth, height: 250, borderRadius: 12 }} resizeMode="cover" />
+        )}
+      />
+      <View style={{ flexDirection: "row", justifyContent: "center", gap: 6, marginTop: 8 }}>
+        {images.map((_, index) => (
+          <View
+            key={index}
+            style={{
+              width: 6, height: 6, borderRadius: 3,
+              backgroundColor: index === activeImageIndex ? colors.blue : colors.border,
+            }}
+          />
+        ))}
+      </View>
+    </View>
+  );
+})()}
 
               {post?.postType === "BEFORE_AFTER" && post?.beforeImageUrl && post?.afterImageUrl && (
                 <View style={{ flexDirection: "row", gap: 6, marginTop: 10 }}>

@@ -18,6 +18,8 @@ export default function Register() {
   const [needsVerification, setNeedsVerification] = useState(false);
   const [registeredEmail, setRegisteredEmail] = useState("");
   const [resending, setResending] = useState(false);
+  const [verificationCode, setVerificationCode] = useState("");
+  const [verifying, setVerifying] = useState(false);
 
   const handleRegister = async () => {
     if (!name || !email || !password) { Alert.alert("Missing fields", "All fields are required."); return; }
@@ -44,7 +46,7 @@ export default function Register() {
     try {
       setResending(true);
       await api.post("/api/auth/resend-verification", { email: registeredEmail });
-      Alert.alert("✅ Sent!", "Check your inbox for a new verification link.");
+      Alert.alert("✅ Sent!", "Check your inbox for your new verification code.");
     } catch (err) {
       Alert.alert("Error", "Could not resend. Try again.");
     } finally {
@@ -52,25 +54,55 @@ export default function Register() {
     }
   };
 
+  const handleVerifyCode = async () => {
+    if (verificationCode.length !== 6) return;
+    try {
+      setVerifying(true);
+      await api.post("/api/auth/verify-email", { email: registeredEmail, code: verificationCode });
+      Alert.alert("✅ Verified!", "Your account is active. Please log in.");
+      router.push("/(auth)/login");
+    } catch (err: any) {
+      Alert.alert("Error", err?.response?.data?.message || "Invalid or expired code. Try again.");
+    } finally {
+      setVerifying(false);
+    }
+  };
+
   if (needsVerification) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background, justifyContent: "center", alignItems: "center", padding: 30 }}>
         <Text style={{ fontSize: 60, marginBottom: 20 }}>📧</Text>
-        <Text style={{ color: colors.text, fontSize: 24, fontWeight: "900", textAlign: "center", marginBottom: 12 }}>Check Your Email</Text>
-        <Text style={{ color: colors.textSecondary, fontSize: 15, textAlign: "center", lineHeight: 24, marginBottom: 8 }}>We sent a verification link to:</Text>
+        <Text style={{ color: colors.text, fontSize: 24, fontWeight: "900", textAlign: "center", marginBottom: 12 }}>Enter Your Code</Text>
+        <Text style={{ color: colors.textSecondary, fontSize: 15, textAlign: "center", lineHeight: 24, marginBottom: 8 }}>We sent a 6-digit code to:</Text>
         <Text style={{ color: colors.blue, fontSize: 15, fontWeight: "700", textAlign: "center", marginBottom: 24 }}>{registeredEmail}</Text>
-        <Text style={{ color: colors.textSecondary, fontSize: 13, textAlign: "center", lineHeight: 22, marginBottom: 32 }}>
-          Tap the link in the email to activate your account. Check your spam folder if you don't see it.
-        </Text>
+
+        <TextInput
+          placeholder="123456" placeholderTextColor={colors.textMuted}
+          keyboardType="number-pad" maxLength={6} autoFocus
+          style={{ backgroundColor: colors.input, color: colors.text, padding: 16, borderRadius: 12, marginBottom: 20, borderWidth: 1, borderColor: colors.border, width: "100%", textAlign: "center", fontSize: 24, letterSpacing: 8, fontWeight: "700" }}
+          value={verificationCode} onChangeText={setVerificationCode}
+        />
+
+        <TouchableOpacity
+          onPress={handleVerifyCode}
+          disabled={verifying || verificationCode.length !== 6}
+          style={{ backgroundColor: verifying || verificationCode.length !== 6 ? colors.card : colors.blue, padding: 16, borderRadius: 12, width: "100%", alignItems: "center", marginBottom: 12 }}
+        >
+          <Text style={{ color: "white", fontWeight: "700", fontSize: 16 }}>
+            {verifying ? "Verifying..." : "Verify & Continue"}
+          </Text>
+        </TouchableOpacity>
+
         <TouchableOpacity
           onPress={handleResend}
           disabled={resending}
           style={{ backgroundColor: colors.input, borderWidth: 1, borderColor: colors.blue, padding: 14, borderRadius: 12, width: "100%", alignItems: "center", marginBottom: 12 }}
         >
           <Text style={{ color: colors.blue, fontWeight: "700", fontSize: 15 }}>
-            {resending ? "Sending..." : "Resend Verification Email"}
+            {resending ? "Sending..." : "Resend Code"}
           </Text>
         </TouchableOpacity>
+
         <TouchableOpacity onPress={() => router.push("/(auth)/login")}>
           <Text style={{ color: colors.textMuted, fontSize: 14, marginTop: 8 }}>Back to Login</Text>
         </TouchableOpacity>
