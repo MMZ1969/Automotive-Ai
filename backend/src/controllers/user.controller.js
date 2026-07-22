@@ -21,6 +21,7 @@ export async function getMe(req, res) {
         isBanned: true,
         isAvailable: true,
         businessHours: true,
+        hasCompletedOnboarding: true,
       },
     });
 
