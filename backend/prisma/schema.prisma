@@ -33,6 +33,7 @@ model User {
   createdAt             DateTime       @default(now())
   updatedAt             DateTime       @updatedAt
   verificationCodeExpiry DateTime?
+  hasCompletedOnboarding Boolean @default(false)
   logs                  Log[]
   vehicles              Vehicle[]
   posts                 Post[]

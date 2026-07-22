@@ -66,6 +66,13 @@ export const createVehicle = async (req, res) => {
       },
     });
 
+    // First vehicle added = onboarding goal achieved. Safe to call on every
+    // vehicle add since Prisma just no-ops if it's already true.
+    await prisma.user.update({
+      where: { id: userId },
+      data: { hasCompletedOnboarding: true },
+    });
+
     res.json(vehicle);
   } catch (err) {
     console.error("CREATE VEHICLE ERROR:", err);
