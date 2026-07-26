@@ -234,9 +234,31 @@ export default function Feed() {
           </View>
         </View>
       </Modal>
-
+    
       {/* HEADER */}
       <View style={{ paddingTop: 60, paddingHorizontal: 20, paddingBottom: 0, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+        {!user?.hasCompletedOnboarding && (
+    <TouchableOpacity
+      onPress={() => router.push("/(tabs)/(profile)/vehicles/add")}
+      style={{
+        backgroundColor: colors.blueMuted ?? "#1e3a8a",
+        borderWidth: 1,
+        borderColor: colors.blue,
+        borderRadius: 12,
+        padding: 14,
+        marginBottom: 16,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+      }}
+    >
+      <View style={{ flex: 1 }}>
+        <Text style={{ color: colors.text, fontWeight: "700", fontSize: 14 }}>🚗 Add your first vehicle</Text>
+        <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>Unlock AI diagnostics and service logs</Text>
+      </View>
+      <Text style={{ color: colors.blue, fontSize: 20 }}>→</Text>
+    </TouchableOpacity>
+  )}
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
             <Image source={logo} style={{ width: 40, height: 40, borderRadius: 10 }} resizeMode="contain" />

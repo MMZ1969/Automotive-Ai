@@ -14,11 +14,13 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { useAuth } from "@context/AuthContext";
 import api from "@lib/api";
 import { createVehicle } from "@lib/vehicles";
 
 export default function AddVehicleScreen() {
   const router = useRouter();
+  const { refreshUser } = useAuth();
 
   const [make, setMake] = useState("");
   const [model, setModel] = useState("");
@@ -117,19 +119,8 @@ export default function AddVehicleScreen() {
         if (v.ModelYear) setYear(v.ModelYear);
         if (v.Trim) setTrim(v.Trim);
       }
-      
-      console.log("NHTSA RAW:", JSON.stringify(v));
 
-      // Store decoded engine data to send on save
-      setDecodedVinData({
-        engine: v?.DisplacementL && v?.EngineCylinders
-          ? `${parseFloat(v.DisplacementL).toFixed(1)}L ${v.EngineCylinders}-Cylinder`
-          : null,
-        engineCylinders: v?.EngineCylinders || null,
-        displacement: v?.DisplacementL || null,
-        driveType: v?.DriveType || null,
-        trim: v?.Trim || null,
-      });
+      console.log("NHTSA RAW:", JSON.stringify(v));
 
       // Store decoded engine data to send on save
       setDecodedVinData({
@@ -170,6 +161,9 @@ export default function AddVehicleScreen() {
         notes,
         ...decodedVinData,
       });
+      // Pull the fresh user object so hasCompletedOnboarding reflects
+      // the backend update immediately, not on next login.
+      await refreshUser();
       router.back();
     } catch (err) {
       console.error("Error creating vehicle:", err);

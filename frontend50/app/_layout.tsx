@@ -59,7 +59,7 @@ function RouteGuard() {
     if (!user && !inAuthGroup && !inPublicRoute && !inOnboarding) {
       router.replace("/(auth)/welcome");
     } else if (user && inAuthGroup) {
-      router.replace("/(tabs)/feed");
+      router.replace(user.hasCompletedOnboarding ? "/(tabs)/feed" : "/add-first-vehicle");
     }
   }, [user, loading, segments, onboardingChecked, hasSeenOnboarding]);
 

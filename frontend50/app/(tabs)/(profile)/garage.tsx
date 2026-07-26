@@ -1,151 +1,363 @@
-import LogCard from "@components/LogCard";
-import VehicleCard from "@components/VehicleCard";
-import WrenchButton from "@components/WrenchButton";
-import { useTheme } from "@context/ThemeContext";
-import { useVehicle } from "@context/VehicleContext";
-import { fetchAllLogs } from "@lib/logs";
-import { fetchVehicles } from "@lib/vehicles";
-import { useFocusEffect, useRouter } from "expo-router";
-import { useCallback, useState } from "react";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
+import { useRouter } from "expo-router";
+import React, { useState } from "react";
 import {
   ActivityIndicator,
-  FlatList,
+  Alert,
+  ScrollView,
+  StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-export default function GarageScreen() {
+import { useAuth } from "@context/AuthContext";
+import api from "@lib/api";
+import { createVehicle } from "@lib/vehicles";
+
+export default function AddVehicleScreen() {
   const router = useRouter();
-  const { colors } = useTheme();
-  const { vehicles, setVehicles, loading: vehiclesLoading, setLoading: setVehiclesLoading } = useVehicle();
-  const [activeTab, setActiveTab] = useState<"vehicles" | "logs">("vehicles");
-  const [logs, setLogs] = useState<any[]>([]);
-  const [logsLoading, setLogsLoading] = useState(true);
+  const { refreshUser } = useAuth();
 
-  useFocusEffect(
-    useCallback(() => {
-      const loadVehicles = async () => {
-        setVehiclesLoading(true);
-        try {
-          const data = await fetchVehicles();
-          setVehicles(data || []);
-        } catch (err) {
-          console.error("Error loading vehicles:", err);
-        } finally {
-          setVehiclesLoading(false);
-        }
-      };
+  const [make, setMake] = useState("");
+  const [model, setModel] = useState("");
+  const [year, setYear] = useState("");
+  const [decodedVinData, setDecodedVinData] = useState<any>({});
+  const [trim, setTrim] = useState("");
+  const [color, setColor] = useState("");
+  const [mileage, setMileage] = useState("");
+  const [vin, setVin] = useState("");
+  const [notes, setNotes] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [scanning, setScanning] = useState(false);
 
-      const loadLogs = async () => {
-        setLogsLoading(true);
-        try {
-          const data = await fetchAllLogs();
-          console.log("FIRST LOG:", JSON.stringify(data?.[0]));
-          setLogs(data || []);
-        } catch (err) {
-          console.error("Error loading logs:", err);
-        } finally {
-          setLogsLoading(false);
-        }
-      };
+  const handleScanVin = () => {
+    Alert.alert(
+      "Scan VIN",
+      "Point your camera at the VIN plate on your dashboard or door jamb",
+      [
+        {
+          text: "Take Photo",
+          onPress: async () => {
+            try {
+              const { status } = await ImagePicker.requestCameraPermissionsAsync();
+              if (status !== "granted") {
+                Alert.alert("Permission needed", "Please allow camera access.");
+                return;
+              }
+              const result = await ImagePicker.launchCameraAsync({
+                allowsEditing: true,
+                quality: 0.9,
+                base64: true,
+              });
+              if (result.canceled) return;
+              await extractVinFromImage(result.assets[0]);
+            } catch (err) {
+              Alert.alert("Error", "Could not open camera.");
+            }
+          },
+        },
+        {
+          text: "Choose from Library",
+          onPress: async () => {
+            try {
+              const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+              if (status !== "granted") {
+                Alert.alert("Permission needed", "Please allow photo library access.");
+                return;
+              }
+              const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ["images"],
+                allowsEditing: true,
+                quality: 0.9,
+                base64: true,
+              });
+              if (result.canceled) return;
+              await extractVinFromImage(result.assets[0]);
+            } catch (err) {
+              Alert.alert("Error", "Could not open photo library.");
+            }
+          },
+        },
+        { text: "Cancel", style: "cancel" },
+      ]
+    );
+  };
 
-      loadVehicles();
-      loadLogs();
-    }, [])
-  );
+  const extractVinFromImage = async (asset: any) => {
+    try {
+      setScanning(true);
+
+      // Step 1 — AI reads the VIN from the image
+      const res = await api.post("/api/scan-vin", {
+        imageBase64: asset.base64,
+        mediaType: asset.mimeType || "image/jpeg",
+      });
+
+      const scannedVin = res.data.vin;
+
+      if (!scannedVin) {
+        Alert.alert("No VIN Found", "Couldn't read a VIN from that photo. Try again with better lighting or a closer shot.");
+        return;
+      }
+
+      setVin(scannedVin);
+
+      // Step 2 — NHTSA API decodes the VIN for free
+      const nhtsaRes = await fetch(
+        `https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVinValues/${scannedVin}?format=json`
+      );
+      const nhtsaData = await nhtsaRes.json();
+      const v = nhtsaData.Results?.[0];
+
+      if (v) {
+        if (v.Make) setMake(v.Make);
+        if (v.Model) setModel(v.Model);
+        if (v.ModelYear) setYear(v.ModelYear);
+        if (v.Trim) setTrim(v.Trim);
+      }
+
+      console.log("NHTSA RAW:", JSON.stringify(v));
+
+      // Store decoded engine data to send on save
+      setDecodedVinData({
+        engine: v?.DisplacementL && v?.EngineCylinders
+          ? `${parseFloat(v.DisplacementL).toFixed(1)}L ${v.EngineCylinders}-Cylinder`
+          : null,
+        engineCylinders: v?.EngineCylinders || null,
+        displacement: v?.DisplacementL || null,
+        driveType: v?.DriveType || null,
+        trim: v?.Trim || null,
+      });
+
+      Alert.alert("VIN Scanned! 🎉", `VIN: ${scannedVin}\n\nVehicle details have been filled in. Please verify and add any missing info.`);
+    } catch (err) {
+      console.error("VIN SCAN ERROR:", err);
+      Alert.alert("Error", "Could not scan VIN. Please enter it manually.");
+    } finally {
+      setScanning(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!make.trim() || !model.trim() || !year.trim()) {
+      Alert.alert("Missing Fields", "Make, Model and Year are required.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await createVehicle({
+        make,
+        model,
+        year: parseInt(year),
+        trim,
+        color,
+        mileage: mileage ? parseInt(mileage) : 0,
+        vin,
+        notes,
+        ...decodedVinData,
+      });
+      // Pull the fresh user object so hasCompletedOnboarding reflects
+      // the backend update immediately.
+      await refreshUser();
+      // Use replace (not back) so we always land on a clean Garage screen
+      // regardless of which stack/tab we were pushed here from (wrench
+      // button, onboarding welcome screen, or the Feed banner).
+      router.replace("/(tabs)/(profile)/garage");
+    } catch (err) {
+      console.error("Error creating vehicle:", err);
+      Alert.alert("Error", "Failed to save vehicle.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: "#050509" }}>
+        <ActivityIndicator size="large" color="#345bff" />
+      </SafeAreaView>
+    );
+  }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-      {/* HEADER */}
-      <View style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 0 }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 16 }}>
-          <TouchableOpacity onPress={() => router.back()}>
-            <Text style={{ color: colors.blue, fontSize: 16 }}>← Back</Text>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#050509" }}>
+      <ScrollView contentContainerStyle={{ padding: 20 }}>
+        {/* HEADER */}
+        <View style={{
+          flexDirection: "row",
+          alignItems: "center",
+          marginBottom: 24,
+        }}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={{ marginRight: 12 }}
+          >
+            <Text style={{ color: "#345bff", fontSize: 16 }}>← Back</Text>
           </TouchableOpacity>
-          <Text style={{ color: colors.text, fontSize: 22, fontWeight: "900" }}>🚗 My Garage</Text>
+          <Text style={styles.title}>Add Vehicle</Text>
         </View>
 
-        {/* TABS */}
-        <View style={{ flexDirection: "row", backgroundColor: colors.card, borderRadius: 12, padding: 4, borderWidth: 1, borderColor: colors.border, marginBottom: 16 }}>
-          <TouchableOpacity
-            onPress={() => setActiveTab("vehicles")}
-            style={{ flex: 1, paddingVertical: 10, borderRadius: 10, alignItems: "center", backgroundColor: activeTab === "vehicles" ? colors.blue : "transparent" }}
-          >
-            <Text style={{ color: activeTab === "vehicles" ? "white" : colors.textMuted, fontWeight: "700", fontSize: 14 }}>🚗 Vehicles</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => setActiveTab("logs")}
-            style={{ flex: 1, paddingVertical: 10, borderRadius: 10, alignItems: "center", backgroundColor: activeTab === "logs" ? colors.blue : "transparent" }}
-          >
-            <Text style={{ color: activeTab === "logs" ? "white" : colors.textMuted, fontWeight: "700", fontSize: 14 }}>📋 Service Logs</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* VEHICLES TAB */}
-      {activeTab === "vehicles" && (
-        <>
-          {vehiclesLoading ? (
-            <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-              <ActivityIndicator size="large" color={colors.blue} />
-            </View>
-          ) : vehicles.length === 0 ? (
-            <View style={{ flex: 1, justifyContent: "center", alignItems: "center", paddingHorizontal: 40 }}>
-              <Text style={{ fontSize: 48, marginBottom: 16 }}>🚗</Text>
-              <Text style={{ color: colors.text, fontSize: 18, fontWeight: "700", textAlign: "center" }}>No vehicles yet</Text>
-              <Text style={{ color: colors.textSecondary, fontSize: 14, textAlign: "center", marginTop: 8 }}>
-                Tap the wrench to add your first vehicle!
+        {/* VIN SCANNER */}
+        <TouchableOpacity
+          onPress={handleScanVin}
+          disabled={scanning}
+          style={{
+            backgroundColor: "#0a1628",
+            borderRadius: 14,
+            borderWidth: 1,
+            borderColor: "#345bff44",
+            padding: 18,
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 10,
+            marginBottom: 24,
+          }}
+        >
+          {scanning ? (
+            <>
+              <ActivityIndicator color="#345bff" size="small" />
+              <Text style={{ color: "#345bff", fontWeight: "700", fontSize: 16 }}>
+                Reading VIN...
               </Text>
-            </View>
+            </>
           ) : (
-            <FlatList
-              data={vehicles}
-              keyExtractor={(item) => item.id.toString()}
-              contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 100 }}
-              renderItem={({ item }) => (
-                <VehicleCard
-                  vehicle={item}
-                  onPress={() => router.push(`/(tabs)/(profile)/vehicles/${item.id}`)}
-                />
-              )}
-            />
+            <>
+              <MaterialCommunityIcons name="barcode-scan" size={26} color="#345bff" />
+              <View>
+                <Text style={{ color: "#345bff", fontWeight: "700", fontSize: 16 }}>
+                  Scan VIN
+                </Text>
+                <Text style={{ color: "#6b7280", fontSize: 12, marginTop: 2 }}>
+                  AI reads your VIN & autofills vehicle details
+                </Text>
+              </View>
+            </>
           )}
-          <WrenchButton onPress={() => router.push("/(tabs)/(profile)/vehicles/add")} />
-        </>
-      )}
+        </TouchableOpacity>
 
-      {/* SERVICE LOGS TAB */}
-      {activeTab === "logs" && (
-        <>
-          {logsLoading ? (
-            <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-              <ActivityIndicator size="large" color={colors.blue} />
-            </View>
-          ) : logs.length === 0 ? (
-            <View style={{ flex: 1, justifyContent: "center", alignItems: "center", paddingHorizontal: 40 }}>
-              <Text style={{ fontSize: 48, marginBottom: 16 }}>📋</Text>
-              <Text style={{ color: colors.text, fontSize: 18, fontWeight: "700", textAlign: "center" }}>No logs yet</Text>
-              <Text style={{ color: colors.textSecondary, fontSize: 14, textAlign: "center", marginTop: 8 }}>
-                Go to a vehicle to add maintenance logs!
-              </Text>
-            </View>
-          ) : (
-            <FlatList
-              data={logs}
-              keyExtractor={(item: any) => item.id.toString()}
-              contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 100 }}
-              renderItem={({ item }) => (
-                <LogCard
-                  log={item}
-                  onPress={() => router.push(`/(tabs)/(profile)/vehicles/${item.vehicleId}/logs/${item.id}`)}
-                />
-              )}
-            />
-          )}
-        </>
-      )}
+        <Text style={styles.label}>Make *</Text>
+        <TextInput
+          style={styles.input}
+          value={make}
+          onChangeText={setMake}
+          placeholder="Ford, Chevy, Toyota..."
+          placeholderTextColor="#6b7280"
+        />
+
+        <Text style={styles.label}>Model *</Text>
+        <TextInput
+          style={styles.input}
+          value={model}
+          onChangeText={setModel}
+          placeholder="Mustang, Silverado, Supra..."
+          placeholderTextColor="#6b7280"
+        />
+
+        <Text style={styles.label}>Year *</Text>
+        <TextInput
+          style={styles.input}
+          value={year}
+          onChangeText={setYear}
+          placeholder="2024"
+          placeholderTextColor="#6b7280"
+          keyboardType="numeric"
+        />
+
+        <Text style={styles.label}>Trim</Text>
+        <TextInput
+          style={styles.input}
+          value={trim}
+          onChangeText={setTrim}
+          placeholder="GT, LT, Sport..."
+          placeholderTextColor="#6b7280"
+        />
+
+        <Text style={styles.label}>Color</Text>
+        <TextInput
+          style={styles.input}
+          value={color}
+          onChangeText={setColor}
+          placeholder="Red, Black, Silver..."
+          placeholderTextColor="#6b7280"
+        />
+
+        <Text style={styles.label}>Mileage</Text>
+        <TextInput
+          style={styles.input}
+          value={mileage}
+          onChangeText={setMileage}
+          placeholder="50000"
+          placeholderTextColor="#6b7280"
+          keyboardType="numeric"
+        />
+
+        <Text style={styles.label}>VIN</Text>
+        <TextInput
+          style={styles.input}
+          value={vin}
+          onChangeText={setVin}
+          placeholder="Vehicle Identification Number"
+          placeholderTextColor="#6b7280"
+          autoCapitalize="characters"
+        />
+
+        <Text style={styles.label}>Notes</Text>
+        <TextInput
+          style={[styles.input, { height: 120 }]}
+          value={notes}
+          onChangeText={setNotes}
+          placeholder="Any additional notes about the vehicle..."
+          placeholderTextColor="#6b7280"
+          multiline
+        />
+
+        <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+          <Text style={styles.saveButtonText}>🚗 Add Vehicle</Text>
+        </TouchableOpacity>
+      </ScrollView>
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  title: {
+    fontSize: 22,
+    fontWeight: "bold",
+    color: "white",
+  },
+  label: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#9ca3af",
+    marginTop: 16,
+    marginBottom: 6,
+  },
+  input: {
+    backgroundColor: "#11131a",
+    color: "white",
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#252838",
+    fontSize: 15,
+  },
+  saveButton: {
+    backgroundColor: "#345bff",
+    padding: 16,
+    borderRadius: 14,
+    alignItems: "center",
+    marginTop: 24,
+    marginBottom: 40,
+  },
+  saveButtonText: {
+    color: "white",
+    fontSize: 17,
+    fontWeight: "700",
+  },
+});
