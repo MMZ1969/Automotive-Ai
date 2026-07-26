@@ -213,7 +213,8 @@ app.post("/api/diagnose", authMiddleware, async (req, res) => {
       },
       body: JSON.stringify({
         model: "claude-opus-4-5",
-        max_tokens: 1200,
+        max_tokens: 1500,
+        tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 3 }],
         messages: [
           {
             role: "user",
@@ -231,30 +232,24 @@ ${vehicle ? `Vehicle: ${vehicle.year} ${vehicle.make} ${vehicle.model}${vehicle.
 
 User's problem: "${query}"
 
-Important: Use the exact vehicle specs above to give accurate diagnosis, severity, and cost estimates specific to this vehicle.
-
 INTENT — determine what the user is actually asking for and match your steps to it:
 - If the user describes a symptom or unknown problem ("noise when braking," "check engine light") → diagnosisSteps should be diagnostic: how to inspect, test, and narrow down the cause.
 - If the user is asking about a specific repair, replacement, or installation task ("replace rear struts," "how do I do a brake job," "install a new alternator") → diagnosisSteps should be the actual repair procedure: removal steps, reassembly steps, torque specs, and sequence — NOT just "how to inspect this part for wear." They already know what needs doing; give them the procedure to do it, in order.
 
-CALIBRATION — READ CAREFULLY. This is the most important part of your instructions:
+USE WEB SEARCH — this is critical for accuracy. You have a web_search tool available. Use it whenever you're about to state a vehicle-specific fact you don't already know with certainty for THIS exact vehicle — especially:
+- Torque specs for suspension, wheel, and drivetrain fasteners
+- Socket/wrench sizes and fastener types (hex, torx, external torx/E-size, etc.)
+- Bolt patterns and tightening sequences
+- Component access points and disassembly order
+- Anything that varies by trim, engine option, or model year
 
-You must be honest about your confidence, not uniformly assertive. A confident WRONG answer is worse than a flagged uncertain one, because the user is under the vehicle acting on what you say — on lug nuts, on suspension fasteners, on anything torque-critical. Getting this wrong causes real harm and destroys trust in this app.
+Search for the specific year/make/model/trim/engine given. Prefer manufacturer service info, established repair reference sites, and specific how-to sources over generic forum speculation when you can find them. If you get a clear, consistent answer from search — state it directly and specifically, as fact, citing your source implicitly through confidence (no need to show raw citations in the JSON output). If search results are thin, conflicting, or don't cover this exact vehicle/trim — say so honestly rather than picking one source's number and presenting it as certain: give your best estimate and flag it clearly, e.g. "sources vary here — confirm your exact torque spec before final tightening."
 
-For EVERY specific claim you make — torque values, socket/wrench sizes, fastener types (hex, torx, external torx/E-size, etc.), bolt patterns, tightening sequences, part locations, and procedural steps — apply this test before stating it:
+Do NOT skip searching just to answer faster. A slower correct answer is the entire point of this app. Do NOT state a specific torque value, socket size, fastener type, or access location as fact unless you either (a) searched and found a clear answer, or (b) are already highly confident it's a standard, well-documented spec for this vehicle class. Never guess a specific number or location and present it as fact — whether or not you attach a disclaimer to it. If you're not sure, say so plainly instead of picking a specific-sounding wrong answer and hedging around it.
 
-- If you are genuinely confident in the exact value for THIS specific vehicle (year/make/model/trim/engine as given) because it's a well-established, commonly-documented spec — state it directly and specifically, no hedging. This is still the core behavior we want: real numbers, not vague gestures at "the assembly."
-- If you are inferring, estimating, or pattern-matching from similar vehicles rather than actually knowing the spec for THIS exact vehicle — you MUST flag it. Give your best estimate, but say so plainly, e.g. "typically around X — verify against your vehicle's exact torque spec before final tightening."
+This applies to procedure and location just as much as numbers. A wrong access point is as dangerous as a wrong torque value, because it sends the user down the wrong disassembly path.
 
-CRITICAL RULE — hedging is not a license to state a guess as if it were fact and then disclaim it afterward. Appending "but verify this" to a specific claim you are NOT actually confident in does NOT make it calibrated — it makes it deniable, which is worse, because the specific-sounding claim is what the user will act on, and the hedge gets skimmed past. Do NOT write things like "accessed from the cargo area (verify exact access point)" when you are not actually confident it's the cargo area. Instead:
-  - If you know the general category of access (e.g. "from the wheel well, behind the wheel" vs "from inside the vehicle") with real confidence for this vehicle type — state that plainly as your primary claim.
-  - If you are not confident which specific access point applies to this exact vehicle — say so honestly up front: "Access point for the upper strut mount varies by vehicle — on most vehicles in this class it's either through the wheel well or under an interior trim panel near the strut tower. Confirm which applies to your specific vehicle before removing trim." Do not pick one specific location and present it as the answer with a disclaimer trailing behind it.
-  - The test is: would removing the hedge leave behind a claim you're not sure is true? If yes, don't lead with that claim — lead with the honest uncertainty instead.
-
-- Never invent a socket size, torque value, bolt pattern, fastener type, or component location to fill a gap or sound more helpful. If you don't know, say so honestly — never state a guess as certain fact and never dress up a guess as fact with a disclaimer attached.
-- This applies to procedure and location just as much as numbers. A wrong location is as dangerous as a wrong torque value, because it sends the user down the wrong disassembly path — tearing into cargo trim they didn't need to touch, for example.
-
-This calibration works alongside — not instead of — giving specific, actionable answers. Do NOT default to vague guidance ("remove the assembly," "consult a repair manual," "check AllData/Mitchell") as your primary answer. Give your best specific answer first. The difference is: state it as fact when you know it, state your honest uncertainty when you don't — never state a wrong guess as fact with a disclaimer bolted on.
+This calibration works alongside — not instead of — giving specific, actionable answers. Do NOT default to vague guidance ("remove the assembly," "consult a repair manual," "check AllData/Mitchell") as your primary answer, and do not defer to searching as an excuse to avoid giving a real answer once you've searched. Search, then answer specifically. Only hedge when the search itself didn't give you a clear answer.
 
 For part numbers: NEVER provide specific part numbers. Instead mention the part name only (e.g. "tail light bulb" or "brake caliper") and set proTip to include "Bring your VIN to any auto parts store for the exact part number for your specific vehicle."
 
@@ -265,7 +260,7 @@ If no vehicle is provided, ask the user to select their vehicle for better accur
 IMPORTANT: If the user's input is clearly NOT about a vehicle or automotive issue (e.g. cooking, trivia, anything unrelated to cars, trucks, or motorcycles), do NOT attempt a diagnosis. Instead respond ONLY with this exact JSON, nothing else:
 {"error": "not_automotive"}
 
-Respond in JSON format only, no markdown, like this:
+After you finish any searching, respond with ONLY the final JSON object below — no markdown, no search commentary, no explanation of what you searched for, just the JSON:
 {
   "summary": "brief one line summary",
   "severity": "Low|Medium|High|Critical",
@@ -284,10 +279,19 @@ Respond in JSON format only, no markdown, like this:
 
     const data = await response.json();
     console.log("ANTHROPIC RESPONSE:", JSON.stringify(data));
-    if (!data.content || !data.content[0]) {
+    if (!data.content || data.content.length === 0) {
       return res.status(500).json({ error: "AI service error", details: data });
     }
-    const text = data.content[0].text;
+    // With web_search enabled, content can include server_tool_use and
+    // web_search_tool_result blocks alongside text blocks — concatenate
+    // just the text blocks to get Claude's actual final answer.
+    const text = data.content
+      .filter((block) => block.type === "text")
+      .map((block) => block.text)
+      .join("\n");
+    if (!text) {
+      return res.status(500).json({ error: "AI service error", details: data });
+    }
     const cleaned = text.replace(/```json|```/g, "").trim();
     const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
