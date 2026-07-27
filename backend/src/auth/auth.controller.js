@@ -156,6 +156,7 @@ export const login = async (req, res) => {
         location: user.location,
         isVerified: user.isVerified,
         isBanned: user.isBanned,
+        hasCompletedOnboarding: user.hasCompletedOnboarding,
       },
     });
     
@@ -182,6 +183,7 @@ export const me = async (req, res) => {
         isAdmin: true,
         location: true,
         phone: true,
+        hasCompletedOnboarding: true,
       },
     });
 
@@ -484,6 +486,7 @@ export const verifyEmailCode = async (req, res) => {
         location: user.location,
         isVerified: user.isVerified,
         isBanned: user.isBanned,
+        hasCompletedOnboarding: user.hasCompletedOnboarding,
       },
     });
   } catch (err) {
