@@ -174,33 +174,37 @@ app.post("/api/diagnose", authMiddleware, async (req, res) => {
   try {
     const { query, vehicle } = req.body;
 
-    // ─── DAILY LIMIT CHECK ───────────────────────────────────────────
+  // ─── DAILY LIMIT CHECK ───────────────────────────────────────────
     const userId = req.user.id;
     const userData = await prisma.user.findUnique({
       where: { id: userId },
-      select: { dailyDiagnoses: true, lastDiagnosisDate: true },
+      select: { dailyDiagnoses: true, lastDiagnosisDate: true, isAdmin: true },
     });
 
-    const today = new Date();
-    const lastDate = userData?.lastDiagnosisDate;
-    const isNewDay =
-      !lastDate || lastDate.toDateString() !== today.toDateString();
+    // Admins (currently just Michael) get unlimited diagnoses — everyone
+    // else keeps the 8/day cap to protect API cost as usage grows.
+    if (!userData?.isAdmin) {
+      const today = new Date();
+      const lastDate = userData?.lastDiagnosisDate;
+      const isNewDay =
+        !lastDate || lastDate.toDateString() !== today.toDateString();
 
-    if (isNewDay) {
-      await prisma.user.update({
-        where: { id: userId },
-        data: { dailyDiagnoses: 0, lastDiagnosisDate: today },
-      });
-    }
+      if (isNewDay) {
+        await prisma.user.update({
+          where: { id: userId },
+          data: { dailyDiagnoses: 0, lastDiagnosisDate: today },
+        });
+      }
 
-    const currentCount = isNewDay ? 0 : userData?.dailyDiagnoses || 0;
+      const currentCount = isNewDay ? 0 : userData?.dailyDiagnoses || 0;
 
-    if (currentCount >= 8) {
-      return res.status(429).json({
-        error:
-          "Daily limit reached. You get 8 free diagnoses per day. Come back tomorrow!",
-        limitReached: true,
-      });
+      if (currentCount >= 8) {
+        return res.status(429).json({
+          error:
+            "Daily limit reached. You get 8 free diagnoses per day. Come back tomorrow!",
+          limitReached: true,
+        });
+      }
     }
     // ─────────────────────────────────────────────────────────────────
 
