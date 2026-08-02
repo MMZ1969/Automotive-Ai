@@ -7,16 +7,18 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { getDownloadURL, ref, uploadBytesResumable } from "firebase/storage";
 import { useCallback, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    Image,
-    Modal,
-    ScrollView,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Image,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { storage } from "../../firebaseConfig";
 
@@ -83,7 +85,11 @@ export default function CarShowScreen() {
       const storageRef = ref(storage, filename);
       const uploadTask = uploadBytesResumable(storageRef, blob);
       uploadTask.on("state_changed", null,
-        () => { Alert.alert("Upload failed", "Please try again."); setUploading(false); },
+        (error) => {
+          console.error("CAR SHOW UPLOAD ERROR:", error);
+          Alert.alert("Upload failed", error?.message || "Please try again.");
+          setUploading(false);
+        },
         async () => {
           const url = await getDownloadURL(uploadTask.snapshot.ref);
           setImageUrl(url);
@@ -91,6 +97,7 @@ export default function CarShowScreen() {
         }
       );
     } catch (err) {
+      console.error("CAR SHOW UPLOAD ERROR (outer):", err);
       Alert.alert("Error", "Upload failed.");
       setUploading(false);
     }
@@ -168,6 +175,10 @@ export default function CarShowScreen() {
 
       {/* CREATE MODAL */}
       <Modal visible={createModal} animationType="slide" transparent onRequestClose={() => setCreateModal(false)}>
+        <KeyboardAvoidingView
+          style={{ flex: 1, justifyContent: "flex-end" }}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+        >
         <View style={{ flex: 1, backgroundColor: "#00000088", justifyContent: "flex-end" }}>
           <View style={{ backgroundColor: colors.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 48, maxHeight: "90%" }}>
             <ScrollView showsVerticalScrollIndicator={false}>
@@ -208,6 +219,7 @@ export default function CarShowScreen() {
             </ScrollView>
           </View>
         </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* HEADER */}

@@ -151,7 +151,7 @@ finally { setLoading(false); }
         </View>
       </View>
 
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }} keyboardShouldPersistTaps="handled">
 
         {vehicles.length > 0 && (
           <View style={{ marginBottom: 16 }}>
