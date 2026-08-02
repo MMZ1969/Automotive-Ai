@@ -55,6 +55,7 @@ export default {
       "expo-router",
       "expo-speech-recognition",
       "expo-notifications",
+      "@react-native-community/datetimepicker",
       [
         "expo-location",
         {

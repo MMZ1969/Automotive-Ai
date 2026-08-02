@@ -2,6 +2,7 @@ import { useAuth } from "@context/AuthContext";
 import { useTheme } from "@context/ThemeContext";
 import api from "@lib/api";
 import { ensureFirebaseAuth } from "@lib/firebaseAuth";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import * as ImagePicker from "expo-image-picker";
 import { useFocusEffect, useRouter } from "expo-router";
 import { getDownloadURL, ref, uploadBytesResumable } from "firebase/storage";
@@ -32,11 +33,11 @@ export default function CarShowScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [createModal, setCreateModal] = useState(false);
 
-  // Form state
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [location, setLocation] = useState("");
-  const [date, setDate] = useState("");
+  const [date, setDate] = useState<Date | null>(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [imageUrl, setImageUrl] = useState("");
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -104,15 +105,15 @@ export default function CarShowScreen() {
   };
 
   const handleCreate = async () => {
-    if (!name.trim() || !location.trim() || !date.trim()) {
+    if (!name.trim() || !location.trim() || !date) {
       Alert.alert("Missing fields", "Name, location, and date are required.");
       return;
     }
     try {
       setSubmitting(true);
-      await api.post("/api/car-shows", { name, description, location, date, imageUrl });
+      await api.post("/api/car-shows", { name, description, location, date: date.toISOString(), imageUrl });
       setCreateModal(false);
-      setName(""); setDescription(""); setLocation(""); setDate(""); setImageUrl("");
+      setName(""); setDescription(""); setLocation(""); setDate(null); setImageUrl("");
       fetchShows();
       Alert.alert("🎪 Car Show Posted!", "Your show has been added.");
     } catch (err) {
@@ -173,7 +174,6 @@ export default function CarShowScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
 
-      {/* CREATE MODAL */}
       <Modal visible={createModal} animationType="slide" transparent onRequestClose={() => setCreateModal(false)}>
         <KeyboardAvoidingView
           style={{ flex: 1, justifyContent: "flex-end" }}
@@ -192,12 +192,17 @@ export default function CarShowScreen() {
               <TextInput value={location} onChangeText={setLocation} placeholder="e.g. Vineland, NJ" placeholderTextColor={colors.textMuted} style={inputStyle} />
 
               <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 6 }}>Date & Time *</Text>
-              <TextInput value={date} onChangeText={setDate} placeholder="e.g. 2026-07-04 10:00" placeholderTextColor={colors.textMuted} style={inputStyle} />
+              <TouchableOpacity onPress={() => setShowDatePicker(true)} style={{ ...inputStyle, justifyContent: "center" }}>
+                <Text style={{ color: date ? colors.text : colors.textMuted, fontSize: 15 }}>
+                  {date
+                    ? date.toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })
+                    : "Tap to select date & time"}
+                </Text>
+              </TouchableOpacity>
 
-              <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 6 }}>Description</Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 6, marginTop: 12 }}>Description</Text>
               <TextInput value={description} onChangeText={setDescription} placeholder="Tell people what to expect..." placeholderTextColor={colors.textMuted} style={{ ...inputStyle, height: 80, textAlignVertical: "top" }} multiline />
 
-              {/* IMAGE UPLOAD */}
               <TouchableOpacity onPress={handlePickImage} disabled={uploading} style={{ backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 14, alignItems: "center", marginBottom: 12 }}>
                 {uploading ? (
                   <ActivityIndicator color={colors.blue} />
@@ -219,10 +224,32 @@ export default function CarShowScreen() {
             </ScrollView>
           </View>
         </View>
+
+        {/* DATE PICKER OVERLAY — rendered inside the same modal instead of a
+            second stacked <Modal>, since iOS won't reliably present two
+            native modals at once. */}
+        {showDatePicker && (
+          <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, justifyContent: "flex-end", backgroundColor: "#00000088", zIndex: 999 }}>
+            <View style={{ backgroundColor: colors.card, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20 }}>
+              <DateTimePicker
+                value={date || new Date()}
+                mode="datetime"
+                display="spinner"
+                minimumDate={new Date()}
+                themeVariant="dark"
+                onChange={(event, selectedDate) => {
+                  if (selectedDate) setDate(selectedDate);
+                }}
+              />
+              <TouchableOpacity onPress={() => setShowDatePicker(false)} style={{ backgroundColor: colors.blue, padding: 14, borderRadius: 12, alignItems: "center", marginTop: 12 }}>
+                <Text style={{ color: "white", fontWeight: "700" }}>Done</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* HEADER */}
       <View style={{ paddingTop: 60, paddingHorizontal: 20, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}>
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
           <View>
@@ -235,7 +262,6 @@ export default function CarShowScreen() {
         </View>
       </View>
 
-      {/* SHOWS LIST */}
       <FlatList
         data={shows}
         keyExtractor={(item) => item.id.toString()}
@@ -258,13 +284,11 @@ export default function CarShowScreen() {
 
           return (
             <View style={{ backgroundColor: colors.card, borderRadius: 16, borderWidth: 1, borderColor: colors.border, overflow: "hidden" }}>
-              {/* SHOW IMAGE */}
               {item.imageUrl && (
                 <Image source={{ uri: item.imageUrl }} style={{ width: "100%", height: 160 }} resizeMode="cover" />
               )}
 
               <View style={{ padding: 16 }}>
-                {/* DATE BADGE */}
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10 }}>
                   <View style={{ backgroundColor: colors.blue + "22", borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: colors.blue + "44" }}>
                     <Text style={{ color: colors.blue, fontSize: 12, fontWeight: "700" }}>
@@ -278,21 +302,17 @@ export default function CarShowScreen() {
                   </View>
                 </View>
 
-                {/* SHOW NAME */}
                 <Text style={{ color: colors.text, fontSize: 18, fontWeight: "900", marginBottom: 6 }}>{item.name}</Text>
 
-                {/* LOCATION */}
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 }}>
                   <Text style={{ fontSize: 14 }}>📍</Text>
                   <Text style={{ color: colors.textSecondary, fontSize: 14 }}>{item.location}</Text>
                 </View>
 
-                {/* DESCRIPTION */}
                 {item.description && (
                   <Text style={{ color: colors.textMuted, fontSize: 13, lineHeight: 20, marginBottom: 12 }}>{item.description}</Text>
                 )}
 
-                {/* POSTED BY */}
                 <TouchableOpacity onPress={() => router.push(`/(tabs)/user/${item.user?.id}`)} style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 14 }}>
                   <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: colors.border, overflow: "hidden", justifyContent: "center", alignItems: "center" }}>
                     {item.user?.profilePhoto ? (
@@ -304,7 +324,6 @@ export default function CarShowScreen() {
                   <Text style={{ color: colors.textSecondary, fontSize: 13 }}>Posted by <Text style={{ color: colors.text, fontWeight: "600" }}>{item.user?.name}</Text></Text>
                 </TouchableOpacity>
 
-                {/* ACTIONS */}
                 <View style={{ flexDirection: "row", gap: 10 }}>
                   <TouchableOpacity
                     onPress={() => handleAttend(item.id)}
@@ -330,7 +349,6 @@ export default function CarShowScreen() {
         }}
       />
 
-      {/* FLOATING POST BUTTON */}
       <TouchableOpacity
         onPress={() => setCreateModal(true)}
         style={{ position: "absolute", bottom: 24, right: 24, backgroundColor: colors.blue, width: 56, height: 56, borderRadius: 28, justifyContent: "center", alignItems: "center", elevation: 8 }}

@@ -32,11 +32,16 @@ export default function PostDetail() {
   const replyInputRef = useRef<TextInput>(null);
 
   const fetchPost = async () => {
+    setLoading(true);
+    setPost(null);
     try {
       const res = await api.get(`/api/posts/${id}`);
       setPost(res.data);
-    } catch (err) { console.error("FETCH POST ERROR:", err); }
-    finally { setLoading(false); }
+    } catch (err) {
+      console.error("FETCH POST ERROR:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { fetchPost(); }, [id]);
@@ -145,7 +150,7 @@ export default function PostDetail() {
       {/* HEADER */}
       <View style={{ paddingTop: 60, paddingHorizontal: 20, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: colors.border, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-          <TouchableOpacity onPress={() => router.push("/(tabs)/feed")}>
+          <TouchableOpacity onPress={() => router.back()}>
             <Text style={{ color: colors.blue, fontSize: 16 }}>← Back</Text>
           </TouchableOpacity>
           <Text style={{ color: colors.text, fontSize: 20, fontWeight: "900" }}>Post</Text>
