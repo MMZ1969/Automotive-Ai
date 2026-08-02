@@ -314,6 +314,14 @@ export const resetPassword = async (req, res) => {
 // RESET PASSWORD REDIRECT (HTTPS intermediary page)
 export const resetPasswordRedirect = async (req, res) => {
   try {
+    // Helmet's default CSP blocks the inline <script> this page needs for
+    // the desktop password-reset form. Loosen it just for this route —
+    // rest of the API keeps Helmet's default strict policy untouched.
+    res.setHeader(
+      "Content-Security-Policy",
+      "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';"
+    );
+    
     const { token } = req.query;
 
     if (!token) {
