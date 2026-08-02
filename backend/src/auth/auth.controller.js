@@ -377,17 +377,89 @@ export const resetPasswordRedirect = async (req, res) => {
         <title>Reset Password — AutoAI</title>
         <style>
           body { background: #050509; color: white; font-family: sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; text-align: center; padding: 20px; }
-          h1 { color: #345bff; font-size: 32px; margin-bottom: 12px; }
-          p { color: #9ca3af; margin-bottom: 32px; }
-          a { background: #345bff; color: white; padding: 16px 32px; border-radius: 12px; text-decoration: none; font-weight: bold; font-size: 18px; }
+          .card { max-width: 400px; width: 100%; }
+          h1 { color: #345bff; font-size: 28px; margin-bottom: 8px; }
+          p { color: #9ca3af; margin-bottom: 24px; font-size: 14px; }
+          .deep-link { display: inline-block; background: #345bff; color: white; padding: 16px 32px; border-radius: 12px; text-decoration: none; font-weight: bold; font-size: 17px; margin-bottom: 28px; }
+          .divider { display: flex; align-items: center; color: #6b7280; font-size: 12px; margin: 20px 0; }
+          .divider::before, .divider::after { content: ""; flex: 1; height: 1px; background: #252838; }
+          .divider span { padding: 0 12px; }
+          input { width: 100%; box-sizing: border-box; background: #11131a; color: white; padding: 14px; border-radius: 10px; border: 1px solid #252838; font-size: 15px; margin-bottom: 12px; }
+          button { width: 100%; background: #345bff; color: white; padding: 14px; border-radius: 10px; border: none; font-size: 16px; font-weight: bold; cursor: pointer; }
+          button:disabled { background: #252838; color: #6b7280; }
+          .hint { color: #6b7280; font-size: 12px; text-align: left; margin-bottom: 16px; }
+          #message { font-size: 14px; margin-top: 14px; min-height: 20px; }
+          #message.error { color: #ef4444; }
+          #message.success { color: #10b981; }
         </style>
       </head>
       <body>
-        <div>
+        <div class="card">
           <h1>🔑 Reset Your Password</h1>
-          <p>Tap below to open AutoAI and set a new password.</p>
-          <a href="automotiveai://reset-password?token=${token}">Open AutoAI 🚗</a>
+          <p>On your phone? Open the app directly. On a computer, reset it right here instead.</p>
+
+          <a class="deep-link" href="automotiveai://reset-password?token=${token}">Open AutoAI 🚗</a>
+
+          <div class="divider"><span>OR RESET HERE</span></div>
+
+          <form id="resetForm">
+            <input type="password" id="newPassword" placeholder="New password" autocomplete="new-password" />
+            <input type="password" id="confirmPassword" placeholder="Confirm new password" autocomplete="new-password" />
+            <div class="hint">Must be 8+ characters, include a number and a special character.</div>
+            <button type="submit" id="submitBtn">Reset Password</button>
+          </form>
+          <div id="message"></div>
         </div>
+
+        <script>
+          const form = document.getElementById('resetForm');
+          const btn = document.getElementById('submitBtn');
+          const msg = document.getElementById('message');
+
+          form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            msg.textContent = '';
+            msg.className = '';
+
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            if (newPassword !== confirmPassword) {
+              msg.textContent = 'Passwords do not match.';
+              msg.className = 'error';
+              return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'Resetting...';
+
+            try {
+              const res = await fetch('/api/auth/reset-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token: '${token}', newPassword }),
+              });
+              const data = await res.json();
+
+              if (!res.ok) {
+                msg.textContent = data.message || 'Something went wrong. Please try again.';
+                msg.className = 'error';
+                btn.disabled = false;
+                btn.textContent = 'Reset Password';
+                return;
+              }
+
+              msg.textContent = '✅ Password reset! You can now log in on the app with your new password.';
+              msg.className = 'success';
+              form.style.display = 'none';
+            } catch (err) {
+              msg.textContent = 'Network error. Please try again.';
+              msg.className = 'error';
+              btn.disabled = false;
+              btn.textContent = 'Reset Password';
+            }
+          });
+        </script>
       </body>
       </html>
     `);
