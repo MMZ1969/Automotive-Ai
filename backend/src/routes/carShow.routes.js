@@ -76,6 +76,28 @@ router.post("/", authMiddleware, async (req, res) => {
       },
     });
 
+    // Also create a real Post so this shows up in the main Feed —
+    // reuses the existing CAR_SHOW postType already handled by the Feed UI.
+    try {
+      const showDate = new Date(date);
+      const formattedDate = showDate.toLocaleDateString("en-US", {
+        month: "long", day: "numeric", year: "numeric",
+      });
+      const postContent = `🎪 ${name}\n📍 ${location}\n📅 ${formattedDate}${description ? `\n\n${description}` : ""}`;
+
+      await prisma.post.create({
+        data: {
+          userId: req.user.id,
+          content: postContent,
+          imageUrl: imageUrl || null,
+          postType: "CAR_SHOW",
+        },
+      });
+    } catch (postErr) {
+      // Never let a Feed-post failure block the actual car show creation
+      console.error("CAR SHOW -> FEED POST ERROR:", postErr);
+    }
+
     // Award +10 rep for posting a car show
     await prisma.user.update({
       where: { id: req.user.id },
