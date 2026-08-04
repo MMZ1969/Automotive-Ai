@@ -32,6 +32,8 @@ export default function CarShowScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [createModal, setCreateModal] = useState(false);
+  const [editingShow, setEditingShow] = useState<any>(null);
+  const [attendeesModal, setAttendeesModal] = useState<any>(null);
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -104,20 +106,42 @@ export default function CarShowScreen() {
     }
   };
 
-  const handleCreate = async () => {
+  const openCreateModal = () => {
+    setEditingShow(null);
+    setName(""); setDescription(""); setLocation(""); setDate(null); setImageUrl("");
+    setCreateModal(true);
+  };
+
+  const openEditModal = (show: any) => {
+    setEditingShow(show);
+    setName(show.name || "");
+    setDescription(show.description || "");
+    setLocation(show.location || "");
+    setDate(show.date ? new Date(show.date) : null);
+    setImageUrl(show.imageUrl || "");
+    setCreateModal(true);
+  };
+
+  const handleSaveShow = async () => {
     if (!name.trim() || !location.trim() || !date) {
       Alert.alert("Missing fields", "Name, location, and date are required.");
       return;
     }
     try {
       setSubmitting(true);
-      await api.post("/api/car-shows", { name, description, location, date: date.toISOString(), imageUrl });
+      if (editingShow) {
+        await api.put(`/api/car-shows/${editingShow.id}`, { name, description, location, date: date.toISOString(), imageUrl });
+        Alert.alert("✅ Show Updated!", "Your changes have been saved.");
+      } else {
+        await api.post("/api/car-shows", { name, description, location, date: date.toISOString(), imageUrl });
+        Alert.alert("🎪 Car Show Posted!", "Your show has been added.");
+      }
       setCreateModal(false);
+      setEditingShow(null);
       setName(""); setDescription(""); setLocation(""); setDate(null); setImageUrl("");
       fetchShows();
-      Alert.alert("🎪 Car Show Posted!", "Your show has been added.");
     } catch (err) {
-      Alert.alert("Error", "Could not create car show. Try again.");
+      Alert.alert("Error", `Could not ${editingShow ? "update" : "create"} car show. Try again.`);
     } finally {
       setSubmitting(false);
     }
@@ -182,8 +206,8 @@ export default function CarShowScreen() {
         <View style={{ flex: 1, backgroundColor: "#00000088", justifyContent: "flex-end" }}>
           <View style={{ backgroundColor: colors.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 48, maxHeight: "90%" }}>
             <ScrollView showsVerticalScrollIndicator={false}>
-              <Text style={{ color: colors.text, fontSize: 22, fontWeight: "900", marginBottom: 4 }}>🎪 Post a Car Show</Text>
-              <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 20 }}>Share an upcoming show with the community</Text>
+              <Text style={{ color: colors.text, fontSize: 22, fontWeight: "900", marginBottom: 4 }}>{editingShow ? "✏️ Edit Car Show" : "🎪 Post a Car Show"}</Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 20 }}>{editingShow ? "Update your show details" : "Share an upcoming show with the community"}</Text>
 
               <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 6 }}>Event Name *</Text>
               <TextInput value={name} onChangeText={setName} placeholder="e.g. Vineland Classic Car Show" placeholderTextColor={colors.textMuted} style={inputStyle} />
@@ -214,11 +238,11 @@ export default function CarShowScreen() {
               </TouchableOpacity>
 
               <View style={{ flexDirection: "row", gap: 10, marginTop: 4 }}>
-                <TouchableOpacity onPress={() => setCreateModal(false)} style={{ flex: 1, backgroundColor: colors.border, padding: 14, borderRadius: 12, alignItems: "center" }}>
+                <TouchableOpacity onPress={() => { setCreateModal(false); setEditingShow(null); }} style={{ flex: 1, backgroundColor: colors.border, padding: 14, borderRadius: 12, alignItems: "center" }}>
                   <Text style={{ color: colors.text, fontWeight: "700" }}>Cancel</Text>
                 </TouchableOpacity>
-                <TouchableOpacity onPress={handleCreate} disabled={submitting} style={{ flex: 1, backgroundColor: colors.blue, padding: 14, borderRadius: 12, alignItems: "center" }}>
-                  <Text style={{ color: "white", fontWeight: "700" }}>{submitting ? "Posting..." : "Post Show"}</Text>
+                <TouchableOpacity onPress={handleSaveShow} disabled={submitting} style={{ flex: 1, backgroundColor: colors.blue, padding: 14, borderRadius: 12, alignItems: "center" }}>
+                  <Text style={{ color: "white", fontWeight: "700" }}>{submitting ? "Saving..." : editingShow ? "Save Changes" : "Post Show"}</Text>
                 </TouchableOpacity>
               </View>
             </ScrollView>
@@ -250,13 +274,48 @@ export default function CarShowScreen() {
         </KeyboardAvoidingView>
       </Modal>
 
+      {/* ATTENDEES MODAL */}
+      <Modal visible={!!attendeesModal} transparent animationType="slide" onRequestClose={() => setAttendeesModal(null)}>
+        <View style={{ flex: 1, backgroundColor: "#00000088", justifyContent: "flex-end" }}>
+          <View style={{ backgroundColor: colors.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40, maxHeight: "75%" }}>
+            <Text style={{ color: colors.text, fontSize: 20, fontWeight: "900", marginBottom: 4 }}>🎪 Who's Going</Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 16 }}>{attendeesModal?.name}</Text>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {attendeesModal?.attendees?.length === 0 ? (
+                <Text style={{ color: colors.textMuted, fontSize: 14, textAlign: "center", marginTop: 20 }}>No one has RSVP'd yet.</Text>
+              ) : (
+                attendeesModal?.attendees?.map((a: any) => (
+                  <TouchableOpacity
+                    key={a.userId}
+                    onPress={() => { setAttendeesModal(null); router.push(`/(tabs)/user/${a.userId}`); }}
+                    style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border }}
+                  >
+                    <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.border, overflow: "hidden", justifyContent: "center", alignItems: "center" }}>
+                      {a.user?.profilePhoto ? (
+                        <Image source={{ uri: a.user.profilePhoto }} style={{ width: 40, height: 40 }} />
+                      ) : (
+                        <Text style={{ color: colors.text, fontWeight: "700" }}>{a.user?.name?.[0]?.toUpperCase() || "?"}</Text>
+                      )}
+                    </View>
+                    <Text style={{ color: colors.text, fontSize: 15, fontWeight: "600" }}>{a.user?.name || "Anonymous"}</Text>
+                  </TouchableOpacity>
+                ))
+              )}
+            </ScrollView>
+            <TouchableOpacity onPress={() => setAttendeesModal(null)} style={{ backgroundColor: colors.border, padding: 14, borderRadius: 12, alignItems: "center", marginTop: 16 }}>
+              <Text style={{ color: colors.text, fontWeight: "700" }}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       <View style={{ paddingTop: 60, paddingHorizontal: 20, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}>
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
           <View>
             <Text style={{ color: colors.text, fontSize: 24, fontWeight: "900" }}>🎪 Car Shows</Text>
             <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 2 }}>Upcoming shows near you</Text>
           </View>
-          <TouchableOpacity onPress={() => setCreateModal(true)} style={{ backgroundColor: colors.blue, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12 }}>
+          <TouchableOpacity onPress={openCreateModal} style={{ backgroundColor: colors.blue, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12 }}>
             <Text style={{ color: "white", fontWeight: "700", fontSize: 14 }}>+ Post Show</Text>
           </TouchableOpacity>
         </View>
@@ -333,14 +392,22 @@ export default function CarShowScreen() {
                       {isAttending ? "✅ Going" : "🎪 I'm Going"}
                     </Text>
                   </TouchableOpacity>
-                  <View style={{ justifyContent: "center", alignItems: "center", paddingHorizontal: 12 }}>
+                  <TouchableOpacity
+                    onPress={() => setAttendeesModal(item)}
+                    style={{ justifyContent: "center", alignItems: "center", paddingHorizontal: 12 }}
+                  >
                     <Text style={{ color: colors.text, fontWeight: "700", fontSize: 16 }}>{attendeeCount}</Text>
-                    <Text style={{ color: colors.textMuted, fontSize: 11 }}>Going</Text>
-                  </View>
+                    <Text style={{ color: colors.blue, fontSize: 11 }}>Going ›</Text>
+                  </TouchableOpacity>
                   {(item.userId === user?.id || user?.isAdmin) && (
-                    <TouchableOpacity onPress={() => handleDelete(item.id)} style={{ backgroundColor: "#b91c1c22", borderWidth: 1, borderColor: "#b91c1c44", padding: 12, borderRadius: 12, alignItems: "center", justifyContent: "center" }}>
-                      <Text style={{ fontSize: 16 }}>🗑️</Text>
-                    </TouchableOpacity>
+                    <>
+                      <TouchableOpacity onPress={() => openEditModal(item)} style={{ backgroundColor: colors.blue + "22", borderWidth: 1, borderColor: colors.blue + "44", padding: 12, borderRadius: 12, alignItems: "center", justifyContent: "center" }}>
+                        <Text style={{ fontSize: 16 }}>✏️</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => handleDelete(item.id)} style={{ backgroundColor: "#b91c1c22", borderWidth: 1, borderColor: "#b91c1c44", padding: 12, borderRadius: 12, alignItems: "center", justifyContent: "center" }}>
+                        <Text style={{ fontSize: 16 }}>🗑️</Text>
+                      </TouchableOpacity>
+                    </>
                   )}
                 </View>
               </View>
@@ -350,7 +417,7 @@ export default function CarShowScreen() {
       />
 
       <TouchableOpacity
-        onPress={() => setCreateModal(true)}
+        onPress={openCreateModal}
         style={{ position: "absolute", bottom: 24, right: 24, backgroundColor: colors.blue, width: 56, height: 56, borderRadius: 28, justifyContent: "center", alignItems: "center", elevation: 8 }}
       >
         <Text style={{ color: "white", fontSize: 28, fontWeight: "300", marginTop: -2 }}>➕</Text>
