@@ -111,6 +111,48 @@ router.post("/", authMiddleware, async (req, res) => {
   }
 });
 
+// PUT update a car show (owner only)
+router.put("/:id", authMiddleware, async (req, res) => {
+  try {
+    const carShowId = parseInt(req.params.id);
+    const { name, description, location, date, imageUrl } = req.body;
+
+    const existing = await prisma.carShow.findUnique({ where: { id: carShowId } });
+    if (!existing) return res.status(404).json({ error: "Car show not found" });
+    if (existing.userId !== req.user.id && !req.user.isAdmin) {
+      return res.status(403).json({ error: "Not authorized" });
+    }
+
+    if (!name || !location || !date) {
+      return res.status(400).json({ error: "Name, location, and date are required" });
+    }
+
+    const updated = await prisma.carShow.update({
+      where: { id: carShowId },
+      data: {
+        name,
+        description,
+        location,
+        date: new Date(date),
+        imageUrl: imageUrl !== undefined ? imageUrl : existing.imageUrl,
+      },
+      include: {
+        user: {
+          select: { id: true, name: true, profilePhoto: true, role: true, isVerified: true },
+        },
+        attendees: {
+          select: { userId: true },
+        },
+      },
+    });
+
+    res.json(updated);
+  } catch (err) {
+    console.error("UPDATE CAR SHOW ERROR:", err);
+    res.status(500).json({ error: "Failed to update car show" });
+  }
+});
+
 // POST toggle attendance (I'm Going / Not Going)
 router.post("/:id/attend", authMiddleware, async (req, res) => {
   try {
