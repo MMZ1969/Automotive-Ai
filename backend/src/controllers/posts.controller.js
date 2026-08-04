@@ -6,6 +6,7 @@ import { createAndSendNotification } from "./notification.controller.js";
 export const getAllPosts = async (req, res) => {
   try {
     const { type, search } = req.query;
+    const viewerId = req.user.id;
     const where = {
       user: { email: { notIn: TEST_ACCOUNT_EMAILS } },
     };
@@ -20,11 +21,28 @@ export const getAllPosts = async (req, res) => {
       include: {
         user: { select: { id: true, name: true, profilePhoto: true, role: true, repPoints: true, isVerified: true } },
         comments: {
-          where: { user: { email: { notIn: TEST_ACCOUNT_EMAILS } } },
+          // Hide test-account comments from everyone EXCEPT the test
+          // account viewing their own comment (so App Store reviewers
+          // don't see commenting look broken while testing it themselves).
+          where: {
+            OR: [
+              { user: { email: { notIn: TEST_ACCOUNT_EMAILS } } },
+              { userId: viewerId },
+            ],
+          },
           include: { user: true },
           orderBy: { createdAt: "asc" },
         },
-        likes: true,
+        likes: {
+          // Same rule for likes: hide test-account likes from real users,
+          // but a test account still sees their own like reflected.
+          where: {
+            OR: [
+              { user: { email: { notIn: TEST_ACCOUNT_EMAILS } } },
+              { userId: viewerId },
+            ],
+          },
+        },
       },
     });
     res.json(posts);
@@ -38,16 +56,29 @@ export const getAllPosts = async (req, res) => {
 export const getPostById = async (req, res) => {
   try {
     const id = Number(req.params.id);
+    const viewerId = req.user?.id;
     const post = await prisma.post.findUnique({
       where: { id },
       include: {
         user: { select: { id: true, name: true, profilePhoto: true, role: true, repPoints: true, isVerified: true } },
         comments: {
-          where: { user: { email: { notIn: TEST_ACCOUNT_EMAILS } } },
+          where: {
+            OR: [
+              { user: { email: { notIn: TEST_ACCOUNT_EMAILS } } },
+              { userId: viewerId },
+            ],
+          },
           include: { user: true },
           orderBy: { createdAt: "asc" },
         },
-        likes: true,
+        likes: {
+          where: {
+            OR: [
+              { user: { email: { notIn: TEST_ACCOUNT_EMAILS } } },
+              { userId: viewerId },
+            ],
+          },
+        },
       },
     });
     if (!post) return res.status(404).json({ error: "Post not found" });
@@ -151,6 +182,7 @@ export const toggleLike = async (req, res) => {
           data: { repPoints: { decrement: 2 } },
         });
       }
+      // Respond immediately — nothing further to await for an unlike.
       return res.json({ liked: false });
     } else {
       await prisma.like.create({ data: { postId, userId } });
@@ -160,17 +192,33 @@ export const toggleLike = async (req, res) => {
           where: { id: post.userId },
           data: { repPoints: { increment: 2 } },
         });
-
-        const actor = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
-        await createAndSendNotification({
-          recipientId: post.userId,
-          actorId: userId,
-          type: "like",
-          postId,
-          message: `${actor?.name || "Someone"} liked your post ❤️`,
-        });
       }
-      return res.json({ liked: true });
+
+      // Respond to the tapping user right away — don't make them wait on
+      // the notification lookup + push-service network call below. That
+      // round trip (actor lookup, notification create, push token lookup,
+      // unread count, then an external fetch to Expo's push API) was
+      // adding several seconds to every like, which made the button feel
+      // unresponsive and led to accidental repeat taps / duplicate likes.
+      res.json({ liked: true });
+
+      if (post && post.userId !== userId) {
+        (async () => {
+          try {
+            const actor = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
+            await createAndSendNotification({
+              recipientId: post.userId,
+              actorId: userId,
+              type: "like",
+              postId,
+              message: `${actor?.name || "Someone"} liked your post ❤️`,
+            });
+          } catch (notifyErr) {
+            console.error("LIKE NOTIFICATION ERROR:", notifyErr);
+          }
+        })();
+      }
+      return;
     }
   } catch (err) {
     console.error("TOGGLE LIKE ERROR:", err);
@@ -194,24 +242,32 @@ export const addComment = async (req, res) => {
       include: { user: true },
     });
 
+    // Respond right away — same reasoning as toggleLike above, the
+    // notification/push work below shouldn't hold up the comment UI.
+    res.json(comment);
+
     const post = await prisma.post.findUnique({ where: { id: postId } });
     if (post && post.userId !== userId) {
-      await prisma.user.update({
-        where: { id: post.userId },
-        data: { repPoints: { increment: 1 } },
-      });
+      (async () => {
+        try {
+          await prisma.user.update({
+            where: { id: post.userId },
+            data: { repPoints: { increment: 1 } },
+          });
 
-      const actor = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
-      await createAndSendNotification({
-        recipientId: post.userId,
-        actorId: userId,
-        type: "comment",
-        postId,
-        message: `${actor?.name || "Someone"} commented on your post 💬`,
-      });
+          const actor = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
+          await createAndSendNotification({
+            recipientId: post.userId,
+            actorId: userId,
+            type: "comment",
+            postId,
+            message: `${actor?.name || "Someone"} commented on your post 💬`,
+          });
+        } catch (notifyErr) {
+          console.error("COMMENT NOTIFICATION ERROR:", notifyErr);
+        }
+      })();
     }
-
-    res.json(comment);
   } catch (err) {
     console.error("ADD COMMENT ERROR:", err);
     res.status(500).json({ error: "Failed to add comment" });
@@ -241,11 +297,23 @@ export const getFollowingPosts = async (req, res) => {
       include: {
         user: { select: { id: true, name: true, profilePhoto: true, role: true, repPoints: true, isVerified: true } },
         comments: {
-          where: { user: { email: { notIn: TEST_ACCOUNT_EMAILS } } },
+          where: {
+            OR: [
+              { user: { email: { notIn: TEST_ACCOUNT_EMAILS } } },
+              { userId },
+            ],
+          },
           include: { user: true },
           orderBy: { createdAt: "asc" },
         },
-        likes: true,
+        likes: {
+          where: {
+            OR: [
+              { user: { email: { notIn: TEST_ACCOUNT_EMAILS } } },
+              { userId },
+            ],
+          },
+        },
       },
     });
     res.json(posts);
@@ -431,27 +499,34 @@ export const addReply = async (req, res) => {
       include: { user: true },
     });
 
-    // Notify the parent comment author (if not replying to yourself)
-    const parentComment = await prisma.comment.findUnique({
-      where: { id: parentId },
-      select: { userId: true },
-    });
-
-    if (parentComment && parentComment.userId !== userId) {
-      const actor = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { name: true },
-      });
-      await createAndSendNotification({
-        recipientId: parentComment.userId,
-        actorId: userId,
-        type: "comment",
-        postId,
-        message: `${actor?.name || "Someone"} replied to your comment 💬`,
-      });
-    }
-
     res.json(reply);
+
+    // Notify the parent comment author (if not replying to yourself) —
+    // moved after res.json so this network work never delays the response.
+    (async () => {
+      try {
+        const parentComment = await prisma.comment.findUnique({
+          where: { id: parentId },
+          select: { userId: true },
+        });
+
+        if (parentComment && parentComment.userId !== userId) {
+          const actor = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { name: true },
+          });
+          await createAndSendNotification({
+            recipientId: parentComment.userId,
+            actorId: userId,
+            type: "comment",
+            postId,
+            message: `${actor?.name || "Someone"} replied to your comment 💬`,
+          });
+        }
+      } catch (notifyErr) {
+        console.error("REPLY NOTIFICATION ERROR:", notifyErr);
+      }
+    })();
   } catch (err) {
     console.error("ADD REPLY ERROR:", err);
     res.status(500).json({ error: "Failed to add reply" });
