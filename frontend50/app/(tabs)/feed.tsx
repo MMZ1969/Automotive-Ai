@@ -234,31 +234,31 @@ export default function Feed() {
           </View>
         </View>
       </Modal>
-    
+
       {/* HEADER */}
       <View style={{ paddingTop: 60, paddingHorizontal: 20, paddingBottom: 0, borderBottomWidth: 1, borderBottomColor: colors.border }}>
         {!user?.hasCompletedOnboarding && (
-    <TouchableOpacity
-      onPress={() => router.push("/(tabs)/(profile)/vehicles/add")}
-      style={{
-        backgroundColor: colors.blueMuted ?? "#1e3a8a",
-        borderWidth: 1,
-        borderColor: colors.blue,
-        borderRadius: 12,
-        padding: 14,
-        marginBottom: 16,
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-      }}
-    >
-      <View style={{ flex: 1 }}>
-        <Text style={{ color: colors.text, fontWeight: "700", fontSize: 14 }}>🚗 Add your first vehicle</Text>
-        <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>Unlock AI diagnostics and service logs</Text>
-      </View>
-      <Text style={{ color: colors.blue, fontSize: 20 }}>→</Text>
-    </TouchableOpacity>
-  )}
+          <TouchableOpacity
+            onPress={() => router.push("/(tabs)/(profile)/vehicles/add")}
+            style={{
+              backgroundColor: colors.blueMuted ?? "#1e3a8a",
+              borderWidth: 1,
+              borderColor: colors.blue,
+              borderRadius: 12,
+              padding: 14,
+              marginBottom: 16,
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: colors.text, fontWeight: "700", fontSize: 14 }}>🚗 Add your first vehicle</Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>Unlock AI diagnostics and service logs</Text>
+            </View>
+            <Text style={{ color: colors.blue, fontSize: 20 }}>→</Text>
+          </TouchableOpacity>
+        )}
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
             <Image source={logo} style={{ width: 40, height: 40, borderRadius: 10 }} resizeMode="contain" />
@@ -366,11 +366,11 @@ export default function Feed() {
 
             <View style={{
               alignSelf: "flex-start",
-              backgroundColor: item.postType === "QUESTION" ? "#1e3a8a" : item.postType === "SERVICE" ? "#78350f" : item.postType === "BEFORE_AFTER" ? "#991b1b" : "#5b21b6",
+              backgroundColor: item.postType === "QUESTION" ? "#1e3a8a" : item.postType === "SERVICE" ? "#78350f" : item.postType === "BEFORE_AFTER" ? "#991b1b" : item.postType === "CAR_SHOW" ? "#5b21b6" : "#5b21b6",
               paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10, marginBottom: 10,
             }}>
               <Text style={{ color: "white", fontSize: 11, fontWeight: "600" }}>
-                {item.postType === "QUESTION" ? "🔧 Question" : item.postType === "SERVICE" ? "🏁 Service" : item.postType === "BEFORE_AFTER" ? "📸 Before/After" : "🚗 Vanity"}
+                {item.postType === "QUESTION" ? "🔧 Question" : item.postType === "SERVICE" ? "🏁 Service" : item.postType === "BEFORE_AFTER" ? "📸 Before/After" : item.postType === "CAR_SHOW" ? "🎪 Car Show" : "🚗 Vanity"}
               </Text>
             </View>
 
@@ -437,13 +437,20 @@ export default function Feed() {
               </View>
             )}
 
+            {/* RichText sits OUTSIDE any TouchableOpacity now — a nested
+                touchable here was swallowing hashtag taps, since the
+                parent card's own onPress was competing with the hashtag's
+                onPress inside RichText. Only the image area below is
+                tappable to open the post; the text/hashtags handle their
+                own taps cleanly. */}
+            <RichText
+              text={item.content}
+              colors={colors}
+              baseStyle={{ color: colors.text, fontSize: 15, lineHeight: 22 }}
+              onHashtagPress={(tag) => router.push({ pathname: "/(tabs)/feed", params: { hashtag: tag } })}
+            />
+
             <TouchableOpacity onPress={() => router.push(`/(tabs)/post/${item.id}`)} activeOpacity={0.8}>
-              <RichText
-                  text={item.content}
-                  colors={colors}
-                  baseStyle={{ color: colors.text, fontSize: 15, lineHeight: 22 }}
-                  onHashtagPress={(tag) => router.push({ pathname: "/(tabs)/feed", params: { hashtag: tag } })}
-                />
               {item.imageUrls?.length > 1 ? (
                 <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 4, marginTop: 12 }}>
                   {item.imageUrls.map((url: string, index: number) => (
