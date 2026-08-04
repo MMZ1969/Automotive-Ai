@@ -6,7 +6,7 @@ import { createAndSendNotification } from "./notification.controller.js";
 export const getAllPosts = async (req, res) => {
   try {
     const { type, search } = req.query;
-    const viewerId = req.user.id;
+    const viewerId = req.user?.id;
     const where = {
       user: { email: { notIn: TEST_ACCOUNT_EMAILS } },
     };
