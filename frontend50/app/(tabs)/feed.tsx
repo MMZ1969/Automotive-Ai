@@ -116,9 +116,35 @@ export default function Feed() {
     fetchPosts(activeTab, filter);
   };
 
+  // Optimistically update just this one post's likes locally instead of
+  // refetching the entire feed (which also re-runs a follow-status lookup
+  // per post) — that full refetch was the source of a multi-second delay
+  // before the heart visually updated. The actual API call still runs in
+  // the background; on failure we revert so the UI never lies.
   const handleLike = async (postId: number) => {
-    try { await api.post(`/api/posts/${postId}/like`); fetchPosts(activeTab, activeFilter); }
-    catch (err) { console.error("LIKE ERROR:", err); }
+    const targetPost = posts.find(p => p.id === postId);
+    const alreadyLiked = targetPost?.likes?.some((l: any) => l.userId === user?.id);
+
+    setPosts(prev => prev.map(p => {
+      if (p.id !== postId) return p;
+      if (alreadyLiked) {
+        return { ...p, likes: (p.likes || []).filter((l: any) => l.userId !== user?.id) };
+      }
+      return { ...p, likes: [...(p.likes || []), { userId: user?.id }] };
+    }));
+
+    try {
+      await api.post(`/api/posts/${postId}/like`);
+    } catch (err) {
+      console.error("LIKE ERROR:", err);
+      setPosts(prev => prev.map(p => {
+        if (p.id !== postId) return p;
+        if (alreadyLiked) {
+          return { ...p, likes: [...(p.likes || []), { userId: user?.id }] };
+        }
+        return { ...p, likes: (p.likes || []).filter((l: any) => l.userId !== user?.id) };
+      }));
+    }
   };
 
   const handleFollow = async (userId: number) => {

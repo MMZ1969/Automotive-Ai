@@ -2,8 +2,8 @@ import { useAuth } from "@context/AuthContext";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import api from "@lib/api";
 import { Tabs, useFocusEffect } from "expo-router";
-import { useCallback, useState } from "react";
-import { Text, View } from "react-native";
+import { useCallback, useEffect, useState } from "react";
+import { DeviceEventEmitter, Text, View } from "react-native";
 
 // Small reusable red count badge for tab icons
 function TabBadge({ count }: { count: number }) {
@@ -35,29 +35,40 @@ export default function TabsLayout() {
   const [notifCount, setNotifCount] = useState(0);
   const [messageCount, setMessageCount] = useState(0);
 
+  const fetchCounts = async () => {
+    // Fetch the two counts INDEPENDENTLY so one failing endpoint
+    // can't silently take the other down (the old Promise.all problem).
+    try {
+      const notifRes = await api.get("/api/notifications/unread-count");
+      setNotifCount(notifRes.data.count || 0);
+    } catch (err) {
+      // notifications count fetch failed — leave it as-is
+    }
+    try {
+      const msgRes = await api.get("/api/messages/unread-count");
+      setMessageCount(msgRes.data.count || 0);
+    } catch (err) {
+      // messages count fetch failed — leave it as-is
+    }
+  };
+
   useFocusEffect(
     useCallback(() => {
-      // Fetch the two counts INDEPENDENTLY so one failing endpoint
-      // can't silently take the other down (the old Promise.all problem).
-      const fetchCounts = async () => {
-        try {
-          const notifRes = await api.get("/api/notifications/unread-count");
-          setNotifCount(notifRes.data.count || 0);
-        } catch (err) {
-          // notifications count fetch failed — leave it as-is
-        }
-        try {
-          const msgRes = await api.get("/api/messages/unread-count");
-          setMessageCount(msgRes.data.count || 0);
-        } catch (err) {
-          // messages count fetch failed — leave it as-is
-        }
-      };
       fetchCounts();
       const interval = setInterval(fetchCounts, 30000);
       return () => clearInterval(interval);
     }, [])
   );
+
+  // Refetch the badge count immediately when the Alerts screen marks
+  // notifications as read, instead of waiting up to 30s for the next
+  // scheduled poll — that lag was why the badge stayed lit after reading.
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener("notifications-read", () => {
+      fetchCounts();
+    });
+    return () => sub.remove();
+  }, []);
 
   return (
     <Tabs

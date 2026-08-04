@@ -3,7 +3,9 @@ import api from "@lib/api";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import {
-  ActivityIndicator, Alert, FlatList, Image, RefreshControl, Text, TouchableOpacity, View
+  ActivityIndicator, Alert,
+  DeviceEventEmitter,
+  FlatList, Image, RefreshControl, Text, TouchableOpacity, View
 } from "react-native";
 
 export default function Notifications() {
@@ -14,13 +16,14 @@ export default function Notifications() {
   const router = useRouter();
 
   const fetchNotifications = async () => {
-    try {
-      await api.post("/api/notifications/mark-read");
-      const res = await api.get("/api/notifications");
-      setNotifications(res.data);
-    } catch (err) { console.error("FETCH NOTIFICATIONS ERROR:", err); }
-    finally { setLoading(false); setRefreshing(false); }
-  };
+  try {
+    await api.post("/api/notifications/mark-read");
+    DeviceEventEmitter.emit("notifications-read");
+    const res = await api.get("/api/notifications");
+    setNotifications(res.data);
+  } catch (err) { console.error("FETCH NOTIFICATIONS ERROR:", err); }
+  finally { setLoading(false); setRefreshing(false); }
+};
 
   useFocusEffect(useCallback(() => { fetchNotifications(); }, []));
   const onRefresh = () => { setRefreshing(true); fetchNotifications(); };
