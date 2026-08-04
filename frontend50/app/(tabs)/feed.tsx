@@ -96,7 +96,7 @@ export default function Feed() {
 
   useFocusEffect(useCallback(() => {
     fetchPosts(activeTab, activeFilter);
-  }, [activeTab, activeFilter]));
+  }, [activeTab, activeFilter, hashtag]));
 
   const onRefresh = () => { setRefreshing(true); fetchPosts(activeTab, activeFilter); };
 
