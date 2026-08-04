@@ -450,6 +450,14 @@ export default function Feed() {
               onHashtagPress={(tag) => router.push({ pathname: "/(tabs)/feed", params: { hashtag: tag } })}
             />
 
+            {/* Text-only posts have no image to tap, so give them an
+                explicit, visible way to open the post detail screen. */}
+            {!item.imageUrl && (!item.imageUrls || item.imageUrls.length === 0) && (
+              <TouchableOpacity onPress={() => router.push(`/(tabs)/post/${item.id}`)} style={{ marginTop: 10 }}>
+                <Text style={{ color: colors.blue, fontSize: 13, fontWeight: "600" }}>View post →</Text>
+              </TouchableOpacity>
+            )}
+
             <TouchableOpacity onPress={() => router.push(`/(tabs)/post/${item.id}`)} activeOpacity={0.8}>
               {item.imageUrls?.length > 1 ? (
                 <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 4, marginTop: 12 }}>
