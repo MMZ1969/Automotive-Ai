@@ -10,6 +10,7 @@ import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  Modal,
   Text,
   TouchableOpacity,
   View,
@@ -23,6 +24,7 @@ export default function GarageScreen() {
   const [activeTab, setActiveTab] = useState<"vehicles" | "logs">("vehicles");
   const [logs, setLogs] = useState<any[]>([]);
   const [logsLoading, setLogsLoading] = useState(true);
+  const [vehiclePickerVisible, setVehiclePickerVisible] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -56,8 +58,54 @@ export default function GarageScreen() {
     }, [])
   );
 
+  // Adding a log requires picking which vehicle it belongs to. If there's
+  // only one vehicle, skip the picker and go straight there. Otherwise show
+  // a quick picker sheet.
+  const handleAddLogPress = () => {
+    if (vehicles.length === 0) {
+      setActiveTab("vehicles");
+      return;
+    }
+    if (vehicles.length === 1) {
+      router.push(`/(tabs)/(profile)/vehicles/${vehicles[0].id}/logs/add`);
+      return;
+    }
+    setVehiclePickerVisible(true);
+  };
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+      {/* VEHICLE PICKER — used when adding a log from the aggregated Service Logs tab */}
+      <Modal visible={vehiclePickerVisible} transparent animationType="slide" onRequestClose={() => setVehiclePickerVisible(false)}>
+        <View style={{ flex: 1, backgroundColor: "#00000088", justifyContent: "flex-end" }}>
+          <View style={{ backgroundColor: colors.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40, maxHeight: "70%" }}>
+            <Text style={{ color: colors.text, fontSize: 20, fontWeight: "900", marginBottom: 4 }}>📋 Add a Log For...</Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 16 }}>Which vehicle is this log for?</Text>
+            <FlatList
+              data={vehicles}
+              keyExtractor={(item) => item.id.toString()}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  onPress={() => {
+                    setVehiclePickerVisible(false);
+                    router.push(`/(tabs)/(profile)/vehicles/${item.id}/logs/add`);
+                  }}
+                  style={{ flexDirection: "row", alignItems: "center", paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.border }}
+                >
+                  <Text style={{ fontSize: 20, marginRight: 12 }}>🚗</Text>
+                  <Text style={{ color: colors.text, fontSize: 15, fontWeight: "600" }}>
+                    {item.year} {item.make} {item.model}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            />
+            <TouchableOpacity onPress={() => setVehiclePickerVisible(false)} style={{ backgroundColor: colors.border, padding: 14, borderRadius: 12, alignItems: "center", marginTop: 16 }}>
+              <Text style={{ color: colors.text, fontWeight: "700" }}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       {/* HEADER */}
       <View style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 0 }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 16 }}>
@@ -128,7 +176,7 @@ export default function GarageScreen() {
               <Text style={{ fontSize: 48, marginBottom: 16 }}>📋</Text>
               <Text style={{ color: colors.text, fontSize: 18, fontWeight: "700", textAlign: "center" }}>No logs yet</Text>
               <Text style={{ color: colors.textSecondary, fontSize: 14, textAlign: "center", marginTop: 8 }}>
-                Go to a vehicle to add maintenance logs!
+                Tap the wrench to add your first service log!
               </Text>
             </View>
           ) : (
@@ -144,6 +192,7 @@ export default function GarageScreen() {
               )}
             />
           )}
+          <WrenchButton onPress={handleAddLogPress} />
         </>
       )}
     </SafeAreaView>
