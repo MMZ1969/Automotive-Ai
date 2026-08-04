@@ -1,4 +1,5 @@
 import prisma from "../lib/prisma.js";
+import { TEST_ACCOUNT_EMAILS } from "../lib/testAccounts.js";
 import { createAndSendNotification } from "./notification.controller.js";
 
 // TOGGLE FOLLOW
@@ -79,7 +80,10 @@ export const getFollowers = async (req, res) => {
   try {
     const userId = Number(req.params.id);
     const follows = await prisma.follow.findMany({
-      where: { followingId: userId },
+      where: {
+        followingId: userId,
+        follower: { email: { notIn: TEST_ACCOUNT_EMAILS } },
+      },
       include: {
         follower: { select: { id: true, name: true, profilePhoto: true, role: true } },
       },
@@ -96,7 +100,10 @@ export const getFollowing = async (req, res) => {
   try {
     const userId = Number(req.params.id);
     const follows = await prisma.follow.findMany({
-      where: { followerId: userId },
+      where: {
+        followerId: userId,
+        following: { email: { notIn: TEST_ACCOUNT_EMAILS } },
+      },
       include: {
         following: { select: { id: true, name: true, profilePhoto: true, role: true } },
       },

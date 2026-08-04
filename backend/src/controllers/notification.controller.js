@@ -1,4 +1,5 @@
 import prisma from "../lib/prisma.js";
+import { isTestAccountUser } from "../lib/testAccounts.js";
 
 // Helper function to send push notification
 export async function sendPushNotification(pushToken, title, body, badgeCount = 1) {
@@ -84,6 +85,11 @@ export async function markAllRead(req, res) {
 // Helper exported for use in other controllers
 export async function createAndSendNotification({ recipientId, actorId, type, postId, jobId, message }) {
   try {
+    // Never notify a real user about activity from a test/reviewer account —
+    // covers likes, comments, replies, follows, and car show RSVPs, since
+    // every one of those funnels through this single function.
+    if (actorId && (await isTestAccountUser(actorId))) return;
+
     await prisma.notification.create({
       data: {
         recipientId,

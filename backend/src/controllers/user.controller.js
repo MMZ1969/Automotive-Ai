@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import prisma from "../lib/prisma.js";
+import { TEST_ACCOUNT_EMAILS } from "../lib/testAccounts.js";
 
 // GET /users/me
 export async function getMe(req, res) {
@@ -141,7 +142,10 @@ export async function getLeaderboard(req, res) {
     const { role } = req.query;
 
     const users = await prisma.user.findMany({
-      where: role ? { role: role.toUpperCase() } : {},
+      where: {
+        ...(role ? { role: role.toUpperCase() } : {}),
+        email: { notIn: TEST_ACCOUNT_EMAILS },
+      },
       orderBy: { repPoints: "desc" },
       take: 20,
       select: {
@@ -312,7 +316,10 @@ export async function getFollowers(req, res) {
   try {
     const id = Number(req.params.id);
     const follows = await prisma.follow.findMany({
-      where: { followingId: id },
+      where: {
+        followingId: id,
+        follower: { email: { notIn: TEST_ACCOUNT_EMAILS } },
+      },
       include: {
         follower: {
           select: { id: true, name: true, role: true, profilePhoto: true },
@@ -331,7 +338,10 @@ export async function getFollowing(req, res) {
   try {
     const id = Number(req.params.id);
     const follows = await prisma.follow.findMany({
-      where: { followerId: id },
+      where: {
+        followerId: id,
+        following: { email: { notIn: TEST_ACCOUNT_EMAILS } },
+      },
       include: {
         following: {
           select: { id: true, name: true, role: true, profilePhoto: true },
@@ -443,6 +453,7 @@ export async function getMechanics(req, res) {
       where: {
         role: "MECHANIC",
         location: { not: null },
+        email: { notIn: TEST_ACCOUNT_EMAILS },
       },
       select: {
         id: true,
@@ -531,6 +542,7 @@ export async function getSuggestions(req, res) {
         id: { notIn: followingIds },
         emailVerified: true,
         isBanned: false,
+        email: { notIn: TEST_ACCOUNT_EMAILS },
       },
       orderBy: { repPoints: "desc" },
       take: 10,

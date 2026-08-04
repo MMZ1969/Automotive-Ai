@@ -1,9 +1,8 @@
 import prisma from "../lib/prisma.js";
+import { TEST_ACCOUNT_EMAILS } from "../lib/testAccounts.js";
 import { createAndSendNotification } from "./notification.controller.js";
 
 // GET all posts
-const TEST_ACCOUNT_EMAILS = ["test@google.com", "apple@test.com"];
-
 export const getAllPosts = async (req, res) => {
   try {
     const { type, search } = req.query;
@@ -20,7 +19,11 @@ export const getAllPosts = async (req, res) => {
       ],
       include: {
         user: { select: { id: true, name: true, profilePhoto: true, role: true, repPoints: true, isVerified: true } },
-        comments: { include: { user: true }, orderBy: { createdAt: "asc" } },
+        comments: {
+          where: { user: { email: { notIn: TEST_ACCOUNT_EMAILS } } },
+          include: { user: true },
+          orderBy: { createdAt: "asc" },
+        },
         likes: true,
       },
     });
@@ -39,7 +42,11 @@ export const getPostById = async (req, res) => {
       where: { id },
       include: {
         user: { select: { id: true, name: true, profilePhoto: true, role: true, repPoints: true, isVerified: true } },
-        comments: { include: { user: true }, orderBy: { createdAt: "asc" } },
+        comments: {
+          where: { user: { email: { notIn: TEST_ACCOUNT_EMAILS } } },
+          include: { user: true },
+          orderBy: { createdAt: "asc" },
+        },
         likes: true,
       },
     });
@@ -233,7 +240,11 @@ export const getFollowingPosts = async (req, res) => {
   ],
       include: {
         user: { select: { id: true, name: true, profilePhoto: true, role: true, repPoints: true, isVerified: true } },
-        comments: { include: { user: true }, orderBy: { createdAt: "asc" } },
+        comments: {
+          where: { user: { email: { notIn: TEST_ACCOUNT_EMAILS } } },
+          include: { user: true },
+          orderBy: { createdAt: "asc" },
+        },
         likes: true,
       },
     });
