@@ -17,8 +17,13 @@ router.get("/", authMiddleware, async (req, res) => {
           select: { id: true, name: true, profilePhoto: true, role: true, isVerified: true },
         },
         attendees: {
-          select: { userId: true },
-        },
+  select: {
+    userId: true,
+    user: {
+      select: { id: true, name: true, profilePhoto: true, role: true },
+    },
+  },
+},
       },
     });
     res.json(shows);
@@ -38,8 +43,13 @@ router.get("/:id", authMiddleware, async (req, res) => {
           select: { id: true, name: true, profilePhoto: true, role: true, isVerified: true },
         },
         attendees: {
-          select: { userId: true },
-        },
+  select: {
+    userId: true,
+    user: {
+      select: { id: true, name: true, profilePhoto: true, role: true },
+    },
+  },
+},
       },
     });
     if (!show) return res.status(404).json({ error: "Car show not found" });
@@ -71,8 +81,13 @@ router.post("/", authMiddleware, async (req, res) => {
           select: { id: true, name: true, profilePhoto: true, role: true, isVerified: true },
         },
         attendees: {
-          select: { userId: true },
-        },
+  select: {
+    userId: true,
+    user: {
+      select: { id: true, name: true, profilePhoto: true, role: true },
+    },
+  },
+},
       },
     });
 
@@ -141,8 +156,13 @@ router.put("/:id", authMiddleware, async (req, res) => {
           select: { id: true, name: true, profilePhoto: true, role: true, isVerified: true },
         },
         attendees: {
-          select: { userId: true },
-        },
+  select: {
+    userId: true,
+    user: {
+      select: { id: true, name: true, profilePhoto: true, role: true },
+    },
+  },
+},
       },
     });
 
