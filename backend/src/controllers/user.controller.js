@@ -368,7 +368,7 @@ export async function requestVerification(req, res) {
 
     await prisma.user.update({
       where: { id: userId },
-      data: { verificationRequest },
+      data: { verificationRequest, hasCompletedOnboarding: true },
     });
 
     res.json({ success: true, message: "Verification request submitted!" });
