@@ -38,7 +38,7 @@ export default function AddFirstVehicle() {
         </TouchableOpacity>
 
         <TouchableOpacity
-          onPress={() => router.push("/(tabs)/mechanic/jobs")}
+          onPress={() => router.replace("/(tabs)/(profile)/settings")}  
           style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, paddingVertical: 16, borderRadius: 14, alignItems: "center", width: "100%", marginBottom: 20 }}
         >
           <Text style={{ color: colors.text, fontSize: 16, fontWeight: "700" }}>📍 Browse Jobs Near Me</Text>

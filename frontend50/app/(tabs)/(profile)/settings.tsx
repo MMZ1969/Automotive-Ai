@@ -158,10 +158,13 @@ export default function Settings() {
       </Modal>
 
       {/* HEADER */}
-      <View style={{ marginTop: 20, marginBottom: 30 }}>
-        <Text style={{ color: colors.text, fontSize: 28, fontWeight: "bold" }}>⚙️ Settings</Text>
-        <Text style={{ color: colors.textSecondary, marginTop: 4 }}>Account preferences & app settings</Text>
-      </View>
+<View style={{ marginTop: 20, marginBottom: 30 }}>
+  <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace("/(tabs)/feed")} style={{ marginBottom: 12 }}>
+    <Text style={{ color: colors.blue, fontSize: 16 }}>← Back</Text>
+  </TouchableOpacity>
+  <Text style={{ color: colors.text, fontSize: 28, fontWeight: "bold" }}>⚙️ Settings</Text>
+  <Text style={{ color: colors.textSecondary, marginTop: 4 }}>Account preferences & app settings</Text>
+</View>
 
       {/* ACCOUNT SECTION */}
       <Text style={sectionTitle}>Account</Text>
