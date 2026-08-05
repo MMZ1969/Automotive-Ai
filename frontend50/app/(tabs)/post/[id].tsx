@@ -66,6 +66,48 @@ export default function PostDetail() {
     finally { setSubmittingReply(false); }
   };
 
+  // Optimistically toggle a comment/reply like in local state, same pattern
+  // used for post likes in feed.tsx — instant visual feedback instead of
+  // waiting on a full fetchPost() refetch.
+  const handleCommentLike = async (commentId: number) => {
+    const targetComment = post?.comments?.find((c: any) => c.id === commentId);
+    const alreadyLiked = targetComment?.likes?.some((l: any) => l.userId === user?.id);
+
+    setPost((prev: any) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        comments: prev.comments.map((c: any) => {
+          if (c.id !== commentId) return c;
+          if (alreadyLiked) {
+            return { ...c, likes: (c.likes || []).filter((l: any) => l.userId !== user?.id) };
+          }
+          return { ...c, likes: [...(c.likes || []), { userId: user?.id }] };
+        }),
+      };
+    });
+
+    try {
+      await api.post(`/api/posts/${id}/comments/${commentId}/like`);
+    } catch (err) {
+      console.error("COMMENT LIKE ERROR:", err);
+      // Revert on failure
+      setPost((prev: any) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          comments: prev.comments.map((c: any) => {
+            if (c.id !== commentId) return c;
+            if (alreadyLiked) {
+              return { ...c, likes: [...(c.likes || []), { userId: user?.id }] };
+            }
+            return { ...c, likes: (c.likes || []).filter((l: any) => l.userId !== user?.id) };
+          }),
+        };
+      });
+    }
+  };
+
   const handleDelete = async () => {
     Alert.alert("Delete Post", "Are you sure? This cannot be undone.", [
       { text: "Cancel", style: "cancel" },
@@ -296,6 +338,7 @@ export default function PostDetail() {
         renderItem={({ item }) => {
           const replies = getReplies(item.id);
           const isReplying = replyingTo?.id === item.id;
+          const commentLiked = item.likes?.some((l: any) => l.userId === user?.id);
           return (
             <View style={{ marginHorizontal: 16, marginBottom: 10 }}>
               <View style={{ backgroundColor: colors.card, borderRadius: 12, borderWidth: 1, borderColor: colors.border, padding: 14 }}>
@@ -312,32 +355,45 @@ export default function PostDetail() {
                   baseStyle={{ color: colors.text, fontSize: 14, paddingLeft: 36, marginBottom: 8 }}
                   onHashtagPress={(tag) => router.push({ pathname: "/(tabs)/feed", params: { hashtag: tag } })}
                 />
-                <TouchableOpacity onPress={() => { setReplyingTo(isReplying ? null : item); setReplyText(""); setTimeout(() => replyInputRef.current?.focus(), 100); }} style={{ paddingLeft: 36 }}>
-                  <Text style={{ color: isReplying ? "#ef4444" : colors.textMuted, fontSize: 12, fontWeight: "700" }}>
-                    {isReplying ? "✕ Cancel" : `💬 Reply${replies.length > 0 ? ` (${replies.length})` : ""}`}
-                  </Text>
-                </TouchableOpacity>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 16, paddingLeft: 36 }}>
+                  <TouchableOpacity onPress={() => handleCommentLike(item.id)} style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                    <Text style={{ fontSize: 13 }}>{commentLiked ? "❤️" : "🤍"}</Text>
+                    <Text style={{ color: colors.textMuted, fontSize: 12, fontWeight: "600" }}>{item.likes?.length || 0}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => { setReplyingTo(isReplying ? null : item); setReplyText(""); setTimeout(() => replyInputRef.current?.focus(), 100); }}>
+                    <Text style={{ color: isReplying ? "#ef4444" : colors.textMuted, fontSize: 12, fontWeight: "700" }}>
+                      {isReplying ? "✕ Cancel" : `💬 Reply${replies.length > 0 ? ` (${replies.length})` : ""}`}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
 
               {replies.length > 0 && (
                 <View style={{ marginLeft: 24, marginTop: 6 }}>
-                  {replies.map((reply: any) => (
-                    <View key={reply.id} style={{ backgroundColor: colors.background, borderRadius: 10, borderWidth: 1, borderColor: colors.border, padding: 12, marginBottom: 6 }}>
-                      <TouchableOpacity onPress={() => router.push(`/(tabs)/user/${reply.user?.id}`)} style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                        <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: colors.border, justifyContent: "center", alignItems: "center", borderWidth: 1, borderColor: reply.user?.role === "MECHANIC" ? colors.blue : colors.green }}>
-                          <Text style={{ color: colors.text, fontSize: 10, fontWeight: "700" }}>{reply.user?.name?.[0]?.toUpperCase() || "?"}</Text>
-                        </View>
-                        <Text style={{ color: colors.blue, fontWeight: "700", fontSize: 13 }}>{reply.user?.name || "Anonymous"}</Text>
-                        <Text style={{ color: colors.textMuted, fontSize: 10, marginLeft: "auto" }}>{new Date(reply.createdAt).toLocaleDateString()}</Text>
-                      </TouchableOpacity>
-                      <RichText
-                        text={reply.content}
-                        colors={colors}
-                        baseStyle={{ color: colors.text, fontSize: 13, paddingLeft: 30 }}
-                        onHashtagPress={(tag) => router.push({ pathname: "/(tabs)/feed", params: { hashtag: tag } })}
-                      />
-                    </View>
-                  ))}
+                  {replies.map((reply: any) => {
+                    const replyLiked = reply.likes?.some((l: any) => l.userId === user?.id);
+                    return (
+                      <View key={reply.id} style={{ backgroundColor: colors.background, borderRadius: 10, borderWidth: 1, borderColor: colors.border, padding: 12, marginBottom: 6 }}>
+                        <TouchableOpacity onPress={() => router.push(`/(tabs)/user/${reply.user?.id}`)} style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                          <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: colors.border, justifyContent: "center", alignItems: "center", borderWidth: 1, borderColor: reply.user?.role === "MECHANIC" ? colors.blue : colors.green }}>
+                            <Text style={{ color: colors.text, fontSize: 10, fontWeight: "700" }}>{reply.user?.name?.[0]?.toUpperCase() || "?"}</Text>
+                          </View>
+                          <Text style={{ color: colors.blue, fontWeight: "700", fontSize: 13 }}>{reply.user?.name || "Anonymous"}</Text>
+                          <Text style={{ color: colors.textMuted, fontSize: 10, marginLeft: "auto" }}>{new Date(reply.createdAt).toLocaleDateString()}</Text>
+                        </TouchableOpacity>
+                        <RichText
+                          text={reply.content}
+                          colors={colors}
+                          baseStyle={{ color: colors.text, fontSize: 13, paddingLeft: 30 }}
+                          onHashtagPress={(tag) => router.push({ pathname: "/(tabs)/feed", params: { hashtag: tag } })}
+                        />
+                        <TouchableOpacity onPress={() => handleCommentLike(reply.id)} style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingLeft: 30, marginTop: 6 }}>
+                          <Text style={{ fontSize: 12 }}>{replyLiked ? "❤️" : "🤍"}</Text>
+                          <Text style={{ color: colors.textMuted, fontSize: 11, fontWeight: "600" }}>{reply.likes?.length || 0}</Text>
+                        </TouchableOpacity>
+                      </View>
+                    );
+                  })}
                 </View>
               )}
 
