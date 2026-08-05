@@ -371,6 +371,26 @@ export async function requestVerification(req, res) {
       data: { verificationRequest, hasCompletedOnboarding: true },
     });
 
+    // Notify all admins so verification requests don't sit unnoticed.
+    try {
+      const requester = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
+      const admins = await prisma.user.findMany({
+        where: { isAdmin: true },
+        select: { id: true },
+      });
+      const { createAndSendNotification } = await import("./notification.controller.js");
+      await Promise.all(admins.map(admin =>
+        createAndSendNotification({
+          recipientId: admin.id,
+          actorId: userId,
+          type: "mechanic_verification",
+          message: `🏁 ${requester?.name || "A mechanic"} submitted a verification request — ${shopName}`,
+        })
+      ));
+    } catch (notifyErr) {
+      console.error("VERIFICATION NOTIFY ADMIN ERROR:", notifyErr);
+    }
+
     res.json({ success: true, message: "Verification request submitted!" });
   } catch (err) {
     console.error("VERIFICATION REQUEST ERROR:", err);
