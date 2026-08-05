@@ -319,3 +319,10 @@ model Message {
   sender         User         @relation("MessageSender", fields: [senderId], references: [id])
   receiver       User         @relation("MessageReceiver", fields: [receiverId], references: [id])
 }
+
+model BannedEmail {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  reason    String?
+  createdAt DateTime @default(now())
+}

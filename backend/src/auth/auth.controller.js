@@ -70,6 +70,13 @@ export const register = async (req, res) => {
       return res.status(400).json({ message: "Email already in use" });
     }
 
+    const banned = await prisma.bannedEmail.findUnique({
+  where: { email: email.toLowerCase() },
+    });
+  if (banned) {
+  return res.status(403).json({ message: "This email address is not permitted to register." });
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const verificationCode = crypto.randomInt(100000, 999999).toString();
