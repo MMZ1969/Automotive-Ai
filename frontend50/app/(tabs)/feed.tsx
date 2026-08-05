@@ -263,7 +263,29 @@ export default function Feed() {
 
       {/* HEADER */}
       <View style={{ paddingTop: 60, paddingHorizontal: 20, paddingBottom: 0, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-        {!user?.hasCompletedOnboarding && (
+        {!user?.hasCompletedOnboarding && user?.role === "MECHANIC" && (
+          <TouchableOpacity
+            onPress={() => router.push("/(tabs)/(profile)/settings")}
+            style={{
+              backgroundColor: colors.blueMuted ?? "#1e3a8a",
+              borderWidth: 1,
+              borderColor: colors.blue,
+              borderRadius: 12,
+              padding: 14,
+              marginBottom: 16,
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: colors.text, fontWeight: "700", fontSize: 14 }}>🏁 Get verified</Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>Earn the badge and start landing jobs nearby</Text>
+            </View>
+            <Text style={{ color: colors.blue, fontSize: 20 }}>→</Text>
+          </TouchableOpacity>
+        )}
+        {!user?.hasCompletedOnboarding && user?.role !== "MECHANIC" && (
           <TouchableOpacity
             onPress={() => router.push("/(tabs)/(profile)/vehicles/add")}
             style={{
