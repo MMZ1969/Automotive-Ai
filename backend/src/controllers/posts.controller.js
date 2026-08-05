@@ -30,7 +30,7 @@ export const getAllPosts = async (req, res) => {
               { userId: viewerId },
             ],
           },
-          include: { user: true },
+          include: { user: true, likes: true },
           orderBy: { createdAt: "asc" },
         },
         likes: {
@@ -68,7 +68,7 @@ export const getPostById = async (req, res) => {
               { userId: viewerId },
             ],
           },
-          include: { user: true },
+          include: { user: true, likes: true },
           orderBy: { createdAt: "asc" },
         },
         likes: {
@@ -303,7 +303,7 @@ export const getFollowingPosts = async (req, res) => {
               { userId },
             ],
           },
-          include: { user: true },
+          include: { user: true, likes: true },
           orderBy: { createdAt: "asc" },
         },
         likes: {
@@ -530,5 +530,54 @@ export const addReply = async (req, res) => {
   } catch (err) {
     console.error("ADD REPLY ERROR:", err);
     res.status(500).json({ error: "Failed to add reply" });
+  }
+};
+// TOGGLE LIKE ON A COMMENT
+export const toggleCommentLike = async (req, res) => {
+  try {
+    const commentId = Number(req.params.commentId);
+    const userId = req.user.id;
+
+    const existing = await prisma.like.findUnique({
+      where: { commentId_userId: { commentId, userId } },
+    });
+
+    const comment = await prisma.comment.findUnique({ where: { id: commentId } });
+    if (!comment) return res.status(404).json({ error: "Comment not found" });
+
+    if (existing) {
+      await prisma.like.delete({
+        where: { commentId_userId: { commentId, userId } },
+      });
+      return res.json({ liked: false });
+    } else {
+      await prisma.like.create({ data: { commentId, userId } });
+
+      // Respond immediately — notification work happens in the background,
+      // same pattern as toggleLike for posts, to avoid the multi-second
+      // delay we fixed there earlier.
+      res.json({ liked: true });
+
+      if (comment.userId !== userId) {
+        (async () => {
+          try {
+            const actor = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
+            await createAndSendNotification({
+              recipientId: comment.userId,
+              actorId: userId,
+              type: "comment_like",
+              postId: comment.postId,
+              message: `${actor?.name || "Someone"} liked your comment ❤️`,
+            });
+          } catch (notifyErr) {
+            console.error("COMMENT LIKE NOTIFICATION ERROR:", notifyErr);
+          }
+        })();
+      }
+      return;
+    }
+  } catch (err) {
+    console.error("TOGGLE COMMENT LIKE ERROR:", err);
+    res.status(500).json({ error: "Failed to toggle comment like" });
   }
 };
