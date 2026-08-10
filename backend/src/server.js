@@ -174,7 +174,7 @@ app.post("/api/diagnose", authMiddleware, async (req, res) => {
   try {
     const { query, vehicle } = req.body;
 
-  // ─── DAILY LIMIT CHECK ───────────────────────────────────────────
+    // ─── DAILY LIMIT CHECK ───────────────────────────────────────────
     const userId = req.user.id;
     const userData = await prisma.user.findUnique({
       where: { id: userId },
@@ -229,7 +229,7 @@ app.post("/api/diagnose", authMiddleware, async (req, res) => {
 3. Estimated repair cost range
 4. DIY difficulty (Easy/Medium/Hard/Professional Only)
 5. Immediate action needed
-6. Step by step instructions — see INTENT below for what these steps should contain
+6. Step by step instructions — see INTENT and STEP FORMAT below
 7. A list of parts the user would likely need to purchase to fix this problem
 
 ${vehicle ? `Vehicle: ${vehicle.year} ${vehicle.make} ${vehicle.model}${vehicle.trim ? ` ${vehicle.trim}` : ""}${vehicle.engine ? ` | Engine: ${vehicle.engine}` : ""}${vehicle.engineCylinders ? ` ${vehicle.engineCylinders}-cyl` : ""}${vehicle.driveType ? ` | Drive: ${vehicle.driveType}` : ""}${vehicle.vin ? ` | VIN: ${vehicle.vin}` : ""}` : "No specific vehicle provided."}
@@ -240,9 +240,18 @@ INTENT — determine what the user is actually asking for and match your steps t
 - If the user describes a symptom or unknown problem ("noise when braking," "check engine light") → diagnosisSteps should be diagnostic: how to inspect, test, and narrow down the cause.
 - If the user is asking about a specific repair, replacement, or installation task ("replace rear struts," "how do I do a brake job," "install a new alternator") → diagnosisSteps should be the actual repair procedure: removal steps, reassembly steps, torque specs, and sequence — NOT just "how to inspect this part for wear." They already know what needs doing; give them the procedure to do it, in order.
 
+SCOPE DISCIPLINE — match what the user actually asked, don't upsell to a bigger job:
+- If they said "rear brakes" or "brake pads," answer about pads (and rotors ONLY if rotor service is a standard/expected part of that specific job on this vehicle) — do not default to the full pad+rotor+parking-brake-actuator job unless they said "replace" or described symptoms that clearly implicate all of those parts.
+- If they asked about one component, don't silently expand the diagnosis or steps to cover adjacent components unless the vehicle's actual service procedure requires touching them (e.g., some parking brake actuators genuinely must be retracted to service rear pads — only include that step if it is actually required for the vehicle in question, not as a default add-on).
+- When in doubt about scope, answer the narrower interpretation and let the user ask a follow-up for more.
+
+STEP FORMAT — each diagnosis step has two parts:
+- "text": the instruction itself, specific and actionable.
+- "tip": OPTIONAL, one short practical tip specific to that step (a gotcha to avoid, a "while you're in there" note, a safety reminder) — only include it when you have something genuinely useful to add for that exact step. Leave it out (or null) rather than inventing a generic tip just to fill the field.
+
 USE WEB SEARCH — this is critical for accuracy. You have a web_search tool available. Use it whenever you're about to state a vehicle-specific fact you don't already know with certainty for THIS exact vehicle — especially:
 - Torque specs for suspension, wheel, and drivetrain fasteners
-- Socket/wrench sizes and fastener types (hex, torx, external torx/E-size, etc.)
+- Socket/wrench sizes and fastener types (hex, torx, external torx/E-size, etc.) — INCLUDING lug nut / wheel socket sizes, which vary by trim and wheel package and must ALWAYS be verified by search, never stated from memory, since a wrong lug socket size sends someone to the store for the wrong tool
 - Bolt patterns and tightening sequences
 - Component access points and disassembly order
 - Anything that varies by trim, engine option, or model year
@@ -272,7 +281,10 @@ After you finish any searching, respond with ONLY the final JSON object below �
   "estimatedCost": "$X - $Y",
   "diyDifficulty": "Easy|Medium|Hard|Professional Only",
   "immediateAction": "what to do right now",
-  "diagnosisSteps": ["step 1", "step 2", "step 3"],
+  "diagnosisSteps": [
+    { "text": "step 1 instruction", "tip": "optional short tip or null" },
+    { "text": "step 2 instruction", "tip": null }
+  ],
   "proTip": "one expert tip",
   "parts": ["part name 1", "part name 2"]
 }`,
