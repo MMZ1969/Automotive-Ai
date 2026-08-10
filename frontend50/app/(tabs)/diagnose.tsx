@@ -289,17 +289,31 @@ finally { setLoading(false); }
             </View>
 
             {/* Diagnosis Steps */}
-            <View style={{ backgroundColor: colors.card, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 16 }}>
-              <Text style={{ color: colors.text, fontWeight: "700", fontSize: 16, marginBottom: 12 }}>📋 Diagnosis Steps</Text>
-              {result.diagnosisSteps?.map((step: string, i: number) => (
-                <View key={i} style={{ flexDirection: "row", gap: 10, marginBottom: 8, alignItems: "flex-start" }}>
-                  <View style={{ backgroundColor: colors.blue, width: 22, height: 22, borderRadius: 11, justifyContent: "center", alignItems: "center" }}>
-                    <Text style={{ color: "white", fontSize: 11, fontWeight: "700" }}>{i + 1}</Text>
-                  </View>
-                  <Text style={{ color: colors.text, fontSize: 14, flex: 1, lineHeight: 20 }}>{step}</Text>
-                </View>
-              ))}
-            </View>
+<View style={{ backgroundColor: colors.card, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 16 }}>
+  <Text style={{ color: colors.text, fontWeight: "700", fontSize: 16, marginBottom: 12 }}>📋 Diagnosis Steps</Text>
+  {result.diagnosisSteps?.map((step: any, i: number) => {
+    // Backend now sends steps as { text, tip } objects, but keep a
+    // fallback for plain-string steps (e.g. the image-diagnosis
+    // endpoint, which hasn't been updated to this format).
+    const stepText = typeof step === "string" ? step : step?.text;
+    const stepTip = typeof step === "string" ? null : step?.tip;
+    return (
+      <View key={i} style={{ marginBottom: 12 }}>
+        <View style={{ flexDirection: "row", gap: 10, alignItems: "flex-start" }}>
+          <View style={{ backgroundColor: colors.blue, width: 22, height: 22, borderRadius: 11, justifyContent: "center", alignItems: "center" }}>
+            <Text style={{ color: "white", fontSize: 11, fontWeight: "700" }}>{i + 1}</Text>
+          </View>
+          <Text style={{ color: colors.text, fontSize: 14, flex: 1, lineHeight: 20 }}>{stepText}</Text>
+        </View>
+        {stepTip && (
+          <View style={{ marginLeft: 32, marginTop: 6, backgroundColor: colors.background, borderRadius: 8, borderWidth: 1, borderColor: colors.blue + "33", padding: 8 }}>
+            <Text style={{ color: colors.blue, fontSize: 12, fontWeight: "600" }}>💡 {stepTip}</Text>
+          </View>
+        )}
+      </View>
+    );
+  })}
+</View>
 
             {/* Pro Tip */}
             <View style={{ backgroundColor: colors.background, borderRadius: 16, borderWidth: 1, borderColor: colors.blue + "33", padding: 16 }}>
