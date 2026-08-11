@@ -245,9 +245,7 @@ SCOPE DISCIPLINE — match what the user actually asked, don't upsell to a bigge
 - If they asked about one component, don't silently expand the diagnosis or steps to cover adjacent components unless the vehicle's actual service procedure requires touching them (e.g., some parking brake actuators genuinely must be retracted to service rear pads — only include that step if it is actually required for the vehicle in question, not as a default add-on).
 - When in doubt about scope, answer the narrower interpretation and let the user ask a follow-up for more.
 
-STEP FORMAT — each diagnosis step has two parts:
-- "text": the instruction itself, specific and actionable.
-- "tip": OPTIONAL, one short practical tip specific to that step (a gotcha to avoid, a "while you're in there" note, a safety reminder) — only include it when you have something genuinely useful to add for that exact step. Leave it out (or null) rather than inventing a generic tip just to fill the field.
+STEP FORMAT — each diagnosis step should be a clear, specific, actionable instruction string. If you have a genuinely useful practical tip for a particular step (a gotcha to avoid, a "while you're in there" note, a safety reminder), fold it into that same step's text naturally rather than as a separate field — e.g. "Remove the caliper guide pin bolts (top and bottom) — support the caliper with wire, don't let it hang on the brake hose." Don't force a tip into every step; only add one when it's genuinely useful.
 
 USE WEB SEARCH — this is critical for accuracy. You have a web_search tool available. Use it whenever you're about to state a vehicle-specific fact you don't already know with certainty for THIS exact vehicle — especially:
 - Torque specs for suspension, wheel, and drivetrain fasteners
@@ -281,10 +279,7 @@ After you finish any searching, respond with ONLY the final JSON object below �
   "estimatedCost": "$X - $Y",
   "diyDifficulty": "Easy|Medium|Hard|Professional Only",
   "immediateAction": "what to do right now",
-  "diagnosisSteps": [
-    { "text": "step 1 instruction", "tip": "optional short tip or null" },
-    { "text": "step 2 instruction", "tip": null }
-  ],
+  "diagnosisSteps": ["step 1 instruction, with any useful tip folded in naturally", "step 2 instruction"],
   "proTip": "one expert tip",
   "parts": ["part name 1", "part name 2"]
 }`,
@@ -355,7 +350,6 @@ parsed.ebayParts = ebayParts;
     res.status(500).json({ error: "Failed to diagnose" });
   }
 });
-
 // AI Part Analyzer route — photo → autofill listing
 app.post("/api/analyze-part", async (req, res) => {
   try {
