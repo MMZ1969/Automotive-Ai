@@ -218,7 +218,7 @@ app.post("/api/diagnose", authMiddleware, async (req, res) => {
       body: JSON.stringify({
         model: "claude-sonnet-4-5",
         max_tokens: 1500,
-        tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 2 }],
+        tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 4 }],
         messages: [
           {
             role: "user",
@@ -255,6 +255,10 @@ USE WEB SEARCH — this is critical for accuracy. You have a web_search tool ava
 - Anything that varies by trim, engine option, or model year
 
 Search for the specific year/make/model/trim/engine given. Prefer manufacturer service info, established repair reference sites, and specific how-to sources over generic forum speculation when you can find them. If you get a clear, consistent answer from search — state it directly and specifically, as fact, citing your source implicitly through confidence (no need to show raw citations in the JSON output). If search results are thin, conflicting, or don't cover this exact vehicle/trim — say so honestly rather than picking one source's number and presenting it as certain: give your best estimate and flag it clearly, e.g. "sources vary here — confirm your exact torque spec before final tightening."
+
+CRITICAL — do not invent a reason to prefer one conflicting source over another. If your search results disagree with each other on a specific number (e.g. one source says 17mm, another says 19mm), you must NOT silently pick one and state it as fact, and you must NOT fabricate a plausible-sounding explanation for the discrepancy (e.g. claiming one applies to "aftermarket wheels" or "an earlier trim") unless a search result actually said that explicitly. When sources genuinely conflict, say so directly in the actual step text the user sees: e.g. "Sources disagree on lug nut socket size for this vehicle — commonly reported as either 17mm or 19mm. Verify with a socket set or your owner's manual before starting." A visible, honest conflict is far better than a confident guess dressed up with an invented justification.
+
+If a search errors out or gets cut off before you can complete it (e.g. hitting a search limit), do not silently fill that gap with an unverified guess stated as fact — say plainly that this specific spec wasn't confirmed and should be checked before starting, the same way you'd handle a genuinely thin result.
 
 Do NOT skip searching just to answer faster. A slower correct answer is the entire point of this app. Do NOT state a specific torque value, socket size, fastener type, or access location as fact unless you either (a) searched and found a clear answer, or (b) are already highly confident it's a standard, well-documented spec for this vehicle class. Never guess a specific number or location and present it as fact — whether or not you attach a disclaimer to it. If you're not sure, say so plainly instead of picking a specific-sounding wrong answer and hedging around it.
 
