@@ -187,12 +187,76 @@ app.use("/api/reviews", reviewRoutes);
 app.use("/api/car-shows", carShowRoutes);
 app.use("/api/messages", messagesRoutes);
 
+// ─── DIAGNOSIS CACHE ──────────────────────────────────────────────────────────
+// Keyed by vehicle + exact query text. Two users (or the same user twice)
+// asking the same question about the same vehicle get an instant cached
+// answer instead of re-running the full search+generation pipeline.
+// TTL is generous (7 days) since vehicle specs don't change; this doesn't
+// touch search depth or prompt logic at all, so it carries no accuracy risk.
+const diagnosisCache = new Map();
+const DIAGNOSIS_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+function getDiagnosisCacheKey(query, vehicle) {
+  const vehicleKey = vehicle
+    ? `${vehicle.year}-${vehicle.make}-${vehicle.model}-${vehicle.trim || ""}-${vehicle.engine || ""}`
+    : "no-vehicle";
+  return `${vehicleKey}::${query.trim().toLowerCase()}`;
+}
+
 // AI Diagnosis route
 app.post("/api/diagnose", authMiddleware, async (req, res) => {
   const t0 = Date.now();
   console.log("DIAGNOSIS REQUEST RECEIVED");
   try {
     const { query, vehicle } = req.body;
+
+    // ─── CACHE CHECK ───────────────────────────────────────────────────
+    const cacheKey = getDiagnosisCacheKey(query, vehicle);
+    const cached = diagnosisCache.get(cacheKey);
+    if (cached && Date.now() - cached.cachedAt < DIAGNOSIS_CACHE_TTL_MS) {
+      console.log(`CACHE HIT +${Date.now() - t0}ms`);
+      // Still enforce the daily limit and award rep for a cached diagnosis —
+      // from the user's perspective they ran a diagnosis, they just got it
+      // fast because someone already asked this exact question.
+      const userId = req.user.id;
+      const userData = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { dailyDiagnoses: true, lastDiagnosisDate: true, isAdmin: true },
+      });
+      if (!userData?.isAdmin) {
+        const today = new Date();
+        const lastDate = userData?.lastDiagnosisDate;
+        const isNewDay = !lastDate || lastDate.toDateString() !== today.toDateString();
+        if (isNewDay) {
+          await prisma.user.update({
+            where: { id: userId },
+            data: { dailyDiagnoses: 0, lastDiagnosisDate: today },
+          });
+        }
+        const currentCount = isNewDay ? 0 : userData?.dailyDiagnoses || 0;
+        if (currentCount >= 8) {
+          return res.status(429).json({
+            error: "Daily limit reached. You get 8 free diagnoses per day. Come back tomorrow!",
+            limitReached: true,
+          });
+        }
+      }
+      try {
+        await prisma.user.update({
+          where: { id: userId },
+          data: {
+            repPoints: { increment: 5 },
+            dailyDiagnoses: { increment: 1 },
+            lastDiagnosisDate: new Date(),
+          },
+        });
+      } catch (repErr) {
+        console.error("REP AWARD ERROR:", repErr);
+      }
+      console.log(`RESPONSE SENT (cached) +${Date.now() - t0}ms`);
+      return res.json(cached.data);
+    }
+    // ─────────────────────────────────────────────────────────────────
 
     // ─── DAILY LIMIT CHECK ───────────────────────────────────────────
     const userId = req.user.id;
@@ -370,6 +434,9 @@ parsed.ebayParts = ebayParts;
     } catch (repErr) {
       console.error("REP AWARD ERROR:", repErr);
     }
+
+    // Store in cache for next time this exact vehicle+query comes in
+    diagnosisCache.set(cacheKey, { data: parsed, cachedAt: Date.now() });
 
     console.log(`RESPONSE SENT +${Date.now() - t0}ms`);
     res.json(parsed);
