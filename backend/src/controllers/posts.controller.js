@@ -581,3 +581,35 @@ export const toggleCommentLike = async (req, res) => {
     res.status(500).json({ error: "Failed to toggle comment like" });
   }
 };
+
+export const deleteComment = async (req, res) => {
+  try {
+    const commentId = Number(req.params.commentId);
+    const userId = req.user.id;
+
+    const comment = await prisma.comment.findUnique({ where: { id: commentId } });
+    if (!comment) return res.status(404).json({ error: "Comment not found" });
+
+    if (comment.userId !== userId) {
+      const user = await prisma.user.findUnique({ where: { id: userId }, select: { isAdmin: true } });
+      if (!user?.isAdmin) {
+        return res.status(403).json({ error: "Not authorized to delete this comment" });
+      }
+    }
+
+    // If this is a top-level comment, its replies need to go too
+    const replies = await prisma.comment.findMany({ where: { parentId: commentId }, select: { id: true } });
+    const replyIds = replies.map((r) => r.id);
+
+    await prisma.like.deleteMany({ where: { commentId: { in: [commentId, ...replyIds] } } });
+    if (replyIds.length > 0) {
+      await prisma.comment.deleteMany({ where: { id: { in: replyIds } } });
+    }
+    await prisma.comment.delete({ where: { id: commentId } });
+
+    res.json({ message: "Comment deleted" });
+  } catch (err) {
+    console.error("DELETE COMMENT ERROR:", err);
+    res.status(500).json({ error: "Failed to delete comment" });
+  }
+};
