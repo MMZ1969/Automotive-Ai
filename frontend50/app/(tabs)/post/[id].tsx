@@ -108,6 +108,34 @@ export default function PostDetail() {
     }
   };
 
+  // Delete a comment or reply. isReply tells us whether to also strip
+  // child replies from local state (mirrors the backend's cascade delete
+  // for top-level comments).
+  const handleDeleteComment = (commentId: number, isReply: boolean) => {
+    Alert.alert("Delete Comment", "Are you sure? This cannot be undone.", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Delete", style: "destructive", onPress: async () => {
+        const previousPost = post;
+        setPost((prev: any) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            comments: prev.comments.filter((c: any) =>
+              c.id !== commentId && (isReply || c.parentId !== commentId)
+            ),
+          };
+        });
+        try {
+          await api.delete(`/api/posts/${id}/comments/${commentId}`);
+        } catch (err) {
+          console.error("DELETE COMMENT ERROR:", err);
+          setPost(previousPost); // revert on failure
+          Alert.alert("Error", "Could not delete comment. Try again.");
+        }
+      }},
+    ]);
+  };
+
   const handleDelete = async () => {
     Alert.alert("Delete Post", "Are you sure? This cannot be undone.", [
       { text: "Cancel", style: "cancel" },
@@ -217,6 +245,7 @@ export default function PostDetail() {
         data={topLevelComments}
         keyExtractor={(item) => item.id.toString()}
         keyboardShouldPersistTaps="handled"
+        extraData={{ replyingTo, replyText, submittingReply }}
         ListHeaderComponent={
           <View>
             <View style={{ backgroundColor: colors.card, margin: 16, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 16 }}>
@@ -365,6 +394,11 @@ export default function PostDetail() {
                       {isReplying ? "✕ Cancel" : `💬 Reply${replies.length > 0 ? ` (${replies.length})` : ""}`}
                     </Text>
                   </TouchableOpacity>
+                  {item.user?.id === user?.id && (
+                    <TouchableOpacity onPress={() => handleDeleteComment(item.id, false)}>
+                      <Text style={{ color: colors.textMuted, fontSize: 12, fontWeight: "700" }}>🗑️ Delete</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
               </View>
 
@@ -387,10 +421,17 @@ export default function PostDetail() {
                           baseStyle={{ color: colors.text, fontSize: 13, paddingLeft: 30 }}
                           onHashtagPress={(tag) => router.push({ pathname: "/(tabs)/feed", params: { hashtag: tag } })}
                         />
-                        <TouchableOpacity onPress={() => handleCommentLike(reply.id)} style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingLeft: 30, marginTop: 6 }}>
-                          <Text style={{ fontSize: 12 }}>{replyLiked ? "❤️" : "🤍"}</Text>
-                          <Text style={{ color: colors.textMuted, fontSize: 11, fontWeight: "600" }}>{reply.likes?.length || 0}</Text>
-                        </TouchableOpacity>
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 16, paddingLeft: 30, marginTop: 6 }}>
+                          <TouchableOpacity onPress={() => handleCommentLike(reply.id)} style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                            <Text style={{ fontSize: 12 }}>{replyLiked ? "❤️" : "🤍"}</Text>
+                            <Text style={{ color: colors.textMuted, fontSize: 11, fontWeight: "600" }}>{reply.likes?.length || 0}</Text>
+                          </TouchableOpacity>
+                          {reply.user?.id === user?.id && (
+                            <TouchableOpacity onPress={() => handleDeleteComment(reply.id, true)}>
+                              <Text style={{ color: colors.textMuted, fontSize: 11, fontWeight: "700" }}>🗑️ Delete</Text>
+                            </TouchableOpacity>
+                          )}
+                        </View>
                       </View>
                     );
                   })}
