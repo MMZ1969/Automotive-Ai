@@ -3,7 +3,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import api from "@lib/api";
 import * as ImagePicker from "expo-image-picker";
 import { useFocusEffect, useRouter } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator, Alert, Image, KeyboardAvoidingView, Linking,
   Platform, ScrollView, Text, TextInput, TouchableOpacity, View,
@@ -17,6 +17,22 @@ try {
   useSpeechRecognitionEvent = mod.useSpeechRecognitionEvent;
 } catch (e) {}
 
+// Staged messages shown while a diagnosis is in flight. This is simulated
+// progress (the backend makes one blocking call, it doesn't stream real
+// stages back) but it's an honest description of what's actually
+// happening server-side — search, cross-reference, compile — just not
+// wired to real-time signals. Timings are tuned to roughly match how a
+// typical multi-search diagnosis actually unfolds, so it lands on the
+// last message right around when responses tend to arrive rather than
+// looping past it.
+const LOADING_STAGES = [
+  { icon: "magnify", text: "Searching manufacturer specs..." },
+  { icon: "wrench", text: "Checking torque & fastener specs..." },
+  { icon: "compare-horizontal", text: "Cross-referencing sources..." },
+  { icon: "clipboard-text-outline", text: "Compiling your diagnosis..." },
+];
+const LOADING_STAGE_DURATION_MS = 8000;
+
 export default function Diagnose() {
   const { colors } = useTheme();
   const router = useRouter();
@@ -24,11 +40,13 @@ export default function Diagnose() {
   const [result, setResult] = useState<any>(null);
   const [videos, setVideos] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingStage, setLoadingStage] = useState(0);
   const [recording, setRecording] = useState(false);
   const [scanImage, setScanImage] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
   const [vehicles, setVehicles] = useState<any[]>([]);
   const [selectedVehicle, setSelectedVehicle] = useState<any>(null);
+  const loadingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useFocusEffect(useCallback(() => {
     const loadVehicles = async () => {
@@ -41,6 +59,26 @@ export default function Diagnose() {
     if (event.results[0]?.transcript) setQuery(event.results[0].transcript);
   });
   useSpeechRecognitionEvent("end", () => setRecording(false));
+
+  // Drive the staged loading messages while a diagnosis request is in
+  // flight. Starts over at stage 0 each time loading turns on, advances
+  // on a timer, and holds on the final stage rather than looping — a
+  // request that runs long just sits on "Compiling your diagnosis..."
+  // instead of cycling back to "Searching..." which would look broken.
+  useEffect(() => {
+    if (loading) {
+      setLoadingStage(0);
+      loadingIntervalRef.current = setInterval(() => {
+        setLoadingStage((prev) => Math.min(prev + 1, LOADING_STAGES.length - 1));
+      }, LOADING_STAGE_DURATION_MS);
+    } else if (loadingIntervalRef.current) {
+      clearInterval(loadingIntervalRef.current);
+      loadingIntervalRef.current = null;
+    }
+    return () => {
+      if (loadingIntervalRef.current) clearInterval(loadingIntervalRef.current);
+    };
+  }, [loading]);
 
   const handleVoice = async () => {
     if (!ExpoSpeechRecognitionModule) { alert("Voice input is only available in the full app build."); return; }
@@ -227,13 +265,48 @@ finally { setLoading(false); }
         </TouchableOpacity>
 
         <TouchableOpacity onPress={handleDiagnose} disabled={loading || (!query.trim() && !selectedVehicle)}
-          style={{ backgroundColor: loading || (!query.trim() && !selectedVehicle) ? colors.border : colors.blue, paddingVertical: 22, borderRadius: 16, alignItems: "center", marginBottom: 24, flexDirection: "row", justifyContent: "center", gap: 10 }}>
+          style={{ backgroundColor: loading || (!query.trim() && !selectedVehicle) ? colors.border : colors.blue, paddingVertical: 22, borderRadius: 16, alignItems: "center", marginBottom: loading ? 14 : 24, flexDirection: "row", justifyContent: "center", gap: 10 }}>
           {loading ? (
             <><ActivityIndicator color="white" size="small" /><Text style={{ color: "white", fontWeight: "700", fontSize: 18 }}>Analyzing...</Text></>
           ) : (
             <><MaterialCommunityIcons name="car-brake-alert" size={24} color="white" /><Text style={{ color: "white", fontWeight: "700", fontSize: 18 }}>Run Diagnosis</Text></>
           )}
         </TouchableOpacity>
+
+        {/* Staged loading panel — shows a believable checklist of what the
+            AI is actually doing (real work, simulated pacing) instead of
+            a blank spinner for 30-40 seconds. */}
+        {loading && (
+          <View style={{ backgroundColor: colors.card, borderRadius: 16, borderWidth: 1, borderColor: colors.blue + "33", padding: 18, marginBottom: 24 }}>
+            {LOADING_STAGES.map((stage, i) => {
+              const isDone = i < loadingStage;
+              const isCurrent = i === loadingStage;
+              return (
+                <View key={i} style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: i < LOADING_STAGES.length - 1 ? 14 : 0 }}>
+                  <View style={{
+                    width: 26, height: 26, borderRadius: 13, justifyContent: "center", alignItems: "center",
+                    backgroundColor: isDone ? colors.green : isCurrent ? colors.blue : colors.background,
+                    borderWidth: isDone || isCurrent ? 0 : 1, borderColor: colors.border,
+                  }}>
+                    {isDone ? (
+                      <MaterialCommunityIcons name="check" size={16} color="white" />
+                    ) : isCurrent ? (
+                      <ActivityIndicator color="white" size="small" />
+                    ) : (
+                      <MaterialCommunityIcons name={stage.icon as any} size={14} color={colors.textMuted} />
+                    )}
+                  </View>
+                  <Text style={{
+                    color: isDone ? colors.textSecondary : isCurrent ? colors.text : colors.textMuted,
+                    fontSize: 14, fontWeight: isCurrent ? "700" : "500", flex: 1,
+                  }}>
+                    {stage.text}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+        )}
 
         {result && (
   <View style={{ gap: 14 }}>
