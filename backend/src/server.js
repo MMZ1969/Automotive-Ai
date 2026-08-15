@@ -73,12 +73,22 @@ app.use("/api/auth/register", registerLimiter);
 
 // ─── EBAY HELPERS ────────────────────────────────────────────────────────────
 
-// Step 1: Get an eBay OAuth token using our App ID + Cert ID
+// Step 1: Get an eBay OAuth token using our App ID + Cert ID.
+// Cached in memory and reused until shortly before it expires — eBay
+// client-credentials tokens are typically valid ~2 hours, so re-fetching
+// one per part, per diagnosis request was pure wasted latency sitting
+// between "Claude finished" and "user sees the result."
+let cachedEbayToken = null;
+let cachedEbayTokenExpiresAt = 0;
+
 async function getEbayToken() {
+  if (cachedEbayToken && Date.now() < cachedEbayTokenExpiresAt) {
+    return cachedEbayToken;
+  }
+
   const credentials = Buffer.from(
     `${process.env.EBAY_APP_ID}:${process.env.EBAY_CERT_ID}`
   ).toString("base64");
-  console.log("EBAY CREDS CHECK:", `${process.env.EBAY_APP_ID}:${process.env.EBAY_CERT_ID}`.length, "chars");
 
   const response = await fetch(
     "https://api.ebay.com/identity/v1/oauth2/token",
@@ -93,8 +103,16 @@ async function getEbayToken() {
   );
 
   const data = await response.json();
-console.log("EBAY TOKEN RESPONSE:", JSON.stringify(data));
-return data.access_token;
+  if (!data.access_token) {
+    console.error("EBAY TOKEN ERROR:", JSON.stringify(data));
+    return null;
+  }
+
+  cachedEbayToken = data.access_token;
+  // Refresh 5 minutes early so we never hand out a token that's about to expire
+  cachedEbayTokenExpiresAt = Date.now() + (data.expires_in - 300) * 1000;
+
+  return cachedEbayToken;
 }
 
 // Step 2: Search eBay for a part and return a price range
@@ -171,6 +189,8 @@ app.use("/api/messages", messagesRoutes);
 
 // AI Diagnosis route
 app.post("/api/diagnose", authMiddleware, async (req, res) => {
+  const t0 = Date.now();
+  console.log("DIAGNOSIS REQUEST RECEIVED");
   try {
     const { query, vehicle } = req.body;
 
@@ -207,6 +227,7 @@ app.post("/api/diagnose", authMiddleware, async (req, res) => {
       }
     }
     // ─────────────────────────────────────────────────────────────────
+    console.log(`DAILY LIMIT CHECK DONE +${Date.now() - t0}ms`);
 
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -293,6 +314,7 @@ After you finish any searching, respond with ONLY the final JSON object below �
     });
 
     const data = await response.json();
+    console.log(`ANTHROPIC RESPONSE RECEIVED +${Date.now() - t0}ms`);
     console.log("ANTHROPIC RESPONSE:", JSON.stringify(data));
     if (!data.content || data.content.length === 0) {
       return res.status(500).json({ error: "AI service error", details: data });
@@ -332,6 +354,7 @@ After you finish any searching, respond with ONLY the final JSON object below �
   console.error("EBAY LOOKUP FAILED:", ebayErr.message);
 }
 parsed.ebayParts = ebayParts;
+    console.log(`EBAY LOOKUP DONE +${Date.now() - t0}ms`);
     // ─────────────────────────────────────────────────────────────────
 
     // Award +5 rep for running a diagnosis
@@ -348,6 +371,7 @@ parsed.ebayParts = ebayParts;
       console.error("REP AWARD ERROR:", repErr);
     }
 
+    console.log(`RESPONSE SENT +${Date.now() - t0}ms`);
     res.json(parsed);
   } catch (err) {
     console.error("DIAGNOSE ERROR:", err);
