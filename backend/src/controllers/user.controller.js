@@ -23,6 +23,7 @@ export async function getMe(req, res) {
         isAvailable: true,
         businessHours: true,
         hasCompletedOnboarding: true,
+        referralCode: true,
       },
     });
 

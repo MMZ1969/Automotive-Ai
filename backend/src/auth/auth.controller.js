@@ -189,6 +189,7 @@ export const login = async (req, res) => {
         isVerified: user.isVerified,
         isBanned: user.isBanned,
         hasCompletedOnboarding: user.hasCompletedOnboarding,
+        referralCode: user.referralCode,
       },
     });
     
@@ -599,6 +600,7 @@ export const verifyEmailCode = async (req, res) => {
         isVerified: user.isVerified,
         isBanned: user.isBanned,
         hasCompletedOnboarding: user.hasCompletedOnboarding,
+        referralCode: user.referralCode,
       },
     });
   } catch (err) {
