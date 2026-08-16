@@ -3,6 +3,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import api from "@lib/api";
 import * as ImagePicker from "expo-image-picker";
 import { useFocusEffect, useRouter } from "expo-router";
+import * as Speech from "expo-speech";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator, Alert, Image, KeyboardAvoidingView, Linking,
@@ -33,6 +34,37 @@ const LOADING_STAGES = [
 ];
 const LOADING_STAGE_DURATION_MS = 8000;
 
+// Builds the plain-text script read aloud for a diagnosis result — meant
+// for hands-free use in the shop, so it's phrased as continuous speech
+// rather than mirroring the visual card layout exactly (no emoji, no
+// bullet symbols, numbers spoken out as "Step 1" etc.).
+function buildReadAloudScript(result: any): string {
+  const parts: (string | null)[] = [
+    result.summary,
+    result.severity ? `Severity: ${result.severity}.` : null,
+    result.estimatedCost ? `Estimated cost: ${result.estimatedCost}.` : null,
+    result.immediateAction ? `Immediate action: ${result.immediateAction}` : null,
+  ];
+
+  if (result.causes?.length) {
+    parts.push("Likely causes.");
+    result.causes.forEach((cause: string, i: number) => parts.push(`${i + 1}. ${cause}`));
+  }
+
+  if (result.diagnosisSteps?.length) {
+    parts.push("Diagnosis steps.");
+    result.diagnosisSteps.forEach((step: any, i: number) => {
+      const stepText = typeof step === "string" ? step : step?.text;
+      const stepTip = typeof step === "string" ? null : step?.tip;
+      parts.push(`Step ${i + 1}: ${stepText}${stepTip ? ` Tip: ${stepTip}` : ""}`);
+    });
+  }
+
+  if (result.proTip) parts.push(`Pro tip: ${result.proTip}`);
+
+  return parts.filter(Boolean).join(" ");
+}
+
 export default function Diagnose() {
   const { colors } = useTheme();
   const router = useRouter();
@@ -46,6 +78,7 @@ export default function Diagnose() {
   const [scanning, setScanning] = useState(false);
   const [vehicles, setVehicles] = useState<any[]>([]);
   const [selectedVehicle, setSelectedVehicle] = useState<any>(null);
+  const [isSpeaking, setIsSpeaking] = useState(false);
   const loadingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useFocusEffect(useCallback(() => {
@@ -79,6 +112,30 @@ export default function Diagnose() {
       if (loadingIntervalRef.current) clearInterval(loadingIntervalRef.current);
     };
   }, [loading]);
+
+  // Stop any in-progress speech if the screen loses focus (user navigates
+  // away) — nothing worse than a diagnosis reading itself out over
+  // another screen. Also stopped explicitly on New Diagnosis / re-run.
+  useFocusEffect(useCallback(() => {
+    return () => { Speech.stop(); setIsSpeaking(false); };
+  }, []));
+
+  const handleReadAloud = () => {
+    if (isSpeaking) {
+      Speech.stop();
+      setIsSpeaking(false);
+      return;
+    }
+    if (!result) return;
+    const script = buildReadAloudScript(result);
+    setIsSpeaking(true);
+    Speech.speak(script, {
+      rate: 0.95,
+      onDone: () => setIsSpeaking(false),
+      onStopped: () => setIsSpeaking(false),
+      onError: () => setIsSpeaking(false),
+    });
+  };
 
   const handleVoice = async () => {
     if (!ExpoSpeechRecognitionModule) { alert("Voice input is only available in the full app build."); return; }
@@ -114,6 +171,7 @@ export default function Diagnose() {
 
   const analyzeImage = async (asset: any) => {
     try {
+      Speech.stop(); setIsSpeaking(false);
       setScanning(true); setResult(null); setVideos([]); setScanImage(asset.uri);
       const res = await api.post("/api/analyze-image-diagnosis", { imageBase64: asset.base64, mediaType: asset.mimeType || "image/jpeg" });
       if (res.data.error === "not_automotive") {
@@ -129,6 +187,7 @@ export default function Diagnose() {
 
   const handleDiagnose = async () => {
     if (!query.trim()) return;
+    Speech.stop(); setIsSpeaking(false);
     const vehicleContext = selectedVehicle ? `Vehicle: ${selectedVehicle.year} ${selectedVehicle.make} ${selectedVehicle.model}. ` : "";
     const fullQuery = vehicleContext + query;
     try {
@@ -312,7 +371,7 @@ finally { setLoading(false); }
   <View style={{ gap: 14 }}>
     <View style={{ flexDirection: "row", gap: 10 }}>
       <TouchableOpacity
-        onPress={() => { setResult(null); setVideos([]); setScanImage(null); setQuery(""); }}
+        onPress={() => { Speech.stop(); setIsSpeaking(false); setResult(null); setVideos([]); setScanImage(null); setQuery(""); }}
         style={{ flex: 1, backgroundColor: colors.card, borderRadius: 12, borderWidth: 1, borderColor: colors.border, paddingVertical: 12, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8 }}
       >
         <MaterialCommunityIcons name="refresh" size={18} color={colors.textSecondary} />
@@ -326,6 +385,19 @@ finally { setLoading(false); }
         <Text style={{ color: "white", fontWeight: "700" }}>Share to Feed</Text>
       </TouchableOpacity>
     </View>
+
+            {/* Read Aloud — full-width and separate from the row above since
+                this is the hands-free entry point: bigger target, easy to
+                hit without looking closely at the screen with dirty hands. */}
+            <TouchableOpacity
+              onPress={handleReadAloud}
+              style={{ backgroundColor: isSpeaking ? "#ef4444" : colors.card, borderRadius: 12, borderWidth: 1, borderColor: isSpeaking ? "#ef4444" : colors.blue + "44", paddingVertical: 14, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8 }}
+            >
+              <MaterialCommunityIcons name={isSpeaking ? "stop-circle-outline" : "volume-high"} size={22} color={isSpeaking ? "white" : colors.blue} />
+              <Text style={{ color: isSpeaking ? "white" : colors.blue, fontWeight: "700", fontSize: 15 }}>
+                {isSpeaking ? "Stop Reading" : "🔊 Read Diagnosis Aloud"}
+              </Text>
+            </TouchableOpacity>
 
             {/* Summary Card */}
             <View style={{ backgroundColor: colors.card, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 16 }}>
