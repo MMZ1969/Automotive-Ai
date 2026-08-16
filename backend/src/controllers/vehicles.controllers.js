@@ -42,6 +42,16 @@ export const createVehicle = async (req, res) => {
     const userId = req.user.id;
     const { year, make, model, trim, vin, color, mileage, notes } = req.body;
 
+    // Fetch current state BEFORE any writes — need to know whether this
+    // user was already onboarded, so we only treat this as a genuine
+    // "first activation" (and therefore a referral trigger) the one
+    // time it's actually true, not on every subsequent vehicle add.
+    const currentUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { hasCompletedOnboarding: true, referredById: true, referralRewardGiven: true },
+    });
+    const isFirstActivation = !currentUser?.hasCompletedOnboarding;
+
     // Decode VIN if provided
     let vinData = {};
     if (vin && vin.length === 17) {
@@ -72,6 +82,27 @@ export const createVehicle = async (req, res) => {
       where: { id: userId },
       data: { hasCompletedOnboarding: true },
     });
+
+    // Referral reward — only fires on genuine first activation, only
+    // once per referred user (guarded by referralRewardGiven), and only
+    // if they were actually referred by someone. This is the exact gap
+    // the bot investigation surfaced: rewarding at signup/verification
+    // alone would be trivially gameable since most signups never
+    // activate at all.
+    if (isFirstActivation && currentUser?.referredById && !currentUser?.referralRewardGiven) {
+      try {
+        await prisma.user.update({
+          where: { id: currentUser.referredById },
+          data: { repPoints: { increment: 10 } },
+        });
+        await prisma.user.update({
+          where: { id: userId },
+          data: { repPoints: { increment: 5 }, referralRewardGiven: true },
+        });
+      } catch (refErr) {
+        console.error("REFERRAL REWARD ERROR:", refErr);
+      }
+    }
 
     res.json(vehicle);
   } catch (err) {
