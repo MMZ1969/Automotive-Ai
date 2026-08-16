@@ -12,6 +12,9 @@ async function main() {
       name: true,
       role: true,
       emailVerified: true,
+      hasCompletedOnboarding: true,
+      phone: true,
+      location: true,
       createdAt: true,
       _count: {
         select: {
@@ -61,9 +64,9 @@ async function main() {
   const fmtDate = (d) => new Date(d).toISOString().slice(0, 10);
 
   const line = (u) =>
-    `#${u.id} | ${u.emailVerified ? "✓" : "✗"} | ${fmtDate(u.createdAt)} | act:${u.activity} ` +
+    `#${u.id} | ${u.emailVerified ? "✓verify" : "✗verify"} | ${u.hasCompletedOnboarding ? "✓onboard" : "✗onboard"} | ${fmtDate(u.createdAt)} | act:${u.activity} ` +
     `(p${u.c.posts} c${u.c.comments} l${u.c.likes} m${u.c.messagesSent} j${u.c.jobsPosted} b${u.c.bids} v${u.c.vehicles} f${u.c.following}) ` +
-    `| ${u.role} | ${u.email}`;
+    `| ${u.role} | name:"${u.name || "—"}" | phone:${u.phone || "—"} | loc:${u.location || "—"} | ${u.email}`;
 
   console.log("───── ACTIVE USERS (your real humans) ─────");
   active.sort((a, b) => b.activity - a.activity).forEach((u) => console.log(line(u)));

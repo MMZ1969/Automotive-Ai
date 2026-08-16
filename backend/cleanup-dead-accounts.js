@@ -38,6 +38,32 @@ async function getActivityCount(userId) {
     carShows + carShowAttendees;
 }
 
+// Same cascade order as deleteAccount in auth.controller.js. A plain
+// prisma.user.delete() will throw a foreign-key error if this user has
+// ANY row referencing them elsewhere — e.g. a Notification.recipientId
+// from a job-posted broadcast to all mechanics, even if this user never
+// took any action themselves. Clearing every relation first avoids that.
+async function deleteUserCascade(userId) {
+  await prisma.carShowAttendee.deleteMany({ where: { userId } });
+  await prisma.carShow.deleteMany({ where: { userId } });
+  await prisma.message.deleteMany({ where: { OR: [{ senderId: userId }, { receiverId: userId }] } });
+  await prisma.conversation.deleteMany({ where: { OR: [{ user1Id: userId }, { user2Id: userId }] } });
+  await prisma.part.deleteMany({ where: { userId } });
+  await prisma.notification.deleteMany({ where: { OR: [{ recipientId: userId }, { actorId: userId }] } });
+  await prisma.report.deleteMany({ where: { reporterId: userId } });
+  await prisma.block.deleteMany({ where: { OR: [{ blockerId: userId }, { blockedId: userId }] } });
+  await prisma.like.deleteMany({ where: { userId } });
+  await prisma.comment.deleteMany({ where: { userId } });
+  await prisma.follow.deleteMany({ where: { OR: [{ followerId: userId }, { followingId: userId }] } });
+  await prisma.bid.deleteMany({ where: { OR: [{ mechanicId: userId }, { job: { userId } }] } });
+  await prisma.review.deleteMany({ where: { OR: [{ reviewerId: userId }, { mechanicId: userId }] } });
+  await prisma.log.deleteMany({ where: { userId } });
+  await prisma.vehicle.deleteMany({ where: { userId } });
+  await prisma.post.deleteMany({ where: { userId } });
+  await prisma.job.deleteMany({ where: { userId } });
+  await prisma.user.delete({ where: { id: userId } });
+}
+
 async function main() {
   const shouldDelete = process.argv.includes("--confirm");
 
@@ -77,11 +103,19 @@ async function main() {
 
   if (shouldDelete && tier1.length > 0) {
     console.log(`\n--confirm flag detected. Deleting ${tier1.length} Tier 1 account(s)...`);
+    let deleted = 0;
+    let failed = 0;
     for (const user of tier1) {
-      await prisma.user.delete({ where: { id: user.id } });
-      console.log(`  Deleted [${user.id}] ${user.email}`);
+      try {
+        await deleteUserCascade(user.id);
+        console.log(`  Deleted [${user.id}] ${user.email}`);
+        deleted++;
+      } catch (err) {
+        console.error(`  FAILED to delete [${user.id}] ${user.email}:`, err.message);
+        failed++;
+      }
     }
-    console.log("Done.");
+    console.log(`Done. Deleted ${deleted}, failed ${failed}.`);
   } else if (!shouldDelete) {
     console.log("\nDry run only — no accounts deleted. Re-run with --confirm to delete Tier 1 candidates.");
   }

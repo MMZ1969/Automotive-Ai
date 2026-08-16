@@ -43,7 +43,7 @@ const isValidEmail = (email) =>
 // REGISTER
 export const register = async (req, res) => {
   try {
-    const { password, name, role } = req.body;
+    const { password, name, role, referralCode } = req.body;
     const email = (req.body.email || "").trim();
 
     if (!isValidEmail(email)) {
@@ -82,6 +82,29 @@ export const register = async (req, res) => {
     const verificationCode = crypto.randomInt(100000, 999999).toString();
     const verificationCodeExpiry = new Date(Date.now() + 1000 * 60 * 15); // 15 min
 
+    // If a referral code was provided, look up the referrer. Invalid or
+    // missing codes are silently ignored — a bad code shouldn't block
+    // registration, it just means no referral relationship gets set.
+    let referredById = null;
+    if (referralCode) {
+      const referrer = await prisma.user.findUnique({
+        where: { referralCode },
+        select: { id: true },
+      });
+      if (referrer) referredById = referrer.id;
+    }
+
+    // Generate this new user's own referral code — no DB-level default
+    // anymore, so it has to happen here explicitly.
+    let myReferralCode;
+    let codeAttempts = 0;
+    do {
+      myReferralCode = crypto.randomBytes(4).toString("hex").toUpperCase().slice(0, 6);
+      const existing = await prisma.user.findUnique({ where: { referralCode: myReferralCode } });
+      if (!existing) break;
+      codeAttempts++;
+    } while (codeAttempts < 5);
+    
     const user = await prisma.user.create({
       data: {
         email,
@@ -91,6 +114,8 @@ export const register = async (req, res) => {
         emailVerified: false,
         verificationToken: verificationCode,
         verificationCodeExpiry,
+        referredById,        // ← add
+        referralCode: myReferralCode,  // ← add
       },
     });
 

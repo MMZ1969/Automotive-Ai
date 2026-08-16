@@ -35,6 +35,11 @@ model User {
   updatedAt             DateTime       @updatedAt
   verificationCodeExpiry DateTime?
   hasCompletedOnboarding Boolean @default(false)
+  referralCode           String?        @unique
+  referredById           Int?
+  referralRewardGiven    Boolean        @default(false)
+  referredBy             User?          @relation("Referrals", fields: [referredById], references: [id])
+  referrals              User[]         @relation("Referrals")
   logs                  Log[]
   vehicles              Vehicle[]
   posts                 Post[]
