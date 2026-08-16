@@ -408,6 +408,7 @@ export async function getFollowing(req, res) {
     res.status(500).json({ error: "Failed to fetch following" });
   }
 }
+
 // POST /users/verification-request — mechanic submits verification request
 export async function requestVerification(req, res) {
   try {
@@ -418,12 +419,38 @@ export async function requestVerification(req, res) {
       return res.status(400).json({ error: "License number and shop name are required." });
     }
 
+    // Fetch current state BEFORE any writes — same pattern as the
+    // vehicle-creation trigger. Only a genuine first activation (not
+    // re-submitting an already-onboarded mechanic's request) should
+    // ever fire the referral reward.
+    const currentUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { hasCompletedOnboarding: true, referredById: true, referralRewardGiven: true },
+    });
+    const isFirstActivation = !currentUser?.hasCompletedOnboarding;
+
     const verificationRequest = JSON.stringify({ licenseNumber, shopName, shopLocation, experience });
 
     await prisma.user.update({
       where: { id: userId },
       data: { verificationRequest, hasCompletedOnboarding: true },
     });
+
+    // Referral reward — same guarded logic as the DIYer vehicle trigger.
+    if (isFirstActivation && currentUser?.referredById && !currentUser?.referralRewardGiven) {
+      try {
+        await prisma.user.update({
+          where: { id: currentUser.referredById },
+          data: { repPoints: { increment: 10 } },
+        });
+        await prisma.user.update({
+          where: { id: userId },
+          data: { repPoints: { increment: 5 }, referralRewardGiven: true },
+        });
+      } catch (refErr) {
+        console.error("REFERRAL REWARD ERROR:", refErr);
+      }
+    }
 
     // Notify all admins so verification requests don't sit unnoticed.
     try {
