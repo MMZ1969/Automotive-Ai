@@ -12,6 +12,7 @@ export default function Leaderboard() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState("");
+  const [expandedUserId, setExpandedUserId] = useState<number | null>(null);
 
   const fetchLeaderboard = async (role: string) => {
     try {
@@ -41,34 +42,73 @@ export default function Leaderboard() {
     return null;
   };
 
-  const renderUser = (user: any, index: number) => (
-  <TouchableOpacity key={user.id} onPress={() => router.push({ pathname: "/(tabs)/user/[id]", params: { id: user.id, from: "leaderboard" } })} style={{
-      flexDirection: "row", alignItems: "center",
-      backgroundColor: index < 3 ? colors.background : colors.card,
-      borderRadius: 14, borderWidth: 1,
-      borderColor: index === 0 ? "#fbbf2444" : index === 1 ? "#9ca3af44" : index === 2 ? "#f9731644" : colors.border,
-      padding: 14, marginBottom: 10, gap: 12,
-    }}>
-      <Text style={{ fontSize: index < 3 ? 24 : 16, fontWeight: "900", color: getRankColor(index), width: 32, textAlign: "center" }}>
-        {getMedal(index) || index + 1}
-      </Text>
-      <View style={{ width: index < 3 ? 52 : 44, height: index < 3 ? 52 : 44, borderRadius: index < 3 ? 26 : 22, backgroundColor: colors.border, justifyContent: "center", alignItems: "center", borderWidth: 2, borderColor: getRankColor(index), overflow: "hidden" }}>
-        {user.profilePhoto ? (
-          <Image source={{ uri: user.profilePhoto }} style={{ width: index < 3 ? 52 : 44, height: index < 3 ? 52 : 44 }} />
-        ) : (
-          <Text style={{ fontSize: index < 3 ? 22 : 18 }}>{user.name?.[0]?.toUpperCase() || "?"}</Text>
-        )}
-      </View>
-      <View style={{ flex: 1 }}>
-        <Text style={{ color: colors.text, fontWeight: "700", fontSize: index < 3 ? 17 : 15 }}>{user.name || "Anonymous"}</Text>
-        <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>{user._count.posts} posts • {user._count.followers} followers</Text>
-      </View>
-      <View style={{ alignItems: "flex-end" }}>
-        <Text style={{ color: getRankColor(index), fontWeight: "900", fontSize: index < 3 ? 20 : 16 }}>{user.repPoints}</Text>
-        <Text style={{ color: colors.textMuted, fontSize: 11 }}>rep</Text>
-      </View>
-    </TouchableOpacity>
-  );
+  const renderUser = (user: any, index: number) => {
+    const isExpanded = expandedUserId === user.id;
+    const breakdown = user.repBreakdown || [];
+
+    return (
+    <View key={user.id} style={{ marginBottom: 10 }}>
+      <TouchableOpacity
+        onPress={() => setExpandedUserId(isExpanded ? null : user.id)}
+        onLongPress={() => router.push({ pathname: "/(tabs)/user/[id]", params: { id: user.id, from: "leaderboard" } })}
+        style={{
+          flexDirection: "row", alignItems: "center",
+          backgroundColor: index < 3 ? colors.background : colors.card,
+          borderRadius: 14, borderWidth: 1,
+          borderColor: isExpanded ? colors.blue : index === 0 ? "#fbbf2444" : index === 1 ? "#9ca3af44" : index === 2 ? "#f9731644" : colors.border,
+          padding: 14, gap: 12,
+        }}>
+        <Text style={{ fontSize: index < 3 ? 24 : 16, fontWeight: "900", color: getRankColor(index), width: 32, textAlign: "center" }}>
+          {getMedal(index) || index + 1}
+        </Text>
+        <View style={{ width: index < 3 ? 52 : 44, height: index < 3 ? 52 : 44, borderRadius: index < 3 ? 26 : 22, backgroundColor: colors.border, justifyContent: "center", alignItems: "center", borderWidth: 2, borderColor: getRankColor(index), overflow: "hidden" }}>
+          {user.profilePhoto ? (
+            <Image source={{ uri: user.profilePhoto }} style={{ width: index < 3 ? 52 : 44, height: index < 3 ? 52 : 44 }} />
+          ) : (
+            <Text style={{ fontSize: index < 3 ? 22 : 18 }}>{user.name?.[0]?.toUpperCase() || "?"}</Text>
+          )}
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: colors.text, fontWeight: "700", fontSize: index < 3 ? 17 : 15 }}>{user.name || "Anonymous"}</Text>
+          <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>{user._count.posts} posts • {user._count.followers} followers</Text>
+        </View>
+        <View style={{ alignItems: "flex-end" }}>
+          <Text style={{ color: getRankColor(index), fontWeight: "900", fontSize: index < 3 ? 20 : 16 }}>{user.repPoints}</Text>
+          <Text style={{ color: colors.textMuted, fontSize: 11 }}>rep</Text>
+        </View>
+        <Text style={{ color: colors.textMuted, fontSize: 16, marginLeft: 4 }}>{isExpanded ? "▲" : "▼"}</Text>
+      </TouchableOpacity>
+
+      {isExpanded && (
+        <View style={{ backgroundColor: colors.card, borderRadius: 14, borderWidth: 1, borderColor: colors.blue + "33", borderTopWidth: 0, borderTopLeftRadius: 0, borderTopRightRadius: 0, padding: 14, marginTop: -1 }}>
+          <Text style={{ color: colors.textMuted, fontSize: 11, marginBottom: 10, fontStyle: "italic" }}>
+            How {user.name || "this user"} earned {user.repPoints} rep
+          </Text>
+          {breakdown.length === 0 ? (
+            <Text style={{ color: colors.textMuted, fontSize: 13 }}>No rep-earning activity yet.</Text>
+          ) : (
+            breakdown.map((item: any, i: number) => (
+              <View key={i} style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: i < breakdown.length - 1 ? 8 : 0 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flex: 1 }}>
+                  <Text style={{ fontSize: 15 }}>{item.icon}</Text>
+                  <Text style={{ color: colors.text, fontSize: 13 }}>{item.label}</Text>
+                  <Text style={{ color: colors.textMuted, fontSize: 12 }}>({item.count})</Text>
+                </View>
+                <Text style={{ color: colors.blue, fontWeight: "700", fontSize: 13 }}>+{item.rep}</Text>
+              </View>
+            ))
+          )}
+          <TouchableOpacity
+            onPress={() => router.push({ pathname: "/(tabs)/user/[id]", params: { id: user.id, from: "leaderboard" } })}
+            style={{ marginTop: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.border }}
+          >
+            <Text style={{ color: colors.blue, fontSize: 12, fontWeight: "700", textAlign: "center" }}>View Full Profile →</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+    </View>
+    );
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -77,7 +117,7 @@ export default function Leaderboard() {
           <Text style={{ color: colors.blue, fontSize: 16 }}>← Back</Text>
         </TouchableOpacity>
         <Text style={{ color: colors.text, fontSize: 28, fontWeight: "900" }}>🏆 Leaderboard</Text>
-        <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 4 }}>Top earners by rep points</Text>
+        <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 4 }}>Top earners by rep points • tap a row to see how</Text>
       </View>
 
       <View style={{ flexDirection: "row", margin: 16, backgroundColor: colors.card, borderRadius: 12, padding: 4, borderWidth: 1, borderColor: colors.border }}>
