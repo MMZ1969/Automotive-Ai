@@ -41,7 +41,7 @@ export default function MechanicDashboard() {
   }
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: 20 }}>
+    <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: 20, paddingTop: 60 }}>
 
       {/* VERIFICATION BANNER */}
       {!user?.isVerified && (
