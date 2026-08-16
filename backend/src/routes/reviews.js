@@ -19,6 +19,19 @@ router.post("/", authMiddleware, async (req, res) => {
     const review = await prisma.review.create({
       data: { jobId, reviewerId, mechanicId, rating, comment, reviewType: "DIYER_TO_MECHANIC" },
     });
+
+    // Award rep to the mechanic being reviewed, scaled by rating (1-5
+    // stars = +2 to +10 rep) — rewards quality work while still giving
+    // some recognition even on a rough review.
+    try {
+      await prisma.user.update({
+        where: { id: mechanicId },
+        data: { repPoints: { increment: rating * 2 } },
+      });
+    } catch (repErr) {
+      console.error("REVIEW REP AWARD ERROR:", repErr);
+    }
+
     res.json(review);
   } catch (err) {
     if (err.code === "P2002") return res.status(400).json({ error: "Already reviewed this job" });
@@ -48,6 +61,17 @@ router.post("/mechanic", authMiddleware, async (req, res) => {
         reviewType: "MECHANIC_TO_DIYER",
       },
     });
+
+    // Same scaled award, applied to the DIYer being reviewed here.
+    try {
+      await prisma.user.update({
+        where: { id: diyerId },
+        data: { repPoints: { increment: rating * 2 } },
+      });
+    } catch (repErr) {
+      console.error("REVIEW REP AWARD ERROR:", repErr);
+    }
+
     res.json(review);
   } catch (err) {
     if (err.code === "P2002") return res.status(400).json({ error: "Already reviewed this job" });

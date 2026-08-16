@@ -100,6 +100,16 @@ export async function createPart(req, res) {
       },
     });
 
+    // Award +1 rep for listing a part — parity with a regular post
+    try {
+      await prisma.user.update({
+        where: { id: userId },
+        data: { repPoints: { increment: 1 } },
+      });
+    } catch (repErr) {
+      console.error("PART LISTING REP AWARD ERROR:", repErr);
+    }
+
     res.json(part);
   } catch (err) {
     console.error("CREATE PART ERROR:", err);
@@ -123,6 +133,20 @@ export async function updatePart(req, res) {
       where: { id },
       data: { title, description, category, condition, price, priceType, imageUrl, status },
     });
+
+    // Award +5 rep the moment a listing transitions INTO "SOLD" — guarded
+    // so re-saving an already-sold listing (or any other update) never
+    // re-awards rep for the same sale.
+    if (status === "SOLD" && existing.status !== "SOLD") {
+      try {
+        await prisma.user.update({
+          where: { id: userId },
+          data: { repPoints: { increment: 5 } },
+        });
+      } catch (repErr) {
+        console.error("PART SOLD REP AWARD ERROR:", repErr);
+      }
+    }
 
     res.json(updated);
   } catch (err) {

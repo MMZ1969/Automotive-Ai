@@ -235,10 +235,36 @@ export const completeJob = async (req, res) => {
       return res.status(403).json({ error: "Not authorized" });
     }
 
+    // Guard against duplicate rep awards if complete gets called more than
+    // once (e.g. both parties tap "complete" independently) — only the
+    // transition INTO completed should ever award rep.
+    const alreadyCompleted = job.status === "COMPLETED";
+
     await prisma.job.update({
       where: { id },
       data: { status: "COMPLETED" },
     });
+
+    if (!alreadyCompleted) {
+      // Mechanic gets the larger share — this recognizes the actual work.
+      // DIYer gets a smaller award for following through and confirming
+      // completion, since that's still real platform engagement, just
+      // not the labor itself.
+      try {
+        if (job.mechanicId) {
+          await prisma.user.update({
+            where: { id: job.mechanicId },
+            data: { repPoints: { increment: 8 } },
+          });
+        }
+        await prisma.user.update({
+          where: { id: job.userId },
+          data: { repPoints: { increment: 3 } },
+        });
+      } catch (repErr) {
+        console.error("JOB COMPLETE REP AWARD ERROR:", repErr);
+      }
+    }
 
     if (isMechanic && job.mechanic) {
       await createAndSendNotification({
