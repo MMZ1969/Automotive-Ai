@@ -154,16 +154,70 @@ export async function getLeaderboard(req, res) {
         role: true,
         profilePhoto: true,
         repPoints: true,
+        totalDiagnoses: true,
         _count: {
           select: {
             posts: true,
             followers: true,
+            carShows: true,
           },
         },
       },
     });
 
-    res.json(users);
+    // For each leaderboard entry, compute an approximate breakdown of how
+    // their rep total was earned, using today's point values against
+    // current counts. This is an honest approximation, not a literal
+    // ledger — if a point value changes later, or a liked post gets
+    // deleted after rep was already awarded, the breakdown won't exactly
+    // reconcile to the stored repPoints total. Good enough to answer
+    // "how did I earn this?" without building a full event-log table.
+    const usersWithBreakdown = await Promise.all(
+      users.map(async (user) => {
+        const [
+          postsByType,
+          likesReceived,
+          commentsReceived,
+          jobsCompletedAsMechanic,
+          jobsCompletedAsDiyer,
+          partsSold,
+          reviewsReceived,
+        ] = await Promise.all([
+          prisma.post.groupBy({
+            by: ["postType"],
+            where: { userId: user.id },
+            _count: true,
+          }),
+          prisma.like.count({ where: { post: { userId: user.id } } }),
+          prisma.comment.count({ where: { post: { userId: user.id } } }),
+          prisma.job.count({ where: { mechanicId: user.id, status: "COMPLETED" } }),
+          prisma.job.count({ where: { userId: user.id, status: "COMPLETED" } }),
+          prisma.part.count({ where: { userId: user.id, status: "SOLD" } }),
+          prisma.review.findMany({ where: { mechanicId: user.id }, select: { rating: true } }),
+        ]);
+
+        const questionPosts = postsByType.find((p) => p.postType === "QUESTION")?._count || 0;
+        const otherPosts = Math.max(0, user._count.posts - questionPosts);
+        const reviewRep = reviewsReceived.reduce((sum, r) => sum + r.rating * 2, 0);
+
+        const repBreakdown = [
+          { label: "Posts", count: otherPosts, rep: otherPosts * 1, icon: "📝" },
+          { label: "Questions Asked", count: questionPosts, rep: questionPosts * 2, icon: "❓" },
+          { label: "Likes Received", count: likesReceived, rep: likesReceived * 2, icon: "❤️" },
+          { label: "Comments Received", count: commentsReceived, rep: commentsReceived * 1, icon: "💬" },
+          { label: "Diagnoses Run", count: user.totalDiagnoses, rep: user.totalDiagnoses * 5, icon: "🔧" },
+          { label: "Car Shows Created", count: user._count.carShows, rep: user._count.carShows * 10, icon: "🎪" },
+          { label: "Jobs Completed (Mechanic)", count: jobsCompletedAsMechanic, rep: jobsCompletedAsMechanic * 8, icon: "🏁" },
+          { label: "Jobs Completed (DIYer)", count: jobsCompletedAsDiyer, rep: jobsCompletedAsDiyer * 3, icon: "✅" },
+          { label: "Parts Sold", count: partsSold, rep: partsSold * 5, icon: "🛒" },
+          { label: "Reviews Received", count: reviewsReceived.length, rep: reviewRep, icon: "⭐" },
+        ].filter((item) => item.count > 0);
+
+        return { ...user, repBreakdown };
+      })
+    );
+
+    res.json(usersWithBreakdown);
   } catch (err) {
     console.error("GET LEADERBOARD ERROR:", err);
     res.status(500).json({ error: "Failed to fetch leaderboard" });

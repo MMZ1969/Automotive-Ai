@@ -247,6 +247,7 @@ app.post("/api/diagnose", authMiddleware, async (req, res) => {
           data: {
             repPoints: { increment: 5 },
             dailyDiagnoses: { increment: 1 },
+            totalDiagnoses: { increment: 1 },
             lastDiagnosisDate: new Date(),
           },
         });
@@ -428,6 +429,7 @@ parsed.ebayParts = ebayParts;
         data: {
           repPoints: { increment: 5 },
           dailyDiagnoses: { increment: 1 },
+          totalDiagnoses: { increment: 1 },
           lastDiagnosisDate: new Date(),
         },
       });
