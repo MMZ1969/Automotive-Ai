@@ -1,3 +1,4 @@
+import { useTheme } from "@context/ThemeContext";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback } from "react";
 import { ActivityIndicator, FlatList, Text, TouchableOpacity, View } from "react-native";
@@ -11,6 +12,7 @@ import { fetchLogsByVehicle } from "@lib/logs";
 export default function VehicleLogsScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
+  const { colors } = useTheme();
   const { logs, setLogs, loading, setLoading } = useLog();
 
   useFocusEffect(
@@ -41,27 +43,27 @@ export default function VehicleLogsScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: "#050509" }}>
-        <ActivityIndicator size="large" color="#345bff" />
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+        <ActivityIndicator size="large" color={colors.blue} />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#050509" }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <View style={{ flex: 1, padding: 16 }}>
         <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 16 }}>
           <TouchableOpacity onPress={() => router.push(`/(tabs)/(profile)/vehicles/${id}`)} style={{ marginRight: 12 }}>
-            <Text style={{ color: "#345bff", fontSize: 16 }}>← Back</Text>
+            <Text style={{ color: colors.blue, fontSize: 16 }}>← Back</Text>
           </TouchableOpacity>
-          <Text style={{ color: "white", fontSize: 22, fontWeight: "bold" }}>
+          <Text style={{ color: colors.text, fontSize: 22, fontWeight: "bold" }}>
             Maintenance Logs
           </Text>
         </View>
 
         {logs.length === 0 ? (
           <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-            <Text style={{ color: "#9ca3af", fontSize: 16, textAlign: "center" }}>
+            <Text style={{ color: colors.textSecondary, fontSize: 16, textAlign: "center" }}>
               No logs yet.{"\n"}Tap the wrench to add your first log!
             </Text>
           </View>
