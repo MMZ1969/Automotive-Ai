@@ -1,13 +1,14 @@
 import { useAuth } from "@context/AuthContext";
 import { useTheme } from "@context/ThemeContext";
 import api from "@lib/api";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { Alert, Linking, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 
 export default function Register() {
   const { register } = useAuth();
   const { colors } = useTheme();
+  const params = useLocalSearchParams();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -20,6 +21,12 @@ export default function Register() {
   const [resending, setResending] = useState(false);
   const [verificationCode, setVerificationCode] = useState("");
   const [verifying, setVerifying] = useState(false);
+  // Pre-filled from an automotiveai://invite?code=XXXX deep link when
+  // present (see app/invite.tsx), but always editable — someone can also
+  // type a code in manually if a friend just told them verbally.
+  const [referralCode, setReferralCode] = useState(
+    typeof params.code === "string" ? params.code.toUpperCase() : ""
+  );
 
   const handleRegister = async () => {
     if (!name || !email || !password) { Alert.alert("Missing fields", "All fields are required."); return; }
@@ -29,7 +36,7 @@ export default function Register() {
     if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) { Alert.alert("Weak Password", "Password must contain at least one special character (!@#$%^&* etc)."); return; }
     try {
       setLoading(true);
-      await register({ name, email, password, role });
+      await register({ name, email, password, role, referralCode: referralCode.trim() || undefined });
     } catch (err: any) {
       if (err?.needsVerification) {
         setRegisteredEmail(email);
@@ -168,6 +175,15 @@ export default function Register() {
           </Text>
         </View>
       )}
+
+      {/* REFERRAL CODE (optional) */}
+      <Text style={{ color: colors.textSecondary, fontSize: 14, marginBottom: 8 }}>Referral Code (optional)</Text>
+      <TextInput
+        placeholder="Got a code from a friend?" placeholderTextColor={colors.textMuted}
+        autoCapitalize="characters"
+        style={{ backgroundColor: colors.input, color: colors.text, padding: 12, borderRadius: 8, marginBottom: 20, borderWidth: 1, borderColor: colors.border }}
+        value={referralCode} onChangeText={setReferralCode}
+      />
 
       {/* TERMS */}
       <TouchableOpacity onPress={() => setAgreedToTerms(!agreedToTerms)} style={{ flexDirection: "row", alignItems: "flex-start", marginBottom: 20, gap: 12 }}>

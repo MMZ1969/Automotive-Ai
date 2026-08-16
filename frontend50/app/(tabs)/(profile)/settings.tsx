@@ -347,6 +347,18 @@ export default function Settings() {
         <View style={row}><Text style={labelStyle}>Build</Text><Text style={valueStyle}>{Constants.expoConfig?.ios?.buildNumber || "—"}</Text></View>
       </View>
 
+      {/* INVITE FRIENDS SECTION */}
+      <Text style={sectionTitle}>Invite Friends</Text>
+      <View style={card}>
+        <TouchableOpacity style={row} onPress={() => router.push("/invite-friends")}>
+          <View>
+            <Text style={labelStyle}>🎉 Invite Friends</Text>
+            <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 2 }}>Share your code, earn rep together</Text>
+          </View>
+          <Text style={{ color: colors.blue, fontSize: 13 }}>Invite →</Text>
+        </TouchableOpacity>
+      </View>
+
       {/* FEEDBACK SECTION */}
       <Text style={sectionTitle}>Feedback</Text>
       <View style={card}>
