@@ -162,6 +162,22 @@ export const login = async (req, res) => {
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: "Invalid credentials" });
+    }
+
+    if (user.isBanned) {
+      return res.status(403).json({ message: "This account has been banned." });
+    }
+
+    if (!user.emailVerified) {
+      return res.status(403).json({ 
+        message: "Please verify your email before logging in. Check your inbox!",
+        needsVerification: true,
+      });
+    }
+
     if (!user.emailVerified) {
       return res.status(403).json({ 
         message: "Please verify your email before logging in. Check your inbox!",
