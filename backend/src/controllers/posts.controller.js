@@ -21,9 +21,6 @@ export const getAllPosts = async (req, res) => {
       include: {
         user: { select: { id: true, name: true, profilePhoto: true, role: true, repPoints: true, isVerified: true } },
         comments: {
-          // Hide test-account comments from everyone EXCEPT the test
-          // account viewing their own comment (so App Store reviewers
-          // don't see commenting look broken while testing it themselves).
           where: {
             OR: [
               { user: { email: { notIn: TEST_ACCOUNT_EMAILS } } },
@@ -34,8 +31,6 @@ export const getAllPosts = async (req, res) => {
           orderBy: { createdAt: "asc" },
         },
         likes: {
-          // Same rule for likes: hide test-account likes from real users,
-          // but a test account still sees their own like reflected.
           where: {
             OR: [
               { user: { email: { notIn: TEST_ACCOUNT_EMAILS } } },
@@ -92,8 +87,6 @@ export const getPostById = async (req, res) => {
 // CREATE a post
 export const createPost = async (req, res) => {
   try {
-    console.log("CREATE POST BODY:", req.body);
-    console.log("POST TYPE RECEIVED:", req.body.postType);
     const { content, imageUrl, imageUrls, postType, servicePrice, serviceLocation, beforeImageUrl, afterImageUrl } = req.body;
     const userId = req.user.id;
     if (!content || content.trim() === "") {
@@ -102,27 +95,26 @@ export const createPost = async (req, res) => {
     const validTypes = ["VANITY", "QUESTION", "SERVICE", "BEFORE_AFTER"];
     const type = validTypes.includes(postType) ? postType : "VANITY";
     const post = await prisma.post.create({
-    data: { 
-  content, 
-  userId, 
-  imageUrl: imageUrl || (imageUrls?.[0] || null),
-  imageUrls: imageUrls || [],
-  postType: type,
-  servicePrice: servicePrice || null,
-  serviceLocation: serviceLocation || null,
-  beforeImageUrl: beforeImageUrl || null,
-  afterImageUrl: afterImageUrl || null,
-    },
-  });
+      data: {
+        content,
+        userId,
+        imageUrl: imageUrl || (imageUrls?.[0] || null),
+        imageUrls: imageUrls || [],
+        postType: type,
+        servicePrice: servicePrice || null,
+        serviceLocation: serviceLocation || null,
+        beforeImageUrl: beforeImageUrl || null,
+        afterImageUrl: afterImageUrl || null,
+      },
+    });
 
-    // Award rep for posting
     const repToAward = type === "QUESTION" ? 2 : 1;
     await prisma.user.update({
       where: { id: userId },
       data: { repPoints: { increment: repToAward } },
     });
 
-res.json(post);
+    res.json(post);
   } catch (err) {
     console.error("CREATE POST ERROR:", err);
     res.status(500).json({ error: "Failed to create post" });
@@ -147,7 +139,6 @@ export const deletePost = async (req, res) => {
   try {
     const id = Number(req.params.id);
 
-    // Delete related records first
     await prisma.like.deleteMany({ where: { postId: id } });
     await prisma.comment.deleteMany({ where: { postId: id } });
     await prisma.report.deleteMany({ where: { postId: id } });
@@ -182,7 +173,6 @@ export const toggleLike = async (req, res) => {
           data: { repPoints: { decrement: 2 } },
         });
       }
-      // Respond immediately — nothing further to await for an unlike.
       return res.json({ liked: false });
     } else {
       await prisma.like.create({ data: { postId, userId } });
@@ -194,12 +184,6 @@ export const toggleLike = async (req, res) => {
         });
       }
 
-      // Respond to the tapping user right away — don't make them wait on
-      // the notification lookup + push-service network call below. That
-      // round trip (actor lookup, notification create, push token lookup,
-      // unread count, then an external fetch to Expo's push API) was
-      // adding several seconds to every like, which made the button feel
-      // unresponsive and led to accidental repeat taps / duplicate likes.
       res.json({ liked: true });
 
       if (post && post.userId !== userId) {
@@ -242,8 +226,6 @@ export const addComment = async (req, res) => {
       include: { user: true },
     });
 
-    // Respond right away — same reasoning as toggleLike above, the
-    // notification/push work below shouldn't hold up the comment UI.
     res.json(comment);
 
     const post = await prisma.post.findUnique({ where: { id: postId } });
@@ -274,6 +256,134 @@ export const addComment = async (req, res) => {
   }
 };
 
+// ADD REPLY (a comment with a parentId)
+export const addReply = async (req, res) => {
+  try {
+    const postId = Number(req.params.id);
+    const parentId = Number(req.params.commentId);
+    const userId = req.user.id;
+    const { content } = req.body;
+
+    if (!content || content.trim() === "") {
+      return res.status(400).json({ error: "Reply cannot be empty" });
+    }
+
+    const reply = await prisma.comment.create({
+      data: { content, userId, postId, parentId },
+      include: { user: true },
+    });
+
+    res.json(reply);
+
+    (async () => {
+      try {
+        const parentComment = await prisma.comment.findUnique({
+          where: { id: parentId },
+          select: { userId: true },
+        });
+
+        if (parentComment && parentComment.userId !== userId) {
+          const actor = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { name: true },
+          });
+          await createAndSendNotification({
+            recipientId: parentComment.userId,
+            actorId: userId,
+            type: "comment",
+            postId,
+            message: `${actor?.name || "Someone"} replied to your comment 💬`,
+          });
+        }
+      } catch (notifyErr) {
+        console.error("REPLY NOTIFICATION ERROR:", notifyErr);
+      }
+    })();
+  } catch (err) {
+    console.error("ADD REPLY ERROR:", err);
+    res.status(500).json({ error: "Failed to add reply" });
+  }
+};
+
+// TOGGLE LIKE ON A COMMENT
+export const toggleCommentLike = async (req, res) => {
+  try {
+    const commentId = Number(req.params.commentId);
+    const userId = req.user.id;
+
+    const existing = await prisma.like.findUnique({
+      where: { commentId_userId: { commentId, userId } },
+    });
+
+    const comment = await prisma.comment.findUnique({ where: { id: commentId } });
+    if (!comment) return res.status(404).json({ error: "Comment not found" });
+
+    if (existing) {
+      await prisma.like.delete({
+        where: { commentId_userId: { commentId, userId } },
+      });
+      return res.json({ liked: false });
+    } else {
+      await prisma.like.create({ data: { commentId, userId } });
+
+      res.json({ liked: true });
+
+      if (comment.userId !== userId) {
+        (async () => {
+          try {
+            const actor = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
+            await createAndSendNotification({
+              recipientId: comment.userId,
+              actorId: userId,
+              type: "comment_like",
+              postId: comment.postId,
+              message: `${actor?.name || "Someone"} liked your comment ❤️`,
+            });
+          } catch (notifyErr) {
+            console.error("COMMENT LIKE NOTIFICATION ERROR:", notifyErr);
+          }
+        })();
+      }
+      return;
+    }
+  } catch (err) {
+    console.error("TOGGLE COMMENT LIKE ERROR:", err);
+    res.status(500).json({ error: "Failed to toggle comment like" });
+  }
+};
+
+// DELETE a comment or reply
+export const deleteComment = async (req, res) => {
+  try {
+    const commentId = Number(req.params.commentId);
+    const userId = req.user.id;
+
+    const comment = await prisma.comment.findUnique({ where: { id: commentId } });
+    if (!comment) return res.status(404).json({ error: "Comment not found" });
+
+    if (comment.userId !== userId) {
+      const user = await prisma.user.findUnique({ where: { id: userId }, select: { isAdmin: true } });
+      if (!user?.isAdmin) {
+        return res.status(403).json({ error: "Not authorized to delete this comment" });
+      }
+    }
+
+    const replies = await prisma.comment.findMany({ where: { parentId: commentId }, select: { id: true } });
+    const replyIds = replies.map((r) => r.id);
+
+    await prisma.like.deleteMany({ where: { commentId: { in: [commentId, ...replyIds] } } });
+    if (replyIds.length > 0) {
+      await prisma.comment.deleteMany({ where: { id: { in: replyIds } } });
+    }
+    await prisma.comment.delete({ where: { id: commentId } });
+
+    res.json({ message: "Comment deleted" });
+  } catch (err) {
+    console.error("DELETE COMMENT ERROR:", err);
+    res.status(500).json({ error: "Failed to delete comment" });
+  }
+};
+
 // GET FOLLOWING POSTS
 export const getFollowingPosts = async (req, res) => {
   try {
@@ -291,9 +401,9 @@ export const getFollowingPosts = async (req, res) => {
     const posts = await prisma.post.findMany({
       where,
       orderBy: [
-  { pinned: "desc" },
-  { createdAt: "desc" },
-  ],
+        { pinned: "desc" },
+        { createdAt: "desc" },
+      ],
       include: {
         user: { select: { id: true, name: true, profilePhoto: true, role: true, repPoints: true, isVerified: true } },
         comments: {
@@ -334,13 +444,6 @@ export const reportPost = async (req, res) => {
       return res.status(400).json({ error: "Reason is required" });
     }
 
-    // NOTE: was previously prisma.report.findUnique() with a
-    // reporterId_postId compound key — but the Report model in
-    // schema.prisma has no @@unique([reporterId, postId]) constraint,
-    // so that shape never existed and this threw on every single call,
-    // which is why the report button appeared completely broken.
-    // findFirst works with a plain where clause and needs no schema
-    // change to fix.
     const existing = await prisma.report.findFirst({
       where: { reporterId, postId },
     });
@@ -352,6 +455,25 @@ export const reportPost = async (req, res) => {
     await prisma.report.create({
       data: { reporterId, postId, reason },
     });
+
+    try {
+      const post = await prisma.post.findUnique({ where: { id: postId }, select: { content: true } });
+      const admins = await prisma.user.findMany({
+        where: { isAdmin: true },
+        select: { id: true },
+      });
+      await Promise.all(admins.map(admin =>
+        createAndSendNotification({
+          recipientId: admin.id,
+          actorId: reporterId,
+          type: "post_reported",
+          postId,
+          message: `🚨 Post reported — Reason: ${reason}${post?.content ? ` | "${post.content.slice(0, 60)}${post.content.length > 60 ? "..." : ""}"` : ""}`,
+        })
+      ));
+    } catch (notifyErr) {
+      console.error("REPORT POST NOTIFY ADMIN ERROR:", notifyErr);
+    }
 
     res.json({ success: true, message: "Post reported successfully" });
   } catch (err) {
@@ -385,12 +507,10 @@ export const reportJob = async (req, res) => {
       data: { reporterId, jobId, reason },
     });
 
-    // Notify admin
     const admins = await prisma.user.findMany({
       where: { isAdmin: true },
       select: { id: true },
     });
-    const { createAndSendNotification } = await import("./notification.controller.js");
     await Promise.all(admins.map(admin =>
       createAndSendNotification({
         recipientId: admin.id,
@@ -434,7 +554,8 @@ export const searchPosts = async (req, res) => {
     res.status(500).json({ error: "Failed to search posts" });
   }
 };
-  // GET SIMILAR POSTS
+
+// GET SIMILAR POSTS
 export const getSimilarPosts = async (req, res) => {
   try {
     const id = Number(req.params.id);
@@ -461,6 +582,7 @@ export const getSimilarPosts = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch similar posts" });
   }
 };
+
 // PIN / UNPIN a post (admin only)
 export const togglePinPost = async (req, res) => {
   try {
