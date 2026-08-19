@@ -334,8 +334,15 @@ export const reportPost = async (req, res) => {
       return res.status(400).json({ error: "Reason is required" });
     }
 
-    const existing = await prisma.report.findUnique({
-      where: { reporterId_postId: { reporterId, postId } },
+    // NOTE: was previously prisma.report.findUnique() with a
+    // reporterId_postId compound key — but the Report model in
+    // schema.prisma has no @@unique([reporterId, postId]) constraint,
+    // so that shape never existed and this threw on every single call,
+    // which is why the report button appeared completely broken.
+    // findFirst works with a plain where clause and needs no schema
+    // change to fix.
+    const existing = await prisma.report.findFirst({
+      where: { reporterId, postId },
     });
 
     if (existing) {
@@ -481,135 +488,5 @@ export const togglePinPost = async (req, res) => {
   } catch (err) {
     console.error("TOGGLE PIN ERROR:", err);
     res.status(500).json({ error: "Failed to toggle pin" });
-  }
-};
-export const addReply = async (req, res) => {
-  try {
-    const postId = Number(req.params.id);
-    const parentId = Number(req.params.commentId);
-    const userId = req.user.id;
-    const { content } = req.body;
-
-    if (!content || content.trim() === "") {
-      return res.status(400).json({ error: "Reply cannot be empty" });
-    }
-
-    const reply = await prisma.comment.create({
-      data: { content, userId, postId, parentId },
-      include: { user: true },
-    });
-
-    res.json(reply);
-
-    // Notify the parent comment author (if not replying to yourself) —
-    // moved after res.json so this network work never delays the response.
-    (async () => {
-      try {
-        const parentComment = await prisma.comment.findUnique({
-          where: { id: parentId },
-          select: { userId: true },
-        });
-
-        if (parentComment && parentComment.userId !== userId) {
-          const actor = await prisma.user.findUnique({
-            where: { id: userId },
-            select: { name: true },
-          });
-          await createAndSendNotification({
-            recipientId: parentComment.userId,
-            actorId: userId,
-            type: "comment",
-            postId,
-            message: `${actor?.name || "Someone"} replied to your comment 💬`,
-          });
-        }
-      } catch (notifyErr) {
-        console.error("REPLY NOTIFICATION ERROR:", notifyErr);
-      }
-    })();
-  } catch (err) {
-    console.error("ADD REPLY ERROR:", err);
-    res.status(500).json({ error: "Failed to add reply" });
-  }
-};
-// TOGGLE LIKE ON A COMMENT
-export const toggleCommentLike = async (req, res) => {
-  try {
-    const commentId = Number(req.params.commentId);
-    const userId = req.user.id;
-
-    const existing = await prisma.like.findUnique({
-      where: { commentId_userId: { commentId, userId } },
-    });
-
-    const comment = await prisma.comment.findUnique({ where: { id: commentId } });
-    if (!comment) return res.status(404).json({ error: "Comment not found" });
-
-    if (existing) {
-      await prisma.like.delete({
-        where: { commentId_userId: { commentId, userId } },
-      });
-      return res.json({ liked: false });
-    } else {
-      await prisma.like.create({ data: { commentId, userId } });
-
-      // Respond immediately — notification work happens in the background,
-      // same pattern as toggleLike for posts, to avoid the multi-second
-      // delay we fixed there earlier.
-      res.json({ liked: true });
-
-      if (comment.userId !== userId) {
-        (async () => {
-          try {
-            const actor = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
-            await createAndSendNotification({
-              recipientId: comment.userId,
-              actorId: userId,
-              type: "comment_like",
-              postId: comment.postId,
-              message: `${actor?.name || "Someone"} liked your comment ❤️`,
-            });
-          } catch (notifyErr) {
-            console.error("COMMENT LIKE NOTIFICATION ERROR:", notifyErr);
-          }
-        })();
-      }
-      return;
-    }
-  } catch (err) {
-    console.error("TOGGLE COMMENT LIKE ERROR:", err);
-    res.status(500).json({ error: "Failed to toggle comment like" });
-  }
-};
-
-export const deleteComment = async (req, res) => {
-  try {
-    const commentId = Number(req.params.commentId);
-    const userId = req.user.id;
-
-    const comment = await prisma.comment.findUnique({ where: { id: commentId } });
-    if (!comment) return res.status(404).json({ error: "Comment not found" });
-
-    if (comment.userId !== userId) {
-      const user = await prisma.user.findUnique({ where: { id: userId }, select: { isAdmin: true } });
-      if (!user?.isAdmin) {
-        return res.status(403).json({ error: "Not authorized to delete this comment" });
-      }
-    }
-
-    // If this is a top-level comment, its replies need to go too
-    const replies = await prisma.comment.findMany({ where: { parentId: commentId }, select: { id: true } });
-    const replyIds = replies.map((r) => r.id);
-
-    await prisma.like.deleteMany({ where: { commentId: { in: [commentId, ...replyIds] } } });
-    if (replyIds.length > 0) {
-      await prisma.comment.deleteMany({ where: { id: { in: replyIds } } });
-    }
-    await prisma.comment.delete({ where: { id: commentId } });
-
-    res.json({ message: "Comment deleted" });
-  } catch (err) {
-    console.error("DELETE COMMENT ERROR:", err);
-    res.status(500).json({ error: "Failed to delete comment" });
   }
 };
