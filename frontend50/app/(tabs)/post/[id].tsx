@@ -1,3 +1,4 @@
+import ImageLightbox from "@components/ImageLightbox";
 import { useAuth } from "@context/AuthContext";
 import { useTheme } from "@context/ThemeContext";
 import api from "@lib/api";
@@ -30,6 +31,15 @@ export default function PostDetail() {
   const screenWidth = Dimensions.get("window").width;
   const carouselWidth = screenWidth - 32 - 32; // matches the card's outer margin(16) + padding(16) on each side
   const replyInputRef = useRef<TextInput>(null);
+  const [lightboxVisible, setLightboxVisible] = useState(false);
+  const [lightboxImages, setLightboxImages] = useState<string[]>([]);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+
+  const openLightbox = (images: string[], index: number) => {
+    setLightboxImages(images);
+    setLightboxIndex(index);
+    setLightboxVisible(true);
+  };
 
   const fetchPost = async () => {
     setLoading(true);
@@ -194,6 +204,14 @@ export default function PostDetail() {
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.background }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
 
+      {/* PHOTO ZOOM LIGHTBOX */}
+      <ImageLightbox
+        visible={lightboxVisible}
+        images={lightboxImages}
+        initialIndex={lightboxIndex}
+        onClose={() => setLightboxVisible(false)}
+      />
+
       {/* EDIT MODAL */}
       <Modal visible={editModalVisible} transparent animationType="slide" onRequestClose={() => setEditModalVisible(false)}>
         <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
@@ -295,7 +313,9 @@ export default function PostDetail() {
 
   if (images.length === 1) {
     return (
-      <Image source={{ uri: images[0] }} style={{ width: "100%", height: 250, borderRadius: 12, marginBottom: 12 }} resizeMode="cover" />
+      <TouchableOpacity onPress={() => openLightbox(images, 0)} activeOpacity={0.85}>
+        <Image source={{ uri: images[0] }} style={{ width: "100%", height: 250, borderRadius: 12, marginBottom: 12 }} resizeMode="cover" />
+      </TouchableOpacity>
     );
   }
 
@@ -311,8 +331,10 @@ export default function PostDetail() {
           const index = Math.round(e.nativeEvent.contentOffset.x / carouselWidth);
           setActiveImageIndex(index);
         }}
-        renderItem={({ item }) => (
-          <Image source={{ uri: item }} style={{ width: carouselWidth, height: 250, borderRadius: 12 }} resizeMode="cover" />
+        renderItem={({ item, index }) => (
+          <TouchableOpacity onPress={() => openLightbox(images, index)} activeOpacity={0.85}>
+            <Image source={{ uri: item }} style={{ width: carouselWidth, height: 250, borderRadius: 12 }} resizeMode="cover" />
+          </TouchableOpacity>
         )}
       />
       <View style={{ flexDirection: "row", justifyContent: "center", gap: 6, marginTop: 8 }}>
@@ -332,18 +354,18 @@ export default function PostDetail() {
 
               {post?.postType === "BEFORE_AFTER" && post?.beforeImageUrl && post?.afterImageUrl && (
                 <View style={{ flexDirection: "row", gap: 6, marginTop: 10 }}>
-                  <View style={{ flex: 1, borderRadius: 10, overflow: "hidden" }}>
+                  <TouchableOpacity onPress={() => openLightbox([post.beforeImageUrl, post.afterImageUrl], 0)} style={{ flex: 1, borderRadius: 10, overflow: "hidden" }} activeOpacity={0.85}>
                     <Image source={{ uri: post.beforeImageUrl }} style={{ width: "100%", height: 180 }} resizeMode="cover" />
                     <View style={{ position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: "rgba(220,38,38,0.7)", padding: 5, alignItems: "center" }}>
                       <Text style={{ color: "white", fontSize: 11, fontWeight: "700", letterSpacing: 1 }}>BEFORE</Text>
                     </View>
-                  </View>
-                  <View style={{ flex: 1, borderRadius: 10, overflow: "hidden" }}>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => openLightbox([post.beforeImageUrl, post.afterImageUrl], 1)} style={{ flex: 1, borderRadius: 10, overflow: "hidden" }} activeOpacity={0.85}>
                     <Image source={{ uri: post.afterImageUrl }} style={{ width: "100%", height: 180 }} resizeMode="cover" />
                     <View style={{ position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: "rgba(16,185,129,0.6)", padding: 5, alignItems: "center" }}>
                       <Text style={{ color: "white", fontSize: 11, fontWeight: "700", letterSpacing: 1 }}>AFTER</Text>
                     </View>
-                  </View>
+                  </TouchableOpacity>
                 </View>
               )}
 

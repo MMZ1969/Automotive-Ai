@@ -15,6 +15,7 @@ import {
   View
 } from "react-native";
 import Svg, { Circle, Line } from "react-native-svg";
+import ImageLightbox from "../../components/ImageLightbox";
 import RichText from "../../components/RichText";
 
 const logo = require("../../assets/autoai_icon_1024_tm.png");
@@ -63,6 +64,15 @@ export default function Feed() {
   const [activeFilter, setActiveFilter] = useState<FilterKey>("ALL");
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [menuPost, setMenuPost] = useState<any>(null);
+  const [lightboxVisible, setLightboxVisible] = useState(false);
+  const [lightboxImages, setLightboxImages] = useState<string[]>([]);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+
+  const openLightbox = (images: string[], index: number) => {
+    setLightboxImages(images);
+    setLightboxIndex(index);
+    setLightboxVisible(true);
+  };
 
   const fetchPosts = async (tab: MainTab = activeTab, filter: FilterKey = activeFilter) => {
     if (filter === "NEAR_ME") {
@@ -202,6 +212,14 @@ export default function Feed() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
+
+      {/* PHOTO ZOOM LIGHTBOX */}
+      <ImageLightbox
+        visible={lightboxVisible}
+        images={lightboxImages}
+        initialIndex={lightboxIndex}
+        onClose={() => setLightboxVisible(false)}
+      />
 
       {/* POST MENU MODAL */}
       <Modal visible={!!menuPost} transparent animationType="fade" onRequestClose={() => setMenuPost(null)}>
@@ -399,7 +417,9 @@ export default function Feed() {
             </Text>
           </View>
         }
-        renderItem={({ item }) => (
+        renderItem={({ item }) => {
+          const postImages: string[] = item.imageUrls?.length > 0 ? item.imageUrls : (item.imageUrl ? [item.imageUrl] : []);
+          return (
           <View style={{
             backgroundColor: colors.card, marginHorizontal: 16, marginTop: 16,
             borderRadius: 16, borderWidth: 1,
@@ -506,42 +526,46 @@ export default function Feed() {
               </TouchableOpacity>
             )}
 
-            <TouchableOpacity onPress={() => router.push(`/(tabs)/post/${item.id}`)} activeOpacity={0.8}>
-              {item.imageUrls?.length > 1 ? (
-                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 4, marginTop: 12 }}>
-                  {item.imageUrls.map((url: string, index: number) => (
+            {/* Images now open the zoom lightbox on tap instead of
+                navigating to the post detail screen. Viewing the full
+                post/comments still works via the comment icon below. */}
+            {postImages.length > 1 ? (
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 4, marginTop: 12 }}>
+                {postImages.map((url: string, index: number) => (
+                  <TouchableOpacity key={index} onPress={() => openLightbox(postImages, index)} activeOpacity={0.85}>
                     <Image
-                      key={index}
                       source={{ uri: url }}
                       style={{
-                        width: item.imageUrls.length === 2 ? "49%" : item.imageUrls.length === 3 && index === 0 ? "100%" : "49%",
-                        height: item.imageUrls.length === 2 ? 160 : item.imageUrls.length === 3 && index === 0 ? 200 : 160,
+                        width: postImages.length === 2 ? 180 : postImages.length === 3 && index === 0 ? 366 : 180,
+                        height: postImages.length === 2 ? 160 : postImages.length === 3 && index === 0 ? 200 : 160,
                         borderRadius: 10,
                       }}
                       resizeMode="cover"
                     />
-                  ))}
-                </View>
-              ) : item.imageUrl ? (
+                  </TouchableOpacity>
+                ))}
+              </View>
+            ) : item.imageUrl ? (
+              <TouchableOpacity onPress={() => openLightbox([item.imageUrl], 0)} activeOpacity={0.85}>
                 <Image source={{ uri: item.imageUrl }} style={{ width: "100%", height: 200, borderRadius: 12, marginTop: 12 }} resizeMode="cover" />
-              ) : null}
-              {item.postType === "BEFORE_AFTER" && item.beforeImageUrl && item.afterImageUrl && (
-                <View style={{ flexDirection: "row", gap: 6, marginTop: 10 }}>
-                  <View style={{ flex: 1, borderRadius: 10, overflow: "hidden" }}>
-                    <Image source={{ uri: item.beforeImageUrl }} style={{ width: "100%", height: 160 }} resizeMode="cover" />
-                    <View style={{ position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: "rgba(220,38,38,0.7)", padding: 5, alignItems: "center" }}>
-                      <Text style={{ color: "white", fontSize: 11, fontWeight: "700", letterSpacing: 1 }}>BEFORE</Text>
-                    </View>
+              </TouchableOpacity>
+            ) : null}
+            {item.postType === "BEFORE_AFTER" && item.beforeImageUrl && item.afterImageUrl && (
+              <View style={{ flexDirection: "row", gap: 6, marginTop: 10 }}>
+                <TouchableOpacity onPress={() => openLightbox([item.beforeImageUrl, item.afterImageUrl], 0)} style={{ flex: 1, borderRadius: 10, overflow: "hidden" }} activeOpacity={0.85}>
+                  <Image source={{ uri: item.beforeImageUrl }} style={{ width: "100%", height: 160 }} resizeMode="cover" />
+                  <View style={{ position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: "rgba(220,38,38,0.7)", padding: 5, alignItems: "center" }}>
+                    <Text style={{ color: "white", fontSize: 11, fontWeight: "700", letterSpacing: 1 }}>BEFORE</Text>
                   </View>
-                  <View style={{ flex: 1, borderRadius: 10, overflow: "hidden" }}>
-                    <Image source={{ uri: item.afterImageUrl }} style={{ width: "100%", height: 160 }} resizeMode="cover" />
-                    <View style={{ position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: "rgba(16,185,129,0.7)", padding: 5, alignItems: "center" }}>
-                      <Text style={{ color: "white", fontSize: 11, fontWeight: "700", letterSpacing: 1 }}>AFTER</Text>
-                    </View>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => openLightbox([item.beforeImageUrl, item.afterImageUrl], 1)} style={{ flex: 1, borderRadius: 10, overflow: "hidden" }} activeOpacity={0.85}>
+                  <Image source={{ uri: item.afterImageUrl }} style={{ width: "100%", height: 160 }} resizeMode="cover" />
+                  <View style={{ position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: "rgba(16,185,129,0.7)", padding: 5, alignItems: "center" }}>
+                    <Text style={{ color: "white", fontSize: 11, fontWeight: "700", letterSpacing: 1 }}>AFTER</Text>
                   </View>
-                </View>
-              )}
-            </TouchableOpacity>
+                </TouchableOpacity>
+              </View>
+            )}
 
             <View style={{ flexDirection: "row", marginTop: 14, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border, gap: 20 }}>
               <TouchableOpacity onPress={() => handleLike(item.id)} style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
@@ -554,7 +578,8 @@ export default function Feed() {
               </TouchableOpacity>
             </View>
           </View>
-        )}
+        );
+        }}
       />
 
       {/* FLOATING POST BUTTON */}
