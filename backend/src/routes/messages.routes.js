@@ -125,9 +125,11 @@ router.post("/conversations/:id/messages", authMiddleware, async (req, res) => {
   try {
     const userId = req.user.id;
     const conversationId = parseInt(req.params.id);
-    const { content } = req.body;
+    const { content, mediaUrl, mediaType } = req.body;
 
-    if (!content || content.trim() === "") {
+    // A message needs text OR media — not necessarily both, so a
+    // photo/video can be sent with no caption.
+    if ((!content || content.trim() === "") && !mediaUrl) {
       return res.status(400).json({ error: "Message cannot be empty" });
     }
 
@@ -156,7 +158,14 @@ router.post("/conversations/:id/messages", authMiddleware, async (req, res) => {
     }
 
     const message = await prisma.message.create({
-      data: { conversationId, senderId: userId, receiverId, content },
+      data: {
+        conversationId,
+        senderId: userId,
+        receiverId,
+        content: content || "",
+        mediaUrl: mediaUrl || null,
+        mediaType: mediaType || null,
+      },
       include: {
         sender: { select: { id: true, name: true, profilePhoto: true } },
       },
@@ -184,10 +193,16 @@ router.post("/conversations/:id/messages", authMiddleware, async (req, res) => {
           where: { receiverId, read: false },
         });
 
+        // For a media-only message, the push preview shows what kind of
+        // media it is rather than an empty string.
+        const pushBody = content && content.trim()
+          ? (content.length > 80 ? content.slice(0, 80) + "…" : content)
+          : mediaType === "video" ? "🎥 Sent a video" : mediaUrl ? "📷 Sent a photo" : "";
+
         await sendPushNotification(
           recipient.pushToken,
           `${message.sender.name} 💬`,
-          content.length > 80 ? content.slice(0, 80) + "…" : content,
+          pushBody,
           unreadCount
         );
       }
