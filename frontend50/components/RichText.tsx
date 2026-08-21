@@ -64,7 +64,9 @@ function YouTubePreviewCard({ videoId, colors }: { videoId: string; colors: any 
 /**
  * Renders post/comment text with:
  *   - tappable URLs  (https://, http://, or www.)  → opens in browser / app
- *   - YouTube links specifically → rendered as a thumbnail preview card
+ *   - YouTube links specifically → rendered ONLY as a thumbnail preview
+ *     card below the text (the raw link itself is omitted from the text
+ *     to avoid showing the same link twice — once as text, once as a card)
  *   - tappable #hashtags → calls onHashtagPress(tag)
  *   - everything else as normal text
  *
@@ -97,18 +99,10 @@ export default function RichText({ text, colors, baseStyle, onHashtagPress }: Ri
           const youtubeId = getYouTubeId(part);
           if (youtubeId) {
             if (!youtubeCards.includes(youtubeId)) youtubeCards.push(youtubeId);
-            // Still show the raw link inline as tappable text too, since
-            // removing it entirely would look like the link vanished —
-            // the preview card below is the primary affordance.
-            return (
-              <Text
-                key={i}
-                style={{ color: colors.blue, textDecorationLine: "underline" }}
-                onPress={() => openLink(part)}
-              >
-                {part}
-              </Text>
-            );
+            // YouTube links are represented ONLY by the preview card below
+            // — showing the raw link text too would just duplicate the
+            // same link twice in the same post.
+            return null;
           }
           return (
             <Text
