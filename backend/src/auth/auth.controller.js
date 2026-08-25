@@ -40,6 +40,24 @@ const validatePassword = (password) => {
 const isValidEmail = (email) =>
   typeof email === "string" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 
+// Disposable/temp-mail domains — common services bots and spam scripts use
+// specifically because they don't require a real inbox. This is a small,
+// hand-maintained list covering the most common services; not exhaustive,
+// but it directly targets the exact pattern seen in tonight's spam
+// signups (e.g. fygdwyv@emel.com). Cheap to extend later — just add
+// domains to this array, no schema or infrastructure change needed.
+const DISPOSABLE_EMAIL_DOMAINS = [
+  "emel.com", "mailinator.com", "guerrillamail.com", "10minutemail.com",
+  "tempmail.com", "temp-mail.org", "throwawaymail.com", "yopmail.com",
+  "trashmail.com", "getnada.com", "fakeinbox.com", "sharklasers.com",
+  "maildrop.cc", "mintemail.com", "dispostable.com", "spamgourmet.com",
+];
+
+const isDisposableEmail = (email) => {
+  const domain = email.split("@")[1]?.toLowerCase().trim();
+  return domain ? DISPOSABLE_EMAIL_DOMAINS.includes(domain) : false;
+};
+
 // REGISTER
 export const register = async (req, res) => {
   try {
@@ -48,6 +66,10 @@ export const register = async (req, res) => {
 
     if (!isValidEmail(email)) {
       return res.status(400).json({ message: "Please enter a valid email address." });
+    }
+
+    if (isDisposableEmail(email)) {
+      return res.status(400).json({ message: "Please use a real, permanent email address to sign up." });
     }
 
     if (isProfane(name)) {
