@@ -131,7 +131,8 @@ export default function ChatScreen() {
           }
         );
       });
-    } catch {
+    } catch (err) {
+      console.error("MESSAGE ATTACHMENT UPLOAD ERROR:", err);
       Alert.alert("Upload failed", "Could not upload attachment. Please try again.");
       setAttachmentUri(null);
       setAttachmentType(null);
