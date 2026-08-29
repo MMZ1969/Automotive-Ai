@@ -251,6 +251,10 @@ app.post("/api/diagnose", authMiddleware, async (req, res) => {
             lastDiagnosisDate: new Date(),
           },
         });
+        // Searchable in Railway logs — this is the one place we can
+        // actually see WHEN a diagnosis ran, since totalDiagnoses is
+        // just a counter with no history of its own.
+        console.log(`DIAGNOSIS RUN | userId=${userId} | cached=true | at=${new Date().toISOString()}`);
       } catch (repErr) {
         console.error("REP AWARD ERROR:", repErr);
       }
@@ -433,6 +437,7 @@ parsed.ebayParts = ebayParts;
           lastDiagnosisDate: new Date(),
         },
       });
+      console.log(`DIAGNOSIS RUN | userId=${req.user.id} | cached=false | at=${new Date().toISOString()}`);
     } catch (repErr) {
       console.error("REP AWARD ERROR:", repErr);
     }
