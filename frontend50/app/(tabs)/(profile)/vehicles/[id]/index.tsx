@@ -304,6 +304,16 @@ export default function VehicleDetailsScreen() {
             <Text style={styles.logsButtonText}>📋 View Maintenance Logs</Text>
           </TouchableOpacity>
 
+                <TouchableOpacity onPress={openLogs} style={styles.logsButton}>
+        <Text style={styles.logsButtonText}>📋 View Maintenance Logs</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity onPress={() => router.push(`/(tabs)/(profile)/vehicles/${id}/diagnoses`)} style={styles.logsButton}>
+        <Text style={styles.logsButtonText}>💾 View Saved Diagnoses</Text>
+      </TouchableOpacity>
+
+      <WrenchButton onPress={() => router.push(`/(tabs)/(profile)/vehicles/${id}/logs/add`)} />
+
           <WrenchButton onPress={() => router.push(`/(tabs)/(profile)/vehicles/${id}/logs/add`)} />
           </>
         ) : (

@@ -359,6 +359,17 @@ export default function Settings() {
         </TouchableOpacity>
       </View>
 
+            <Text style={sectionTitle}>Saved Diagnoses</Text>
+      <View style={card}>
+        <TouchableOpacity style={row} onPress={() => router.push("/(tabs)/saved-diagnoses")}>
+          <View>
+            <Text style={labelStyle}>💾 Saved Diagnoses</Text>
+            <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 2 }}>View diagnoses you've saved</Text>
+          </View>
+          <Text style={{ color: colors.blue, fontSize: 13 }}>View →</Text>
+        </TouchableOpacity>
+      </View>
+
       {/* FEEDBACK SECTION */}
       <Text style={sectionTitle}>Feedback</Text>
       <View style={card}>
