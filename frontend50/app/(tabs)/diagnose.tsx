@@ -230,6 +230,30 @@ finally { setLoading(false); }
     });
   };
 
+  const handleSaveDiagnosis = async () => {
+  if (!result) return;
+  try {
+    await api.post("/api/diagnose/save", {
+      query,
+      vehicleId: selectedVehicle?.id || null,
+      vehicleLabel: selectedVehicle ? `${selectedVehicle.year} ${selectedVehicle.make} ${selectedVehicle.model}` : null,
+      summary: result.summary,
+      severity: result.severity,
+      causes: result.causes,
+      estimatedCost: result.estimatedCost,
+      diyDifficulty: result.diyDifficulty,
+      immediateAction: result.immediateAction,
+      diagnosisSteps: result.diagnosisSteps,
+      proTip: result.proTip,
+      ebayParts: result.ebayParts,
+    });
+    Alert.alert("✅ Saved!", selectedVehicle ? "Saved to this vehicle's history." : "Saved to your diagnosis history.");
+  } catch (err) {
+    console.error("SAVE DIAGNOSIS ERROR:", err);
+    Alert.alert("Error", "Could not save diagnosis. Try again.");
+  }
+};
+
   const severityColor = (severity: string) => {
     switch (severity) {
       case "Low": return "#10b981"; case "Medium": return "#f59e0b";
@@ -384,6 +408,13 @@ finally { setLoading(false); }
         <MaterialCommunityIcons name="share-variant" size={18} color="white" />
         <Text style={{ color: "white", fontWeight: "700" }}>Share to Feed</Text>
       </TouchableOpacity>
+      <TouchableOpacity
+            onPress={handleSaveDiagnosis}
+            style={{ flex: 1, backgroundColor: colors.card, borderRadius: 12, borderWidth: 1, borderColor: colors.green + "44", paddingVertical: 12, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8 }}
+          >
+            <MaterialCommunityIcons name="content-save-outline" size={18} color={colors.green} />
+            <Text style={{ color: colors.green, fontWeight: "700" }}>Save</Text>
+          </TouchableOpacity>
     </View>
 
             {/* Read Aloud — full-width and separate from the row above since
