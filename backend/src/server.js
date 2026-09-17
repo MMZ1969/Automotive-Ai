@@ -818,6 +818,93 @@ app.get("/api/youtube", async (req, res) => {
   }
 });
 
+// SAVE a diagnosis
+app.post("/api/diagnose/save", authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { query, vehicleId, vehicleLabel, summary, severity, causes, estimatedCost, diyDifficulty, immediateAction, diagnosisSteps, proTip, ebayParts } = req.body;
+
+    if (!summary || !diagnosisSteps) {
+      return res.status(400).json({ error: "Missing diagnosis data" });
+    }
+
+    const saved = await prisma.savedDiagnosis.create({
+      data: {
+        userId,
+        vehicleId: vehicleId || null,
+        vehicleLabel: vehicleLabel || null,
+        query: query || "",
+        summary,
+        severity: severity || "Medium",
+        causes: causes || [],
+        estimatedCost: estimatedCost || null,
+        diyDifficulty: diyDifficulty || null,
+        immediateAction: immediateAction || null,
+        diagnosisSteps,
+        proTip: proTip || null,
+        ebayParts: ebayParts || null,
+      },
+    });
+
+    res.json(saved);
+  } catch (err) {
+    console.error("SAVE DIAGNOSIS ERROR:", err);
+    res.status(500).json({ error: "Failed to save diagnosis" });
+  }
+});
+
+// LIST saved diagnoses (optionally filtered by vehicleId)
+app.get("/api/diagnose/saved", authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { vehicleId } = req.query;
+
+    const where = { userId };
+    if (vehicleId) where.vehicleId = Number(vehicleId);
+
+    const saved = await prisma.savedDiagnosis.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+    });
+
+    res.json(saved);
+  } catch (err) {
+    console.error("LIST SAVED DIAGNOSES ERROR:", err);
+    res.status(500).json({ error: "Failed to fetch saved diagnoses" });
+  }
+});
+
+// GET one saved diagnosis
+app.get("/api/diagnose/saved/:id", authMiddleware, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const saved = await prisma.savedDiagnosis.findUnique({ where: { id } });
+    if (!saved || saved.userId !== req.user.id) {
+      return res.status(404).json({ error: "Saved diagnosis not found" });
+    }
+    res.json(saved);
+  } catch (err) {
+    console.error("GET SAVED DIAGNOSIS ERROR:", err);
+    res.status(500).json({ error: "Failed to fetch saved diagnosis" });
+  }
+});
+
+// DELETE a saved diagnosis
+app.delete("/api/diagnose/saved/:id", authMiddleware, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const saved = await prisma.savedDiagnosis.findUnique({ where: { id } });
+    if (!saved || saved.userId !== req.user.id) {
+      return res.status(404).json({ error: "Saved diagnosis not found" });
+    }
+    await prisma.savedDiagnosis.delete({ where: { id } });
+    res.json({ message: "Deleted" });
+  } catch (err) {
+    console.error("DELETE SAVED DIAGNOSIS ERROR:", err);
+    res.status(500).json({ error: "Failed to delete saved diagnosis" });
+  }
+});
+
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {

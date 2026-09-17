@@ -45,6 +45,7 @@ model User {
   posts                 Post[]
   comments              Comment[]
   likes                 Like[]
+  savedDiagnoses        SavedDiagnosis[]
   followers             Follow[]       @relation("UserFollowing")
   following             Follow[]       @relation("UserFollowers")
   notificationsReceived Notification[] @relation("NotificationRecipient")
@@ -129,6 +130,7 @@ model Vehicle {
   color            String?
   mileage          Int?
   notes            String?
+  savedDiagnoses SavedDiagnosis[]
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
   logs             Log[]
@@ -333,4 +335,24 @@ model BannedEmail {
   email     String   @unique
   reason    String?
   createdAt DateTime @default(now())
+}
+
+model SavedDiagnosis {
+  id              Int       @id @default(autoincrement())
+  userId          Int
+  vehicleId       Int?
+  vehicleLabel    String?
+  query           String
+  summary         String
+  severity        String
+  causes          String[]
+  estimatedCost   String?
+  diyDifficulty   String?
+  immediateAction String?
+  diagnosisSteps  Json
+  proTip          String?
+  ebayParts       Json?
+  createdAt       DateTime  @default(now())
+  user            User      @relation(fields: [userId], references: [id])
+  vehicle         Vehicle?  @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
 }
