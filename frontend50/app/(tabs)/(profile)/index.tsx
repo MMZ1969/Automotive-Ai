@@ -30,6 +30,11 @@ export default function Profile() {
   const [unreadMessages, setUnreadMessages] = useState(0);
 
   const fetchVanityPosts = async () => {
+    // Guards against firing during the brief window on focus where this
+    // tab is mounted but `user` (and the auth header) hasn't landed yet —
+    // e.g. right after login/verification while session state is still
+    // settling. Same guard fetchStats already has below.
+    if (!user?.id) return;
     try {
       setLoadingPosts(true);
       const res = await api.get(`/api/posts?type=VANITY`);
@@ -54,6 +59,7 @@ export default function Profile() {
   }, [user?.id]);
 
   const fetchUnreadMessages = async () => {
+    if (!user?.id) return;
     try {
       const res = await api.get("/api/messages/unread-count");
       setUnreadMessages(res.data.count || 0);

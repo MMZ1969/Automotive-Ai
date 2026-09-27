@@ -1,6 +1,5 @@
 import { useAuth } from "@context/AuthContext";
 import { useTheme } from "@context/ThemeContext";
-import api from "@lib/api";
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { Alert, Linking, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
@@ -16,11 +15,6 @@ export default function Register() {
   const [loading, setLoading] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [needsVerification, setNeedsVerification] = useState(false);
-  const [registeredEmail, setRegisteredEmail] = useState("");
-  const [resending, setResending] = useState(false);
-  const [verificationCode, setVerificationCode] = useState("");
-  const [verifying, setVerifying] = useState(false);
   // Pre-filled from an automotiveai://invite?code=XXXX deep link when
   // present (see app/invite.tsx), but always editable — someone can also
   // type a code in manually if a friend just told them verbally.
@@ -39,8 +33,11 @@ export default function Register() {
       await register({ name, email, password, role, referralCode: referralCode.trim() || undefined });
     } catch (err: any) {
       if (err?.needsVerification) {
-        setRegisteredEmail(email);
-        setNeedsVerification(true);
+        // Verification code entry lives on its own persistent route now —
+        // not local state here — so it survives this screen unmounting,
+        // the app backgrounding, a force-close, anything. See
+        // app/(auth)/verify-email.tsx.
+        router.push({ pathname: "/(auth)/verify-email", params: { email } });
       } else {
         Alert.alert("Registration failed", err.message || "Try again.");
       }
@@ -48,74 +45,6 @@ export default function Register() {
       setLoading(false);
     }
   };
-
-  const handleResend = async () => {
-    try {
-      setResending(true);
-      await api.post("/api/auth/resend-verification", { email: registeredEmail });
-      Alert.alert("✅ Sent!", "Check your inbox for your new verification code.");
-    } catch (err) {
-      Alert.alert("Error", "Could not resend. Try again.");
-    } finally {
-      setResending(false);
-    }
-  };
-
-  const handleVerifyCode = async () => {
-    if (verificationCode.length !== 6) return;
-    try {
-      setVerifying(true);
-      await api.post("/api/auth/verify-email", { email: registeredEmail, code: verificationCode });
-      Alert.alert("✅ Verified!", "Your account is active. Please log in.");
-      router.push("/(auth)/login");
-    } catch (err: any) {
-      Alert.alert("Error", err?.response?.data?.message || "Invalid or expired code. Try again.");
-    } finally {
-      setVerifying(false);
-    }
-  };
-
-  if (needsVerification) {
-    return (
-      <View style={{ flex: 1, backgroundColor: colors.background, justifyContent: "center", alignItems: "center", padding: 30 }}>
-        <Text style={{ fontSize: 60, marginBottom: 20 }}>📧</Text>
-        <Text style={{ color: colors.text, fontSize: 24, fontWeight: "900", textAlign: "center", marginBottom: 12 }}>Enter Your Code</Text>
-        <Text style={{ color: colors.textSecondary, fontSize: 15, textAlign: "center", lineHeight: 24, marginBottom: 8 }}>We sent a 6-digit code to:</Text>
-        <Text style={{ color: colors.blue, fontSize: 15, fontWeight: "700", textAlign: "center", marginBottom: 24 }}>{registeredEmail}</Text>
-
-        <TextInput
-          placeholder="123456" placeholderTextColor={colors.textMuted}
-          keyboardType="number-pad" maxLength={6} autoFocus
-          style={{ backgroundColor: colors.input, color: colors.text, padding: 16, borderRadius: 12, marginBottom: 20, borderWidth: 1, borderColor: colors.border, width: "100%", textAlign: "center", fontSize: 24, letterSpacing: 8, fontWeight: "700" }}
-          value={verificationCode} onChangeText={setVerificationCode}
-        />
-
-        <TouchableOpacity
-          onPress={handleVerifyCode}
-          disabled={verifying || verificationCode.length !== 6}
-          style={{ backgroundColor: verifying || verificationCode.length !== 6 ? colors.card : colors.blue, padding: 16, borderRadius: 12, width: "100%", alignItems: "center", marginBottom: 12 }}
-        >
-          <Text style={{ color: "white", fontWeight: "700", fontSize: 16 }}>
-            {verifying ? "Verifying..." : "Verify & Continue"}
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={handleResend}
-          disabled={resending}
-          style={{ backgroundColor: colors.input, borderWidth: 1, borderColor: colors.blue, padding: 14, borderRadius: 12, width: "100%", alignItems: "center", marginBottom: 12 }}
-        >
-          <Text style={{ color: colors.blue, fontWeight: "700", fontSize: 15 }}>
-            {resending ? "Sending..." : "Resend Code"}
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={() => router.push("/(auth)/login")}>
-          <Text style={{ color: colors.textMuted, fontSize: 14, marginTop: 8 }}>Back to Login</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: 20, justifyContent: "center", flexGrow: 1 }}>

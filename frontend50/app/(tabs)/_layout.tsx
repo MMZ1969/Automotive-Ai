@@ -105,6 +105,8 @@ export default function TabsLayout() {
       <Tabs.Screen name="car-show" options={{ href: null }} />
       <Tabs.Screen name="messages" options={{ href: null }} />
       <Tabs.Screen name="chat/[id]" options={{ href: null }} />
+      <Tabs.Screen name="saved-diagnoses" options={{ href: null }} />
+      <Tabs.Screen name="saved-diagnosis/[id]" options={{ href: null }} />
 
       {/* VISIBLE TABS */}
       <Tabs.Screen

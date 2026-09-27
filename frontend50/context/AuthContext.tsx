@@ -12,6 +12,7 @@ interface AuthContextType {
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (data: any) => Promise<void>;
+  completeVerification: (token: string, userObj: any) => Promise<void>;
   logout: () => void;
   refreshUser: () => Promise<void>;
   isMechanic: boolean;
@@ -190,6 +191,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  // Called after a successful verify-email code check. That endpoint
+  // already returns a fresh token + user (same shape as /login) — this
+  // just applies it the same way login() does, so a user who just fought
+  // their way through the code screen lands straight in the app instead
+  // of being sent back to re-type the password they just used.
+  const completeVerification = async (token: string, userObj: any) => {
+    await AsyncStorage.setItem("token", token);
+    await AsyncStorage.setItem("user", JSON.stringify(userObj));
+    api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+    setUser(userObj);
+    await registerPushToken();
+  };
+
   const logout = async () => {
     try {
       await AsyncStorage.multiRemove(["token", "user"]);
@@ -247,6 +261,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         loading,
         login,
         register,
+        completeVerification,
         logout,
         refreshUser,
         isMechanic,

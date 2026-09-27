@@ -1,11 +1,9 @@
 import { useAuth } from "@context/AuthContext";
 import { useTheme } from "@context/ThemeContext";
-import api from "@lib/api";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Image,
   Text,
   TextInput,
@@ -23,37 +21,28 @@ export default function LoginScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
-  const [needsVerification, setNeedsVerification] = useState(false);
-  const [resending, setResending] = useState(false);
 
   const handleLogin = async () => {
     setError(null);
-    setNeedsVerification(false);
     setSubmitting(true);
     try {
       await login(email, password);
     } catch (err: any) {
       const data = err?.response?.data;
       if (data?.needsVerification) {
-        setNeedsVerification(true);
-        setError("Please verify your email before logging in.");
+        // Same destination register.tsx uses when the backend says
+        // needsVerification — this is the actual bug fix: someone who
+        // dismissed the code screen after registering (or never got that
+        // far) has zero other way back in. Trying to log in is the one
+        // thing they WILL do, so that's the hook that routes them back
+        // to a verification screen instead of a dead-end error + an
+        // email resend with nowhere to type the code.
+        router.push({ pathname: "/(auth)/verify-email", params: { email } });
       } else {
         setError("Login failed. Check your credentials.");
       }
     } finally {
       setSubmitting(false);
-    }
-  };
-
-  const handleResend = async () => {
-    try {
-      setResending(true);
-      await api.post("/api/auth/resend-verification", { email });
-      Alert.alert("✅ Sent!", "Check your inbox for a new verification link.");
-    } catch (err) {
-      Alert.alert("Error", "Could not resend. Try again.");
-    } finally {
-      setResending(false);
     }
   };
 
@@ -101,19 +90,6 @@ export default function LoginScreen() {
       {/* ERROR */}
       {error && (
         <Text style={{ color: "#ef4444", marginBottom: 12, textAlign: "center" }}>{error}</Text>
-      )}
-
-      {/* NEEDS VERIFICATION */}
-      {needsVerification && (
-        <TouchableOpacity
-          onPress={handleResend}
-          disabled={resending}
-          style={{ backgroundColor: colors.input, borderWidth: 1, borderColor: colors.blue, padding: 12, borderRadius: 10, width: "100%", alignItems: "center", marginBottom: 12 }}
-        >
-          <Text style={{ color: colors.blue, fontWeight: "700" }}>
-            {resending ? "Sending..." : "📧 Resend Verification Email"}
-          </Text>
-        </TouchableOpacity>
       )}
 
       <TouchableOpacity

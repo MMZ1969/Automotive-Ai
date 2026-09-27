@@ -18,14 +18,6 @@ try {
   useSpeechRecognitionEvent = mod.useSpeechRecognitionEvent;
 } catch (e) {}
 
-// Staged messages shown while a diagnosis is in flight. This is simulated
-// progress (the backend makes one blocking call, it doesn't stream real
-// stages back) but it's an honest description of what's actually
-// happening server-side — search, cross-reference, compile — just not
-// wired to real-time signals. Timings are tuned to roughly match how a
-// typical multi-search diagnosis actually unfolds, so it lands on the
-// last message right around when responses tend to arrive rather than
-// looping past it.
 const LOADING_STAGES = [
   { icon: "magnify", text: "Searching manufacturer specs..." },
   { icon: "wrench", text: "Checking torque & fastener specs..." },
@@ -34,10 +26,6 @@ const LOADING_STAGES = [
 ];
 const LOADING_STAGE_DURATION_MS = 8000;
 
-// Builds the plain-text script read aloud for a diagnosis result — meant
-// for hands-free use in the shop, so it's phrased as continuous speech
-// rather than mirroring the visual card layout exactly (no emoji, no
-// bullet symbols, numbers spoken out as "Step 1" etc.).
 function buildReadAloudScript(result: any): string {
   const parts: (string | null)[] = [
     result.summary,
@@ -93,11 +81,6 @@ export default function Diagnose() {
   });
   useSpeechRecognitionEvent("end", () => setRecording(false));
 
-  // Drive the staged loading messages while a diagnosis request is in
-  // flight. Starts over at stage 0 each time loading turns on, advances
-  // on a timer, and holds on the final stage rather than looping — a
-  // request that runs long just sits on "Compiling your diagnosis..."
-  // instead of cycling back to "Searching..." which would look broken.
   useEffect(() => {
     if (loading) {
       setLoadingStage(0);
@@ -113,9 +96,6 @@ export default function Diagnose() {
     };
   }, [loading]);
 
-  // Stop any in-progress speech if the screen loses focus (user navigates
-  // away) — nothing worse than a diagnosis reading itself out over
-  // another screen. Also stopped explicitly on New Diagnosis / re-run.
   useFocusEffect(useCallback(() => {
     return () => { Speech.stop(); setIsSpeaking(false); };
   }, []));
@@ -231,28 +211,28 @@ finally { setLoading(false); }
   };
 
   const handleSaveDiagnosis = async () => {
-  if (!result) return;
-  try {
-    await api.post("/api/diagnose/save", {
-      query,
-      vehicleId: selectedVehicle?.id || null,
-      vehicleLabel: selectedVehicle ? `${selectedVehicle.year} ${selectedVehicle.make} ${selectedVehicle.model}` : null,
-      summary: result.summary,
-      severity: result.severity,
-      causes: result.causes,
-      estimatedCost: result.estimatedCost,
-      diyDifficulty: result.diyDifficulty,
-      immediateAction: result.immediateAction,
-      diagnosisSteps: result.diagnosisSteps,
-      proTip: result.proTip,
-      ebayParts: result.ebayParts,
-    });
-    Alert.alert("✅ Saved!", selectedVehicle ? "Saved to this vehicle's history." : "Saved to your diagnosis history.");
-  } catch (err) {
-    console.error("SAVE DIAGNOSIS ERROR:", err);
-    Alert.alert("Error", "Could not save diagnosis. Try again.");
-  }
-};
+    if (!result) return;
+    try {
+      await api.post("/api/diagnose/save", {
+        query,
+        vehicleId: selectedVehicle?.id || null,
+        vehicleLabel: selectedVehicle ? `${selectedVehicle.year} ${selectedVehicle.make} ${selectedVehicle.model}` : null,
+        summary: result.summary,
+        severity: result.severity,
+        causes: result.causes,
+        estimatedCost: result.estimatedCost,
+        diyDifficulty: result.diyDifficulty,
+        immediateAction: result.immediateAction,
+        diagnosisSteps: result.diagnosisSteps,
+        proTip: result.proTip,
+        ebayParts: result.ebayParts,
+      });
+      Alert.alert("✅ Saved!", selectedVehicle ? "Saved to this vehicle's history." : "Saved to your diagnosis history.");
+    } catch (err) {
+      console.error("SAVE DIAGNOSIS ERROR:", err);
+      Alert.alert("Error", "Could not save diagnosis. Try again.");
+    }
+  };
 
   const severityColor = (severity: string) => {
     switch (severity) {
@@ -356,9 +336,6 @@ finally { setLoading(false); }
           )}
         </TouchableOpacity>
 
-        {/* Staged loading panel — shows a believable checklist of what the
-            AI is actually doing (real work, simulated pacing) instead of
-            a blank spinner for 30-40 seconds. */}
         {loading && (
           <View style={{ backgroundColor: colors.card, borderRadius: 16, borderWidth: 1, borderColor: colors.blue + "33", padding: 18, marginBottom: 24 }}>
             {LOADING_STAGES.map((stage, i) => {
@@ -408,18 +385,16 @@ finally { setLoading(false); }
         <MaterialCommunityIcons name="share-variant" size={18} color="white" />
         <Text style={{ color: "white", fontWeight: "700" }}>Share to Feed</Text>
       </TouchableOpacity>
-      <TouchableOpacity
-            onPress={handleSaveDiagnosis}
-            style={{ flex: 1, backgroundColor: colors.card, borderRadius: 12, borderWidth: 1, borderColor: colors.green + "44", paddingVertical: 12, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8 }}
-          >
-            <MaterialCommunityIcons name="content-save-outline" size={18} color={colors.green} />
-            <Text style={{ color: colors.green, fontWeight: "700" }}>Save</Text>
-          </TouchableOpacity>
     </View>
 
-            {/* Read Aloud — full-width and separate from the row above since
-                this is the hands-free entry point: bigger target, easy to
-                hit without looking closely at the screen with dirty hands. */}
+            <TouchableOpacity
+              onPress={handleSaveDiagnosis}
+              style={{ backgroundColor: colors.card, borderRadius: 12, borderWidth: 1, borderColor: colors.green + "44", paddingVertical: 14, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8 }}
+            >
+              <MaterialCommunityIcons name="content-save-outline" size={20} color={colors.green} />
+              <Text style={{ color: colors.green, fontWeight: "700", fontSize: 15 }}>Save Diagnosis</Text>
+            </TouchableOpacity>
+
             <TouchableOpacity
               onPress={handleReadAloud}
               style={{ backgroundColor: isSpeaking ? "#ef4444" : colors.card, borderRadius: 12, borderWidth: 1, borderColor: isSpeaking ? "#ef4444" : colors.blue + "44", paddingVertical: 14, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8 }}
@@ -430,7 +405,6 @@ finally { setLoading(false); }
               </Text>
             </TouchableOpacity>
 
-            {/* Summary Card */}
             <View style={{ backgroundColor: colors.card, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 16 }}>
               <Text style={{ color: colors.text, fontSize: 18, fontWeight: "700", marginBottom: 8 }}>{result.summary}</Text>
               <View style={{ flexDirection: "row", gap: 10, flexWrap: "wrap" }}>
@@ -447,13 +421,11 @@ finally { setLoading(false); }
               <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 10, fontStyle: "italic" }}>⚠️ AI diagnosis is for informational purposes only. Always consult a certified mechanic for safety critical repairs.</Text>
             </View>
 
-            {/* Immediate Action */}
             <View style={{ backgroundColor: "#1a0a0a", borderRadius: 16, borderWidth: 1, borderColor: "#ef444433", padding: 16 }}>
               <Text style={{ color: "#ef4444", fontWeight: "700", fontSize: 14, marginBottom: 6 }}>⚠️ Immediate Action</Text>
-              <Text style={{ color: colors.text, fontSize: 14, lineHeight: 20 }}>{result.immediateAction}</Text>
+              <Text style={{ color: "#f5f5f5", fontSize: 14, lineHeight: 20 }}>{result.immediateAction}</Text>
             </View>
 
-            {/* Likely Causes */}
             <View style={{ backgroundColor: colors.card, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 16 }}>
               <Text style={{ color: colors.text, fontWeight: "700", fontSize: 16, marginBottom: 12 }}>🔍 Likely Causes</Text>
               {result.causes?.map((cause: string, i: number) => (
@@ -464,13 +436,9 @@ finally { setLoading(false); }
               ))}
             </View>
 
-            {/* Diagnosis Steps */}
 <View style={{ backgroundColor: colors.card, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 16 }}>
   <Text style={{ color: colors.text, fontWeight: "700", fontSize: 16, marginBottom: 12 }}>📋 Diagnosis Steps</Text>
   {result.diagnosisSteps?.map((step: any, i: number) => {
-    // Backend now sends steps as { text, tip } objects, but keep a
-    // fallback for plain-string steps (e.g. the image-diagnosis
-    // endpoint, which hasn't been updated to this format).
     const stepText = typeof step === "string" ? step : step?.text;
     const stepTip = typeof step === "string" ? null : step?.tip;
     return (
@@ -491,13 +459,11 @@ finally { setLoading(false); }
   })}
 </View>
 
-            {/* Pro Tip */}
             <View style={{ backgroundColor: colors.background, borderRadius: 16, borderWidth: 1, borderColor: colors.blue + "33", padding: 16 }}>
               <Text style={{ color: colors.blue, fontWeight: "700", fontSize: 14, marginBottom: 6 }}>💡 Pro Tip</Text>
               <Text style={{ color: colors.text, fontSize: 14, lineHeight: 20 }}>{result.proTip}</Text>
             </View>
 
-            {/* eBay Parts Section */}
             {result.ebayParts && result.ebayParts.length > 0 && (
               <View style={{ backgroundColor: colors.card, borderRadius: 16, borderWidth: 1, borderColor: "#e5a00d44", padding: 16 }}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 4 }}>
@@ -535,7 +501,6 @@ finally { setLoading(false); }
               </View>
             )}
 
-            {/* Repair Videos */}
             {videos.length > 0 && (
               <View style={{ backgroundColor: colors.card, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 16, marginBottom: 40 }}>
                 <Text style={{ color: colors.text, fontWeight: "700", fontSize: 16, marginBottom: 6 }}>📺 Repair Videos</Text>
