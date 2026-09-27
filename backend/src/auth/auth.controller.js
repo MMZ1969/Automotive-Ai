@@ -172,9 +172,18 @@ export const register = async (req, res) => {
 // LOGIN
 export const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { password } = req.body;
+    // Case-insensitive + trimmed, matching register()'s lookup and the
+    // ban scripts. Previously findUnique({ where: { email } }) was an
+    // exact-match lookup, so an account stored as "Shontubiswas10@..."
+    // (or any mixed-case signup) couldn't log back in with a differently
+    // cased or whitespace-padded email even though registration and
+    // banning both already treated email as case-insensitive.
+    const email = (req.body.email || "").trim();
 
-    const user = await prisma.user.findUnique({ where: { email } });
+    const user = await prisma.user.findFirst({
+      where: { email: { equals: email, mode: "insensitive" } },
+    });
     if (!user) {
       return res.status(400).json({ message: "Invalid credentials" });
     }
@@ -287,9 +296,11 @@ export const deleteAccount = async (req, res) => {
 // FORGOT PASSWORD
 export const forgotPassword = async (req, res) => {
   try {
-    const { email } = req.body;
+    const email = (req.body.email || "").trim();
 
-    const user = await prisma.user.findUnique({ where: { email } });
+    const user = await prisma.user.findFirst({
+      where: { email: { equals: email, mode: "insensitive" } },
+    });
     if (!user) {
       return res.json({ message: "If that email exists, a reset link has been sent." });
     }
@@ -298,7 +309,7 @@ export const forgotPassword = async (req, res) => {
     const expiry = new Date(Date.now() + 1000 * 60 * 60); // 1 hour
 
     await prisma.user.update({
-      where: { email },
+      where: { id: user.id },
       data: {
         resetToken: token,
         resetTokenExpiry: expiry,
@@ -571,13 +582,16 @@ export const changePassword = async (req, res) => {
 // VERIFY EMAIL CODE
 export const verifyEmailCode = async (req, res) => {
   try {
-    const { email, code } = req.body;
+    const { code } = req.body;
+    const email = (req.body.email || "").trim();
 
     if (!email || !code) {
       return res.status(400).json({ message: "Email and code are required." });
     }
 
-    const user = await prisma.user.findUnique({ where: { email } });
+    const user = await prisma.user.findFirst({
+      where: { email: { equals: email, mode: "insensitive" } },
+    });
 
     if (!user) {
       return res.status(400).json({ message: "Invalid code." });
@@ -638,9 +652,11 @@ export const verifyEmailCode = async (req, res) => {
 // RESEND VERIFICATION EMAIL
 export const resendVerification = async (req, res) => {
   try {
-    const { email } = req.body;
+    const email = (req.body.email || "").trim();
 
-    const user = await prisma.user.findUnique({ where: { email } });
+    const user = await prisma.user.findFirst({
+      where: { email: { equals: email, mode: "insensitive" } },
+    });
     if (!user) {
       return res.json({ message: "If that email exists, a verification link has been sent." });
     }
@@ -653,7 +669,7 @@ export const resendVerification = async (req, res) => {
     const verificationCodeExpiry = new Date(Date.now() + 1000 * 60 * 15);
 
     await prisma.user.update({
-      where: { email },
+      where: { id: user.id },
       data: { verificationToken: verificationCode, verificationCodeExpiry },
     });
 
