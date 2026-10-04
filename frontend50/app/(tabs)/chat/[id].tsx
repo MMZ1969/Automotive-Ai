@@ -2,9 +2,9 @@ import { useAuth } from "@context/AuthContext";
 import { useTheme } from "@context/ThemeContext";
 import api from "@lib/api";
 import { ensureFirebaseAuth } from "@lib/firebaseAuth";
-import { ResizeMode, Video } from "expo-av";
 import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { useVideoPlayer, VideoView } from "expo-video";
 import { getDownloadURL, ref, uploadBytesResumable } from "firebase/storage";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -21,6 +21,26 @@ import {
 } from "react-native";
 import ImageLightbox from "../../../components/ImageLightbox";
 import { storage } from "../../../firebaseConfig";
+
+// Split out because useVideoPlayer is a hook — it can't be called inline
+// inside FlatList's renderItem (that's a plain callback, not a component
+// React tracks separately per row), so each video message bubble needs
+// its own real component instance to hold its own player. This is the
+// expo-av -> expo-video migration: SDK 55 removes expo-av entirely, and
+// this was the only file in the app using it.
+function VideoMessage({ uri }: { uri: string }) {
+  const player = useVideoPlayer(uri, (player) => {
+    player.loop = false;
+  });
+  return (
+    <VideoView
+      player={player}
+      style={{ width: 220, height: 220 }}
+      contentFit="cover"
+      nativeControls
+    />
+  );
+}
 
 export default function ChatScreen() {
   const { user } = useAuth();
@@ -43,6 +63,17 @@ export default function ChatScreen() {
   const [attachmentType, setAttachmentType] = useState<"image" | "video" | null>(null);
   const [uploadingAttachment, setUploadingAttachment] = useState(false);
   const [attachmentProgress, setAttachmentProgress] = useState(0);
+
+  // Single player for the composing-attachment preview. Hooks must be
+  // called unconditionally, so this always exists — it just has nothing
+  // to play when there's no video attachment selected. The <VideoView>
+  // that actually uses it below is what's conditional.
+  const attachmentPlayer = useVideoPlayer(
+    attachmentType === "video" && attachmentUri ? attachmentUri : null,
+    (player) => {
+      player.loop = false;
+    }
+  );
 
   const [lightboxVisible, setLightboxVisible] = useState(false);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
@@ -296,13 +327,7 @@ export default function ChatScreen() {
                   </TouchableOpacity>
                 )}
                 {item.mediaUrl && item.mediaType === "video" && (
-                  <Video
-                    source={{ uri: item.mediaUrl }}
-                    style={{ width: 220, height: 220 }}
-                    useNativeControls
-                    resizeMode={ResizeMode.COVER}
-                    isLooping={false}
-                  />
+                  <VideoMessage uri={item.mediaUrl} />
                 )}
                 {item.content ? (
                   <Text style={{
@@ -329,7 +354,12 @@ export default function ChatScreen() {
         <View style={{ paddingHorizontal: 16, paddingTop: 10, flexDirection: "row", alignItems: "center", gap: 10 }}>
           <View style={{ width: 60, height: 60, borderRadius: 10, overflow: "hidden", backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border }}>
             {attachmentType === "video" ? (
-              <Video source={{ uri: attachmentUri }} style={{ width: "100%", height: "100%" }} resizeMode={ResizeMode.COVER} />
+              <VideoView
+                player={attachmentPlayer}
+                style={{ width: "100%", height: "100%" }}
+                contentFit="cover"
+                nativeControls={false}
+              />
             ) : (
               <Image source={{ uri: attachmentUri }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
             )}
