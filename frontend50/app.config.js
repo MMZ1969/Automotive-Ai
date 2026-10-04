@@ -1,8 +1,10 @@
+import withFixGoogleMapsPod from "./plugins/withFixGoogleMapsPod.js";
+
 export default {
   expo: {
     name: "AutoAI",
     slug: "frontend50",
-    version: "1.0.21",
+    version: "1.0.22",
     orientation: "portrait",
     icon: "./assets/autoai_icon_1024_tm.png",
     userInterfaceStyle: "light",
@@ -10,7 +12,7 @@ export default {
     ios: {
       supportsTablet: true,
       bundleIdentifier: "app.automotiveai",
-      buildNumber: "34",
+      buildNumber: "35",
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
         NSAppTransportSecurity: { NSAllowsArbitraryLoads: true },
@@ -30,7 +32,7 @@ export default {
         backgroundColor: "#050509",
       },
       package: "app.automotiveai",
-      versionCode: 23,
+      versionCode: 24,
       permissions: [
         "android.permission.RECORD_AUDIO",
         "android.permission.ACCESS_FINE_LOCATION",
@@ -52,9 +54,12 @@ export default {
     },
     web: { favicon: "./assets/favicon.png" },
     plugins: [
+      "expo-font",
       "expo-router",
       "expo-speech-recognition",
       "expo-notifications",
+      "expo-status-bar",
+      "expo-video",
       "@react-native-community/datetimepicker",
       [
         "expo-location",
@@ -62,6 +67,7 @@ export default {
           locationWhenInUsePermission: "AutoAI uses your location to show mechanics near you.",
         },
       ],
+      withFixGoogleMapsPod,
     ],
     scheme: "automotiveai",
     extra: {
