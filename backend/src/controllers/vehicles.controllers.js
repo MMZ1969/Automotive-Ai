@@ -1,5 +1,6 @@
 // src/controllers/vehicles.controllers.js
 import prisma from "../lib/prisma.js";
+import { grantReferralReward } from "../lib/referrals.js";
 
 // Helper — decode VIN via NHTSA and return engine details
 const decodeVin = async (vin) => {
@@ -91,14 +92,7 @@ export const createVehicle = async (req, res) => {
     // activate at all.
     if (isFirstActivation && currentUser?.referredById && !currentUser?.referralRewardGiven) {
       try {
-        await prisma.user.update({
-          where: { id: currentUser.referredById },
-          data: { repPoints: { increment: 10 } },
-        });
-        await prisma.user.update({
-          where: { id: userId },
-          data: { repPoints: { increment: 5 }, referralRewardGiven: true },
-        });
+        await grantReferralReward(userId, currentUser.referredById);
       } catch (refErr) {
         console.error("REFERRAL REWARD ERROR:", refErr);
       }

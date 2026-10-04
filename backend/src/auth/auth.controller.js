@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import { Resend } from "resend";
+import { normalizeEmail } from "../lib/emailNormalize.js";
 import prisma from "../lib/prisma.js";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -92,11 +93,23 @@ export const register = async (req, res) => {
       return res.status(400).json({ message: "Email already in use" });
     }
 
-    const banned = await prisma.bannedEmail.findUnique({
-  where: { email: email.toLowerCase() },
+    // Same inbox, different spelling (john+2@gmail.com, j.ohn@gmail.com) counts
+    // as the same address — one inbox, one account.
+    const emailNormalized = normalizeEmail(email);
+    const aliasTaken = await prisma.user.findFirst({
+      where: { emailNormalized },
+      select: { id: true },
     });
-  if (banned) {
-  return res.status(403).json({ message: "This email address is not permitted to register." });
+    if (aliasTaken) {
+      return res.status(400).json({ message: "Email already in use" });
+    }
+
+    // Banned list is matched on the normalized form too, so a banned person
+    // can't get back in with an alias of the same address.
+    const bannedRows = await prisma.bannedEmail.findMany({ select: { email: true } });
+    const banned = bannedRows.some((b) => normalizeEmail(b.email) === emailNormalized);
+    if (banned) {
+      return res.status(403).json({ message: "This email address is not permitted to register." });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -111,9 +124,12 @@ export const register = async (req, res) => {
     if (referralCode) {
       const referrer = await prisma.user.findUnique({
         where: { referralCode },
-        select: { id: true },
+        select: { id: true, email: true },
       });
-      if (referrer) referredById = referrer.id;
+      // Referring yourself through an alias of your own inbox earns nothing.
+      if (referrer && normalizeEmail(referrer.email) !== emailNormalized) {
+        referredById = referrer.id;
+      }
     }
 
     // Generate this new user's own referral code — no DB-level default
@@ -130,6 +146,7 @@ export const register = async (req, res) => {
     const user = await prisma.user.create({
       data: {
         email,
+        emailNormalized,
         password: hashedPassword,
         name,
         role: role || "DIYER",

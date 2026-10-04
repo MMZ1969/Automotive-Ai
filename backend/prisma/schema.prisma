@@ -10,6 +10,9 @@ datasource db {
 model User {
   id                    Int            @id @default(autoincrement())
   email                 String         @unique
+  // Canonical form of email with aliases collapsed (see src/lib/emailNormalize.js).
+  // Not unique on purpose: existing accounts may already collide; checked in code.
+  emailNormalized       String?
   password              String
   name                  String?
   profilePhoto          String?
@@ -65,6 +68,8 @@ model User {
 messagesReceived Message[]        @relation("MessageReceiver")
 conversations1   Conversation[]   @relation("ConversationUser1")
 conversations2   Conversation[]   @relation("ConversationUser2")
+
+  @@index([emailNormalized])
 }
 
 model Post {

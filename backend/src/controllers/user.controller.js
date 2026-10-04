@@ -1,5 +1,7 @@
 import bcrypt from "bcryptjs";
+import { normalizeEmail } from "../lib/emailNormalize.js";
 import prisma from "../lib/prisma.js";
+import { grantReferralReward } from "../lib/referrals.js";
 import { TEST_ACCOUNT_EMAILS } from "../lib/testAccounts.js";
 
 // GET /users/me
@@ -60,7 +62,17 @@ export async function updateProfile(req, res) {
       if (existing && existing.id !== userId) {
         return res.status(400).json({ error: "Email already in use" });
       }
+      // An alias of someone else's inbox counts as taken, same as at signup.
+      const emailNormalized = normalizeEmail(email);
+      const aliasTaken = await prisma.user.findFirst({
+        where: { emailNormalized, NOT: { id: userId } },
+        select: { id: true },
+      });
+      if (aliasTaken) {
+        return res.status(400).json({ error: "Email already in use" });
+      }
       data.email = email;
+      data.emailNormalized = emailNormalized;
     }
 
     if (password) {
@@ -440,14 +452,7 @@ export async function requestVerification(req, res) {
     // Referral reward — same guarded logic as the DIYer vehicle trigger.
     if (isFirstActivation && currentUser?.referredById && !currentUser?.referralRewardGiven) {
       try {
-        await prisma.user.update({
-          where: { id: currentUser.referredById },
-          data: { repPoints: { increment: 10 } },
-        });
-        await prisma.user.update({
-          where: { id: userId },
-          data: { repPoints: { increment: 5 }, referralRewardGiven: true },
-        });
+        await grantReferralReward(userId, currentUser.referredById);
       } catch (refErr) {
         console.error("REFERRAL REWARD ERROR:", refErr);
       }
