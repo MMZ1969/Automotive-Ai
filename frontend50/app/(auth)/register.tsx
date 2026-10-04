@@ -39,7 +39,11 @@ export default function Register() {
         // app/(auth)/verify-email.tsx.
         router.push({ pathname: "/(auth)/verify-email", params: { email } });
       } else {
-        Alert.alert("Registration failed", err.message || "Try again.");
+        // Show the server's reason ("Email already in use", "Please use a real,
+        // permanent email address...") instead of axios's generic
+        // "Request failed with status code 400".
+        const serverMessage = err?.response?.data?.message || err?.response?.data?.error;
+        Alert.alert("Registration failed", serverMessage || err.message || "Try again.");
       }
     } finally {
       setLoading(false);
