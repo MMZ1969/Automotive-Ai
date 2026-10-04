@@ -15,6 +15,7 @@ async function main() {
       hasCompletedOnboarding: true,
       phone: true,
       location: true,
+      totalDiagnoses: true,
       createdAt: true,
       _count: {
         select: {
@@ -33,10 +34,14 @@ async function main() {
 
   const scored = users.map((u) => {
     const c = u._count;
-    // "Real activity" = things a human actively DOES (not passive signup state)
+    // "Real activity" = things a human actively DOES (not passive signup state).
+    // totalDiagnoses is included here specifically because it's the one
+    // action that costs real money (Anthropic API + web search per run) —
+    // an account burning diagnoses needs to show up as "active" even if
+    // it has zero posts/comments/etc, not get hidden in the "dead" bucket.
     const activity =
       c.posts + c.comments + c.likes + c.messagesSent +
-      c.jobsPosted + c.bids + c.vehicles + c.following;
+      c.jobsPosted + c.bids + c.vehicles + c.following + u.totalDiagnoses;
     return { ...u, activity, c };
   });
 
@@ -65,7 +70,7 @@ async function main() {
 
   const line = (u) =>
     `#${u.id} | ${u.emailVerified ? "✓verify" : "✗verify"} | ${u.hasCompletedOnboarding ? "✓onboard" : "✗onboard"} | ${fmtDate(u.createdAt)} | act:${u.activity} ` +
-    `(p${u.c.posts} c${u.c.comments} l${u.c.likes} m${u.c.messagesSent} j${u.c.jobsPosted} b${u.c.bids} v${u.c.vehicles} f${u.c.following}) ` +
+    `(p${u.c.posts} c${u.c.comments} l${u.c.likes} m${u.c.messagesSent} j${u.c.jobsPosted} b${u.c.bids} v${u.c.vehicles} f${u.c.following} DIAG:${u.totalDiagnoses}) ` +
     `| ${u.role} | name:"${u.name || "—"}" | phone:${u.phone || "—"} | loc:${u.location || "—"} | ${u.email}`;
 
   console.log("───── ACTIVE USERS (your real humans) ─────");
