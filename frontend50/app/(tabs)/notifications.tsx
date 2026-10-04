@@ -33,6 +33,7 @@ export default function Notifications() {
       case "like": case "comment": if (item.postId) router.push(`/(tabs)/post/${item.postId}`); break;
       case "follow": if (item.actorId) router.push(`/(tabs)/user/${item.actorId}`); break;
       case "mechanic_verification": router.push("/(tabs)/(profile)/admin"); break;
+      case "post_reported": router.push({ pathname: "/(tabs)/(profile)/admin", params: { tab: "reports" } }); break;
       case "job":
         if (item.jobId) {
           router.push({ pathname: "/(tabs)/mechanic/jobs", params: { jobId: item.jobId.toString() } });
