@@ -126,6 +126,13 @@ export const updatePost = async (req, res) => {
   try {
     const id = Number(req.params.id);
     const { content } = req.body;
+
+    const existing = await prisma.post.findUnique({ where: { id }, select: { userId: true } });
+    if (!existing) return res.status(404).json({ error: "Post not found" });
+    if (existing.userId !== req.user.id) {
+      return res.status(403).json({ error: "Not authorized to edit this post" });
+    }
+
     const post = await prisma.post.update({ where: { id }, data: { content } });
     res.json(post);
   } catch (err) {
@@ -138,8 +145,23 @@ export const updatePost = async (req, res) => {
 export const deletePost = async (req, res) => {
   try {
     const id = Number(req.params.id);
+    const userId = req.user.id;
 
-    await prisma.like.deleteMany({ where: { postId: id } });
+    const existing = await prisma.post.findUnique({ where: { id }, select: { userId: true } });
+    if (!existing) return res.status(404).json({ error: "Post not found" });
+
+    // Owner or admin only — this endpoint previously had no ownership check,
+    // so any logged-in user could delete any post by id.
+    if (existing.userId !== userId) {
+      const user = await prisma.user.findUnique({ where: { id: userId }, select: { isAdmin: true } });
+      if (!user?.isAdmin) {
+        return res.status(403).json({ error: "Not authorized to delete this post" });
+      }
+    }
+
+    // Likes on this post's comments (commentId set, postId null) must go too,
+    // or the comment delete below trips a foreign-key error.
+    await prisma.like.deleteMany({ where: { OR: [{ postId: id }, { comment: { postId: id } }] } });
     await prisma.comment.deleteMany({ where: { postId: id } });
     await prisma.report.deleteMany({ where: { postId: id } });
     await prisma.post.delete({ where: { id } });

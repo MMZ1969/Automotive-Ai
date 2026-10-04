@@ -191,15 +191,23 @@ model Block {
 }
 
 model Report {
-  id         Int      @id @default(autoincrement())
-  reporterId Int
-  postId     Int?
-  jobId      Int?
-  reason     String
-  createdAt  DateTime @default(now())
-  reporter   User     @relation("Reporter", fields: [reporterId], references: [id])
-  post       Post?    @relation(fields: [postId], references: [id])
-  job        Job?     @relation(fields: [jobId], references: [id])
+  id             Int       @id @default(autoincrement())
+  reporterId     Int
+  postId         Int?
+  jobId          Int?
+  reason         String
+  createdAt      DateTime  @default(now())
+  // Moderation workflow: OPEN until an admin acts, then RESOLVED or DISMISSED.
+  status         String    @default("OPEN")
+  resolution     String?   // DISMISSED | POST_REMOVED | POST_REMOVED_OWNER_BANNED | OWNER_BANNED | REPORTER_BANNED
+  resolvedAt     DateTime?
+  resolvedById   Int?
+  // Kept when a reported post is removed (postId is nulled), so the record survives.
+  targetOwnerId  Int?
+  targetSnapshot String?
+  reporter       User      @relation("Reporter", fields: [reporterId], references: [id])
+  post           Post?     @relation(fields: [postId], references: [id])
+  job            Job?      @relation(fields: [jobId], references: [id])
 }
 
 model Job {

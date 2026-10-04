@@ -11,6 +11,7 @@ import prisma from "./lib/prisma.js";
 import authMiddleware from "./middleware/authMiddleware.js";
 
 import authRoutes from "./auth/auth.routes.js";
+import adminRoutes from "./routes/admin.routes.js";
 import carShowRoutes from "./routes/carShow.routes.js";
 import followRoutes from "./routes/follow.routes.js";
 import jobRoutes from "./routes/job.routes.js";
@@ -186,6 +187,7 @@ app.use("/api/parts", partsRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/car-shows", carShowRoutes);
 app.use("/api/messages", messagesRoutes);
+app.use("/api/admin", adminRoutes);
 
 // ─── DIAGNOSIS CACHE ──────────────────────────────────────────────────────────
 // Keyed by vehicle + exact query text. Two users (or the same user twice)
