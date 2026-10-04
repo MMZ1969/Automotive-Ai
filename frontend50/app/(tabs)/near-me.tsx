@@ -39,6 +39,26 @@ export default function NearMe() {
   
   useEffect(() => { initMap(); }, []);
 
+  const getCurrentPositionWithRetry = async (retries = 4, delayMs = 1200) => {
+    for (let attempt = 0; attempt < retries; attempt++) {
+      try {
+        return await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      } catch (err) {
+        if (attempt === retries - 1) {
+          // Last attempt: fall back to a cached fix if the provider has one,
+          // rather than failing outright. Android emulators (and some real
+          // devices right after a permission grant) can report the location
+          // provider as "unavailable" for a second or two before it catches up.
+          const lastKnown = await Location.getLastKnownPositionAsync();
+          if (lastKnown) return lastKnown;
+          throw err;
+        }
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+    }
+    throw new Error("Unable to acquire current position");
+  };
+
   const initMap = async () => {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
@@ -48,7 +68,7 @@ export default function NearMe() {
         return;
       }
 
-      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      const loc = await getCurrentPositionWithRetry();
       setUserLocation({ lat: loc.coords.latitude, lng: loc.coords.longitude });
 
       const res = await api.get("/api/users/mechanics");
@@ -111,8 +131,14 @@ export default function NearMe() {
         <Text style={{ fontSize: 48, marginBottom: 16 }}>📍</Text>
         <Text style={{ color: colors.text, fontSize: 20, fontWeight: "700", textAlign: "center", marginBottom: 8 }}>Location Required</Text>
         <Text style={{ color: colors.textSecondary, textAlign: "center", marginBottom: 24 }}>AutoAI needs your location to show mechanics near you.</Text>
-        <TouchableOpacity onPress={() => router.back()} style={{ backgroundColor: colors.blue, padding: 14, borderRadius: 12, paddingHorizontal: 30 }}>
-          <Text style={{ color: "white", fontWeight: "700" }}>Go Back</Text>
+        <TouchableOpacity
+          onPress={() => { setLocationError(false); setLoading(true); initMap(); }}
+          style={{ backgroundColor: colors.blue, padding: 14, borderRadius: 12, paddingHorizontal: 30, marginBottom: 12 }}
+        >
+          <Text style={{ color: "white", fontWeight: "700" }}>Try Again</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => router.back()} style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, padding: 14, borderRadius: 12, paddingHorizontal: 30 }}>
+          <Text style={{ color: colors.text, fontWeight: "700" }}>Go Back</Text>
         </TouchableOpacity>
       </View>
     );
