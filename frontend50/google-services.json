@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "511012609862",
+    "project_id": "automotive-ai-d3291",
+    "storage_bucket": "automotive-ai-d3291.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:511012609862:android:6ba9b760023965d6c5cf47",
+        "android_client_info": {
+          "package_name": "app.automotiveai"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAVQO-KGHz2kdYLr8nwgksiSiB4m7PbE8U"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

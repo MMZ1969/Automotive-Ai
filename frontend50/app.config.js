@@ -4,7 +4,7 @@ export default {
   expo: {
     name: "AutoAI",
     slug: "frontend50",
-    version: "1.0.22",
+    version: "1.0.23",
     orientation: "portrait",
     icon: "./assets/autoai_icon_1024_tm.png",
     userInterfaceStyle: "light",
@@ -12,7 +12,7 @@ export default {
     ios: {
       supportsTablet: true,
       bundleIdentifier: "app.automotiveai",
-      buildNumber: "35",
+      buildNumber: "36",
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
         NSAppTransportSecurity: { NSAllowsArbitraryLoads: true },
@@ -32,7 +32,10 @@ export default {
         backgroundColor: "#050509",
       },
       package: "app.automotiveai",
-      versionCode: 24,
+      versionCode: 25,
+      // Required for push on Android: expo-notifications gets the device token
+      // through FCM, which needs this file (Firebase app "AutoAI Android").
+      googleServicesFile: "./google-services.json",
       permissions: [
         "android.permission.RECORD_AUDIO",
         "android.permission.ACCESS_FINE_LOCATION",
