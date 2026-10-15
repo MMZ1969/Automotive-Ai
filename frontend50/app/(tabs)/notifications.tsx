@@ -33,7 +33,8 @@ export default function Notifications() {
       case "like": case "comment": if (item.postId) router.push(`/(tabs)/post/${item.postId}`); break;
       case "follow": if (item.actorId) router.push(`/(tabs)/user/${item.actorId}`); break;
       case "mechanic_verification": router.push("/(tabs)/(profile)/admin"); break;
-      case "post_reported": router.push({ pathname: "/(tabs)/(profile)/admin", params: { tab: "reports" } }); break;
+      case "post_reported": case "job_reported":
+        router.push({ pathname: "/(tabs)/(profile)/admin", params: { tab: "reports" } }); break;
       case "job":
         if (item.jobId) {
           router.push({ pathname: "/(tabs)/mechanic/jobs", params: { jobId: item.jobId.toString() } });
@@ -45,6 +46,11 @@ export default function Notifications() {
         router.push({ pathname: "/(tabs)/mechanic/jobs", params: { tab: "mine" } });
         break;
       case "job_update":
+        // Job reports filed before the "job_reported" type existed
+        if (item.message?.startsWith("🚨 Job reported")) {
+          router.push({ pathname: "/(tabs)/(profile)/admin", params: { tab: "reports" } });
+          break;
+        }
         router.push("/(tabs)/mechanic/jobs");
         break;
         case "car_show":

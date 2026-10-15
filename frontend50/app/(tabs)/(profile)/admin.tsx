@@ -74,7 +74,10 @@ export default function AdminPanel() {
   const router = useRouter();
   const { colors } = useTheme();
   const { tab } = useLocalSearchParams<{ tab?: string }>();
-  const [view, setView] = useState<"verify" | "reports" | "users">(tab === "reports" ? "reports" : "verify");
+  const [view, setView] = useState<"verify" | "reports" | "diags" | "users">(tab === "reports" ? "reports" : "verify");
+  const [diagnoses, setDiagnoses] = useState<any[]>([]);
+  const [diagStats, setDiagStats] = useState<any>(null);
+  const [diagDays, setDiagDays] = useState<1 | 7 | 30>(7);
   const [requests, setRequests] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [reports, setReports] = useState<any[]>([]);
@@ -133,14 +136,28 @@ export default function AdminPanel() {
     }
   };
 
+  const fetchDiagnoses = async () => {
+    try {
+      const res = await api.get("/api/admin/diagnoses", { params: { days: diagDays } });
+      setDiagnoses(res.data.items);
+      setDiagStats(res.data.stats);
+    } catch (err) {
+      console.error("FETCH DIAGNOSES ERROR:", err);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
   const fetchData = async () => {
     fetchOpenCount();
     if (view === "verify") await fetchRequests();
     else if (view === "reports") await fetchReports();
+    else if (view === "diags") await fetchDiagnoses();
     else await fetchUsers();
   };
 
-  useFocusEffect(useCallback(() => { setLoading(true); fetchData(); }, [view, reportFilter]));
+  useFocusEffect(useCallback(() => { setLoading(true); fetchData(); }, [view, reportFilter, diagDays]));
   const onRefresh = () => { setRefreshing(true); fetchData(); };
 
   const handleVerify = async (userId: number, name: string, approved: boolean) => {
@@ -238,6 +255,11 @@ export default function AdminPanel() {
           <TouchableOpacity onPress={() => setView("reports")} style={{ flex: 1, paddingVertical: 8, borderRadius: 10, alignItems: "center", backgroundColor: view === "reports" ? colors.blue : "transparent" }}>
             <Text style={{ color: view === "reports" ? "white" : colors.textMuted, fontWeight: "700", fontSize: 13 }}>
               🚨 Reports ({openReportCount})
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setView("diags")} style={{ flex: 1, paddingVertical: 8, borderRadius: 10, alignItems: "center", backgroundColor: view === "diags" ? colors.blue : "transparent" }}>
+            <Text style={{ color: view === "diags" ? "white" : colors.textMuted, fontWeight: "700", fontSize: 13 }}>
+              🔧 Diags
             </Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={() => setView("users")} style={{ flex: 1, paddingVertical: 8, borderRadius: 10, alignItems: "center", backgroundColor: view === "users" ? colors.blue : "transparent" }}>
@@ -467,6 +489,80 @@ export default function AdminPanel() {
                   </View>
                 )}
               </View>
+            );
+          }}
+        />
+      )}
+
+      {/* DIAGNOSES VIEW */}
+      {view === "diags" && (
+        <FlatList
+          data={diagnoses}
+          keyExtractor={(item) => item.id.toString()}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.blue} />}
+          contentContainerStyle={{ padding: 16 }}
+          ListHeaderComponent={
+            <View style={{ marginBottom: 14 }}>
+              <View style={{ flexDirection: "row", gap: 8, marginBottom: 12 }}>
+                {([1, 7, 30] as const).map((d) => (
+                  <TouchableOpacity
+                    key={d}
+                    onPress={() => setDiagDays(d)}
+                    style={{
+                      paddingHorizontal: 14, paddingVertical: 6, borderRadius: 16, borderWidth: 1,
+                      borderColor: colors.border, backgroundColor: diagDays === d ? colors.blue : colors.card,
+                    }}
+                  >
+                    <Text style={{ color: diagDays === d ? "white" : colors.textMuted, fontWeight: "700", fontSize: 13 }}>
+                      {d === 1 ? "24h" : `${d} days`}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              {diagStats && (
+                <View style={{ backgroundColor: colors.card, borderRadius: 12, borderWidth: 1, borderColor: colors.border, padding: 12 }}>
+                  <Text style={{ color: colors.text, fontSize: 14, fontWeight: "700" }}>
+                    {diagStats.total} diagnoses · {diagStats.fromRealUsers} from {diagStats.realUsers} real user{diagStats.realUsers === 1 ? "" : "s"}
+                  </Text>
+                  <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 4 }}>
+                    {diagStats.cached} cached · {diagStats.repeatsNoRep} repeats (no rep) · excludes you + review accounts in "real"
+                  </Text>
+                </View>
+              )}
+            </View>
+          }
+          ListEmptyComponent={
+            <View style={{ alignItems: "center", marginTop: 60 }}>
+              <Text style={{ fontSize: 48 }}>🔧</Text>
+              <Text style={{ color: colors.text, fontSize: 18, fontWeight: "700", marginTop: 16 }}>No diagnoses yet</Text>
+              <Text style={{ color: colors.textSecondary, marginTop: 8 }}>Diagnoses run in this window will show up here</Text>
+            </View>
+          }
+          renderItem={({ item }) => {
+            const u = item.user;
+            const tag = u.isAdmin ? "  👑" : u.isTest ? "  🧪 review" : "";
+            return (
+              <TouchableOpacity
+                onPress={() => router.push(`/(tabs)/user/${u.id}`)}
+                style={{ backgroundColor: colors.card, borderRadius: 14, borderWidth: 1, borderColor: colors.border, padding: 14, marginBottom: 10 }}
+              >
+                <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6 }}>
+                  <Text style={{ color: colors.text, fontWeight: "700", fontSize: 13, flex: 1 }} numberOfLines={1}>
+                    {u.name || "Unnamed"}{tag}
+                  </Text>
+                  <Text style={{ color: colors.textMuted, fontSize: 12 }}>{timeAgo(item.createdAt)}</Text>
+                </View>
+                {item.vehicleLabel && (
+                  <Text style={{ color: colors.blue, fontSize: 12, fontWeight: "600", marginBottom: 4 }}>🚗 {item.vehicleLabel}</Text>
+                )}
+                <Text style={{ color: colors.text, fontSize: 14 }} numberOfLines={4}>"{item.query}"</Text>
+                {item.summary && (
+                  <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 6 }} numberOfLines={2}>→ {item.summary}</Text>
+                )}
+                <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 8 }}>
+                  {item.severity || "—"}{item.cached ? " · cached" : ""}{item.repAwarded ? " · +5 rep" : " · repeat, no rep"}
+                </Text>
+              </TouchableOpacity>
             );
           }}
         />

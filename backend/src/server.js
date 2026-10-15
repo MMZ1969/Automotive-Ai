@@ -1,5 +1,6 @@
 // src/server.js
 import cors from "cors";
+import { createHash } from "crypto";
 import dotenv from "dotenv";
 import express from "express";
 import rateLimit from "express-rate-limit";
@@ -205,6 +206,56 @@ function getDiagnosisCacheKey(query, vehicle) {
   return `${vehicleKey}::${query.trim().toLowerCase()}`;
 }
 
+// ─── DIAGNOSIS ACCOUNTING ─────────────────────────────────────────────────────
+// Every served diagnosis (fresh or cached) counts toward the daily cap and the
+// lifetime total and gets a DiagnosisLog row. Rep (+5) is only paid if this
+// user hasn't asked the same question about the same vehicle in the last 24h,
+// so re-asking one question 8 times no longer earns 40 rep a day.
+const DIAGNOSIS_REP = 5;
+const REPEAT_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+function vehicleLabelOf(vehicle) {
+  if (!vehicle) return null;
+  return [vehicle.year, vehicle.make, vehicle.model, vehicle.trim].filter(Boolean).join(" ") || null;
+}
+
+async function recordDiagnosis({ userId, cacheKey, query, vehicle, result, cached }) {
+  try {
+    const queryKey = createHash("sha256").update(cacheKey).digest("hex");
+    const repeat = await prisma.diagnosisLog.findFirst({
+      where: { userId, queryKey, createdAt: { gte: new Date(Date.now() - REPEAT_WINDOW_MS) } },
+      select: { id: true },
+    });
+    const repAwarded = !repeat;
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { id: userId },
+        data: {
+          ...(repAwarded ? { repPoints: { increment: DIAGNOSIS_REP } } : {}),
+          dailyDiagnoses: { increment: 1 },
+          totalDiagnoses: { increment: 1 },
+          lastDiagnosisDate: new Date(),
+        },
+      }),
+      prisma.diagnosisLog.create({
+        data: {
+          userId,
+          queryKey,
+          vehicleLabel: vehicleLabelOf(vehicle),
+          query: String(query).slice(0, 2000),
+          summary: typeof result?.summary === "string" ? result.summary.slice(0, 500) : null,
+          severity: typeof result?.severity === "string" ? result.severity : null,
+          cached,
+          repAwarded,
+        },
+      }),
+    ]);
+    console.log(`DIAGNOSIS RUN | userId=${userId} | cached=${cached} | rep=${repAwarded ? DIAGNOSIS_REP : 0} | at=${new Date().toISOString()}`);
+  } catch (err) {
+    console.error("DIAGNOSIS RECORD ERROR:", err);
+  }
+}
+
 // AI Diagnosis route
 app.post("/api/diagnose", authMiddleware, async (req, res) => {
   const t0 = Date.now();
@@ -243,23 +294,7 @@ app.post("/api/diagnose", authMiddleware, async (req, res) => {
           });
         }
       }
-      try {
-        await prisma.user.update({
-          where: { id: userId },
-          data: {
-            repPoints: { increment: 5 },
-            dailyDiagnoses: { increment: 1 },
-            totalDiagnoses: { increment: 1 },
-            lastDiagnosisDate: new Date(),
-          },
-        });
-        // Searchable in Railway logs — this is the one place we can
-        // actually see WHEN a diagnosis ran, since totalDiagnoses is
-        // just a counter with no history of its own.
-        console.log(`DIAGNOSIS RUN | userId=${userId} | cached=true | at=${new Date().toISOString()}`);
-      } catch (repErr) {
-        console.error("REP AWARD ERROR:", repErr);
-      }
+      await recordDiagnosis({ userId, cacheKey, query, vehicle, result: cached.data, cached: true });
       console.log(`RESPONSE SENT (cached) +${Date.now() - t0}ms`);
       return res.json(cached.data);
     }
@@ -430,21 +465,8 @@ parsed.ebayParts = ebayParts;
     console.log(`EBAY LOOKUP DONE +${Date.now() - t0}ms`);
     // ─────────────────────────────────────────────────────────────────
 
-    // Award +5 rep for running a diagnosis
-    try {
-      await prisma.user.update({
-        where: { id: req.user.id },
-        data: {
-          repPoints: { increment: 5 },
-          dailyDiagnoses: { increment: 1 },
-          totalDiagnoses: { increment: 1 },
-          lastDiagnosisDate: new Date(),
-        },
-      });
-      console.log(`DIAGNOSIS RUN | userId=${req.user.id} | cached=false | at=${new Date().toISOString()}`);
-    } catch (repErr) {
-      console.error("REP AWARD ERROR:", repErr);
-    }
+    // Count it, log it, and award rep unless it's a repeat within 24h
+    await recordDiagnosis({ userId, cacheKey, query, vehicle, result: parsed, cached: false });
 
     // Store in cache for next time this exact vehicle+query comes in
     diagnosisCache.set(cacheKey, { data: parsed, cachedAt: Date.now() });

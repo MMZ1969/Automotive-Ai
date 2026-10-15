@@ -1,6 +1,8 @@
 import jwt from "jsonwebtoken";
 import prisma from "../lib/prisma.js";
 
+const LAST_SEEN_THROTTLE_MS = 15 * 60 * 1000;
+
 export default async function authMiddleware(req, res, next) {
   const authHeader = req.headers.authorization;
 
@@ -18,7 +20,7 @@ export default async function authMiddleware(req, res, next) {
     // an already-issued 7-day token.
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
-      select: { isBanned: true },
+      select: { isBanned: true, lastSeenAt: true },
     });
 
     if (!user) {
@@ -27,6 +29,15 @@ export default async function authMiddleware(req, res, next) {
 
     if (user.isBanned) {
       return res.status(403).json({ error: "This account has been banned." });
+    }
+
+    // Record "last seen" at most every 15 minutes, fire-and-forget so it
+    // never slows down or fails the request.
+    const now = Date.now();
+    if (!user.lastSeenAt || now - user.lastSeenAt.getTime() > LAST_SEEN_THROTTLE_MS) {
+      prisma.user
+        .update({ where: { id: decoded.userId }, data: { lastSeenAt: new Date(now) } })
+        .catch((e) => console.error("LAST SEEN UPDATE ERROR:", e.message));
     }
 
     req.user = { id: decoded.userId, role: decoded.role };

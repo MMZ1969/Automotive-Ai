@@ -17,7 +17,7 @@ class ModerationError extends Error {
   }
 }
 
-async function requireAdmin(req, res) {
+export async function requireAdmin(req, res) {
   const admin = await prisma.user.findUnique({
     where: { id: req.user.id },
     select: { isAdmin: true },

@@ -537,7 +537,8 @@ export const reportJob = async (req, res) => {
       createAndSendNotification({
         recipientId: admin.id,
         actorId: reporterId,
-        type: "job_update",
+        type: "job_reported",
+        jobId,
         message: `🚨 Job reported: "${job.title}" — Reason: ${reason}`,
       })
     ));
