@@ -4,6 +4,7 @@ import api from "@lib/api";
 import { Tabs, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { DeviceEventEmitter, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // Small reusable red count badge for tab icons
 function TabBadge({ count }: { count: number }) {
@@ -32,6 +33,10 @@ function TabBadge({ count }: { count: number }) {
 
 export default function TabsLayout() {
   const { user } = useAuth();
+  // Android 15+ draws edge-to-edge, so the system nav bar (3-button or gesture)
+  // overlaps the bottom of the screen. Add its height so the tabs sit above it.
+  // iOS gets the home-indicator inset the same way.
+  const insets = useSafeAreaInsets();
   const [notifCount, setNotifCount] = useState(0);
   const [messageCount, setMessageCount] = useState(0);
 
@@ -79,8 +84,8 @@ export default function TabsLayout() {
           backgroundColor: "#0d0f17",
           borderTopColor: "#252838",
           borderTopWidth: 1,
-          height: 60,
-          paddingBottom: 8,
+          height: 60 + insets.bottom,
+          paddingBottom: insets.bottom > 0 ? insets.bottom : 8,
         },
         tabBarActiveTintColor: "#345bff",
         tabBarInactiveTintColor: "#6b7280",
