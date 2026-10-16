@@ -273,7 +273,7 @@ export default function Settings() {
               <View style={{ padding: 16 }}>
                 <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 4 }}>Business Hours</Text>
                 <Text style={{ color: colors.textMuted, fontSize: 11, marginBottom: 8 }}>e.g. Mon-Fri 8am-6pm, Sat 9am-3pm</Text>
-                <TextInput value={newBusinessHours} onChangeText={setNewBusinessHours} style={{ ...inputStyle, borderColor: colors.blue }} autoFocus placeholder="Mon-Fri 8am-6pm" placeholderTextColor={colors.textMuted} />
+                <TextInput value={newBusinessHours} onChangeText={setNewBusinessHours} style={{ ...inputStyle, borderColor: colors.blue, minHeight: 64, textAlignVertical: "top" }} autoFocus multiline maxLength={120} placeholder="Mon-Fri 8am-6pm" placeholderTextColor={colors.textMuted} />
                 <View style={{ flexDirection: "row", gap: 10 }}>
                   <TouchableOpacity onPress={handleSaveBusinessHours} disabled={savingBusinessHours} style={{ flex: 1, backgroundColor: colors.blue, padding: 12, borderRadius: 10, alignItems: "center" }}>
                     <Text style={{ color: "white", fontWeight: "700" }}>{savingBusinessHours ? "Saving..." : "Save"}</Text>
@@ -284,12 +284,17 @@ export default function Settings() {
                 </View>
               </View>
             ) : (
-              <TouchableOpacity style={row} onPress={() => setEditingBusinessHours(true)}>
-                <Text style={labelStyle}>🕐 Business Hours</Text>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                  <Text style={valueStyle}>{user?.businessHours || "Add hours"}</Text>
+              // Stacked (label + Edit on top, hours below) so long schedules
+              // like "Mon-Fri 8am-6pm, Sat 9am-3pm" get the full width instead of
+              // being squeezed beside the label.
+              <TouchableOpacity style={{ padding: 16 }} onPress={() => setEditingBusinessHours(true)}>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                  <Text style={labelStyle}>🕐 Business Hours</Text>
                   <Text style={{ color: colors.blue, fontSize: 13 }}>Edit</Text>
                 </View>
+                <Text style={{ ...valueStyle, fontSize: 15, marginTop: 6, lineHeight: 21 }}>
+                  {user?.businessHours || "Add hours"}
+                </Text>
               </TouchableOpacity>
             )}
           </>

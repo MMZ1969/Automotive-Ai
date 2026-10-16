@@ -4,7 +4,7 @@ export default {
   expo: {
     name: "AutoAI",
     slug: "frontend50",
-    version: "1.0.23",
+    version: "1.0.24",
     orientation: "portrait",
     icon: "./assets/autoai_icon_1024_tm.png",
     userInterfaceStyle: "light",
@@ -12,7 +12,7 @@ export default {
     ios: {
       supportsTablet: true,
       bundleIdentifier: "app.automotiveai",
-      buildNumber: "36",
+      buildNumber: "37",
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
         NSAppTransportSecurity: { NSAllowsArbitraryLoads: true },
@@ -32,7 +32,7 @@ export default {
         backgroundColor: "#050509",
       },
       package: "app.automotiveai",
-      versionCode: 25,
+      versionCode: 26,
       // Required for push on Android: expo-notifications gets the device token
       // through FCM, which needs this file (Firebase app "AutoAI Android").
       googleServicesFile: "./google-services.json",
@@ -71,6 +71,17 @@ export default {
         },
       ],
       withFixGoogleMapsPod,
+      // Play Console: "DEX code optimization below threshold" (fix by Feb 2027).
+      // Turns on R8 minify/obfuscation + resource shrinking for Android release builds.
+      [
+        "expo-build-properties",
+        {
+          android: {
+            enableMinifyInReleaseBuilds: true,
+            enableShrinkResourcesInReleaseBuilds: true,
+          },
+        },
+      ],
     ],
     scheme: "automotiveai",
     extra: {

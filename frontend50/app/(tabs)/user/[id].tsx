@@ -135,15 +135,15 @@ export default function UserProfile() {
               {isMechanic && (profile?.location || profile?.businessHours) && (
                 <View style={{ marginTop: 12, backgroundColor: colors.card, borderRadius: 12, borderWidth: 1, borderColor: colors.border, padding: 12, alignSelf: "stretch" }}>
                   {profile?.location && (
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: profile?.businessHours ? 6 : 0 }}>
+                    <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 8, marginBottom: profile?.businessHours ? 6 : 0 }}>
                       <Text style={{ fontSize: 14 }}>📍</Text>
-                      <Text style={{ color: colors.textSecondary, fontSize: 13 }}>{profile.location}</Text>
+                      <Text style={{ color: colors.textSecondary, fontSize: 13, flex: 1, lineHeight: 19 }}>{profile.location}</Text>
                     </View>
                   )}
                   {profile?.businessHours && (
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                    <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 8 }}>
                       <Text style={{ fontSize: 14 }}>🕐</Text>
-                      <Text style={{ color: colors.textSecondary, fontSize: 13 }}>{profile.businessHours}</Text>
+                      <Text style={{ color: colors.textSecondary, fontSize: 13, flex: 1, lineHeight: 19 }}>{profile.businessHours}</Text>
                     </View>
                   )}
                 </View>
