@@ -3,9 +3,9 @@ import { useTheme } from "@context/ThemeContext";
 import api from "@lib/api";
 import { ensureFirebaseAuth } from "@lib/firebaseAuth";
 import * as ImagePicker from "expo-image-picker";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { getDownloadURL, ref, uploadBytesResumable } from "firebase/storage";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator, Alert, Image, KeyboardAvoidingView, Platform,
   ScrollView, Text, TextInput, TouchableOpacity, View,
@@ -19,6 +19,10 @@ const PRICE_TYPE_LABELS: Record<string, string> = { FIXED: "Fixed Price", OBO: "
 
 export default function AddPartScreen() {
   const router = useRouter();
+  // Same screen edits an existing listing when opened with ?id=<partId>
+  const { id: editId } = useLocalSearchParams<{ id?: string }>();
+  const isEdit = !!editId;
+  const [loadingPart, setLoadingPart] = useState(isEdit);
   const { user } = useAuth();
   const { colors } = useTheme();
 
@@ -36,6 +40,34 @@ export default function AddPartScreen() {
   const [analyzing, setAnalyzing] = useState(false);
   const [contactPreference, setContactPreference] = useState("EMAIL");
 
+  useEffect(() => {
+    if (!isEdit) return;
+    (async () => {
+      try {
+        const { data } = await api.get(`/api/parts/${editId}`);
+        if (data.userId !== user?.id) { Alert.alert("Not allowed", "You can only edit your own listings."); router.back(); return; }
+        setTitle(data.title || "");
+        setDescription(data.description || "");
+        if (CATEGORIES.includes(data.category)) setCategory(data.category);
+        if (CONDITIONS.includes(data.condition)) setCondition(data.condition);
+        if (PRICE_TYPES.includes(data.priceType)) setPriceType(data.priceType);
+        setPrice(data.price != null ? String(data.price) : "");
+        if (data.contactPreference) setContactPreference(data.contactPreference);
+        setImageUri(data.imageUrl || null);
+        setImageUrl(data.imageUrl || null);
+      } catch {
+        Alert.alert("Error", "Could not load this listing.");
+        router.back();
+      } finally { setLoadingPart(false); }
+    })();
+  }, [editId]);
+
+  // When editing, a new photo replaces the old one but doesn't let AI overwrite what you typed
+  const processPhoto = (asset: ImagePicker.ImagePickerAsset) =>
+    isEdit
+      ? uploadToFirebase(asset.uri)
+      : Promise.all([uploadToFirebase(asset.uri), analyzeWithAI(asset.base64!, asset.mimeType || "image/jpeg")]);
+
   const handlePickPhoto = async () => {
     Alert.alert("Add Photo", "Choose an option", [
       { text: "Take Photo", onPress: async () => {
@@ -46,7 +78,7 @@ export default function AddPartScreen() {
           if (result.canceled) return;
           const asset = result.assets[0];
           setImageUri(asset.uri);
-          await Promise.all([uploadToFirebase(asset.uri), analyzeWithAI(asset.base64!, asset.mimeType || "image/jpeg")]);
+          await processPhoto(asset);
         } catch { Alert.alert("Error", "Could not open camera."); }
       }},
       { text: "Choose from Library", onPress: async () => {
@@ -57,7 +89,7 @@ export default function AddPartScreen() {
           if (result.canceled) return;
           const asset = result.assets[0];
           setImageUri(asset.uri);
-          await Promise.all([uploadToFirebase(asset.uri), analyzeWithAI(asset.base64!, asset.mimeType || "image/jpeg")]);
+          await processPhoto(asset);
         } catch { Alert.alert("Error", "Could not open photo library."); }
       }},
       { text: "Cancel", style: "cancel" },
@@ -97,9 +129,20 @@ export default function AddPartScreen() {
   const handleSubmit = async () => {
     if (!title.trim()) { Alert.alert("Missing Info", "Please add a title for your listing."); return; }
     if (uploading || analyzing) { Alert.alert("Please wait", "Still processing your photo..."); return; }
+    const payload = { title: title.trim(), description, category, condition, priceType, price: priceType !== "TRADE" && priceType !== "FREE" && price ? parseFloat(price) : null, imageUrl, contactPreference };
+    if (isEdit) {
+      try {
+        setSubmitting(true);
+        await api.put(`/api/parts/${editId}`, payload);
+        Alert.alert("✅ Saved", "Your listing has been updated.", [{ text: "OK", onPress: () => router.back() }]);
+      } catch (err: any) {
+        Alert.alert("Error", err?.response?.data?.error || "Could not save changes. Try again.");
+      } finally { setSubmitting(false); }
+      return;
+    }
     try {
       setSubmitting(true);
-      await api.post("/api/parts", { title, description, category, condition, priceType, price: priceType !== "TRADE" && priceType !== "FREE" && price ? parseFloat(price) : null, imageUrl, contactPreference });
+      await api.post("/api/parts", payload);
       Alert.alert("🔩 Listed!", "Your part is now listed.", [
         { text: "View Listings", onPress: () => router.push("/(tabs)/(parts)") },
         { text: "List Another", onPress: () => router.replace("/(tabs)/(parts)/add") },
@@ -111,17 +154,25 @@ export default function AddPartScreen() {
   const labelStyle = { fontSize: 15, fontWeight: "600" as const, color: colors.textSecondary, marginBottom: 8 };
   const inputStyle = { backgroundColor: colors.card, color: colors.text, padding: 12, borderRadius: 10, borderWidth: 1, borderColor: colors.border, fontSize: 15, marginBottom: 16 };
 
+  if (loadingPart) {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.background, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator color={colors.blue} size="large" />
+      </View>
+    );
+  }
+
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.background }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <ScrollView contentContainerStyle={{ padding: 20 }}>
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 40, marginBottom: 24 }}>
-          <TouchableOpacity onPress={() => router.push("/(tabs)/(parts)")}>
+          <TouchableOpacity onPress={() => (isEdit ? router.back() : router.push("/(tabs)/(parts)"))}>
             <Text style={{ color: colors.blue, fontSize: 16 }}>← Back</Text>
           </TouchableOpacity>
-          <Text style={{ color: colors.text, fontSize: 22, fontWeight: "900" }}>List a Part</Text>
+          <Text style={{ color: colors.text, fontSize: 22, fontWeight: "900" }}>{isEdit ? "Edit Listing" : "List a Part"}</Text>
           <TouchableOpacity onPress={handleSubmit} disabled={submitting || uploading || analyzing}
             style={{ backgroundColor: submitting || uploading || analyzing ? colors.border : colors.blue, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 }}>
-            {submitting ? <ActivityIndicator color="white" size="small" /> : <Text style={{ color: "white", fontWeight: "700" }}>Post</Text>}
+            {submitting ? <ActivityIndicator color="white" size="small" /> : <Text style={{ color: "white", fontWeight: "700" }}>{isEdit ? "Save" : "Post"}</Text>}
           </TouchableOpacity>
         </View>
 
@@ -141,12 +192,12 @@ export default function AddPartScreen() {
             <>
               <Text style={{ fontSize: 36 }}>📷</Text>
               <Text style={{ color: colors.textSecondary, marginTop: 8, fontWeight: "600" }}>Add Photo</Text>
-              <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 4 }}>AI will autofill your listing!</Text>
+              {!isEdit && <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 4 }}>AI will autofill your listing!</Text>}
             </>
           )}
         </TouchableOpacity>
 
-        {!imageUri && (
+        {!imageUri && !isEdit && (
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: 20, backgroundColor: colors.background, padding: 10, borderRadius: 10, borderWidth: 1, borderColor: colors.blue + "33" }}>
             <Text style={{ fontSize: 16 }}>🤖</Text>
             <Text style={{ color: colors.textSecondary, fontSize: 12 }}>Take a photo and AI will fill in title, category, condition & description</Text>
@@ -206,6 +257,10 @@ export default function AddPartScreen() {
             <Text style={labelStyle}>Price ($)</Text>
             <TextInput style={inputStyle} value={price} onChangeText={setPrice} placeholder="0.00" placeholderTextColor={colors.textMuted} keyboardType="decimal-pad" />
           </>
+        )}
+
+        {isEdit && imageUri && (
+          <Text style={{ color: colors.textMuted, fontSize: 12, textAlign: "center", marginBottom: 8 }}>Tap the photo to replace it</Text>
         )}
 
         <View style={{ height: 40 }} />

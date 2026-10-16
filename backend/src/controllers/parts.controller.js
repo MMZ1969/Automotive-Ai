@@ -1,5 +1,16 @@
 import prisma from "../lib/prisma.js";
 
+const STATUSES = ["AVAILABLE", "SOLD"];
+const CONTACT_PREFS = ["EMAIL", "PHONE", "BOTH"];
+
+// undefined = field not sent (leave as is); "" / null = clear it
+function parsePrice(price) {
+  if (price === undefined) return undefined;
+  if (price === null || price === "") return null;
+  const n = parseFloat(price);
+  return Number.isFinite(n) ? n : null;
+}
+
 // GET /api/parts — browse all available parts
 export async function getParts(req, res) {
   try {
@@ -81,7 +92,7 @@ export async function getPartById(req, res) {
 export async function createPart(req, res) {
   try {
     const userId = req.user.id;
-    const { title, description, category, condition, price, priceType, imageUrl } = req.body;
+    const { title, description, category, condition, price, priceType, imageUrl, contactPreference } = req.body;
 
     if (!title || !category || !condition) {
       return res.status(400).json({ error: "Title, category, and condition are required" });
@@ -94,9 +105,10 @@ export async function createPart(req, res) {
         description,
         category,
         condition,
-        price: price ? parseFloat(price) : null,
+        price: parsePrice(price) ?? null,
         priceType: priceType || "FIXED",
         imageUrl,
+        ...(CONTACT_PREFS.includes(contactPreference) ? { contactPreference } : {}),
       },
     });
 
@@ -122,7 +134,14 @@ export async function updatePart(req, res) {
   try {
     const userId = req.user.id;
     const id = Number(req.params.id);
-    const { title, description, category, condition, price, priceType, imageUrl, status } = req.body;
+    const { title, description, category, condition, price, priceType, imageUrl, status, contactPreference } = req.body;
+
+    if (title !== undefined && !String(title).trim()) {
+      return res.status(400).json({ error: "Title can't be empty" });
+    }
+    if (status !== undefined && !STATUSES.includes(status)) {
+      return res.status(400).json({ error: "Invalid status" });
+    }
 
     const existing = await prisma.part.findUnique({ where: { id } });
     if (!existing || existing.userId !== userId) {
@@ -131,7 +150,11 @@ export async function updatePart(req, res) {
 
     const updated = await prisma.part.update({
       where: { id },
-      data: { title, description, category, condition, price, priceType, imageUrl, status },
+      data: {
+        title, description, category, condition, priceType, imageUrl, status,
+        price: parsePrice(price),
+        ...(CONTACT_PREFS.includes(contactPreference) ? { contactPreference } : {}),
+      },
     });
 
     // Award +5 rep the moment a listing transitions INTO "SOLD" — guarded

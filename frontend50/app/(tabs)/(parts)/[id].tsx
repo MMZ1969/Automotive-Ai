@@ -1,8 +1,8 @@
 import { useAuth } from "@context/AuthContext";
 import { useTheme } from "@context/ThemeContext";
 import api from "@lib/api";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import { useCallback, useState } from "react";
 import {
   ActivityIndicator, Alert, Image, Linking, ScrollView, Text, TouchableOpacity, View,
 } from "react-native";
@@ -17,7 +17,8 @@ export default function PartDetailScreen() {
   const [part, setPart] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  // Refetch on focus so edits made on the Edit screen show up on return
+  useFocusEffect(useCallback(() => {
     const fetchPart = async () => {
       try {
         const res = await api.get(`/api/parts/${id}`);
@@ -28,7 +29,19 @@ export default function PartDetailScreen() {
       } finally { setLoading(false); }
     };
     if (id) fetchPart();
-  }, [id]);
+  }, [id]));
+
+  const handleMarkSold = () => {
+    Alert.alert("Mark as Sold", "This removes the listing from Parts. You'll get +5 rep for the sale.", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Mark Sold", onPress: async () => {
+        try {
+          await api.put(`/api/parts/${id}`, { status: "SOLD" });
+          Alert.alert("🎉 Sold!", "Nice work. Your listing is marked as sold.", [{ text: "OK", onPress: () => router.back() }]);
+        } catch { Alert.alert("Error", "Could not update listing."); }
+      }},
+    ]);
+  };
 
   const formatPrice = (part: any) => {
     if (part.priceType === "FREE") return "🎁 Free";
@@ -112,6 +125,23 @@ export default function PartDetailScreen() {
           <TouchableOpacity onPress={handleContact} style={{ backgroundColor: colors.blue, paddingVertical: 18, borderRadius: 16, alignItems: "center", marginBottom: 40 }}>
             <Text style={{ color: "white", fontWeight: "700", fontSize: 18 }}>📞 Contact Seller</Text>
           </TouchableOpacity>
+        )}
+
+        {isOwner && (
+          <View style={{ flexDirection: "row", gap: 10, marginBottom: 12 }}>
+            <TouchableOpacity
+              onPress={() => router.push({ pathname: "/(tabs)/(parts)/add", params: { id: String(id) } })}
+              style={{ flex: 1, backgroundColor: colors.blue, paddingVertical: 16, borderRadius: 16, alignItems: "center" }}>
+              <Text style={{ color: "white", fontWeight: "700", fontSize: 16 }}>✏️ Edit</Text>
+            </TouchableOpacity>
+            {part.status !== "SOLD" && (
+              <TouchableOpacity
+                onPress={handleMarkSold}
+                style={{ flex: 1, backgroundColor: colors.green, paddingVertical: 16, borderRadius: 16, alignItems: "center" }}>
+                <Text style={{ color: "white", fontWeight: "700", fontSize: 16 }}>✅ Mark Sold</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         )}
 
         {isOwner && (
