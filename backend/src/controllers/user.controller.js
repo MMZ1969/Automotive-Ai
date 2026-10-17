@@ -119,18 +119,15 @@ export async function searchUsers(req, res) {
         AND: [
           { id: { not: currentUserId } },
           { email: { notIn: TEST_ACCOUNT_EMAILS } },
-          {
-            OR: [
-              { name: { contains: q, mode: "insensitive" } },
-              { email: { contains: q, mode: "insensitive" } },
-            ],
-          },
+          { isBanned: false },
+          // Name only: matching on email would let anyone probe whether an
+          // address has an account.
+          { name: { contains: q, mode: "insensitive" } },
         ],
       },
       select: {
         id: true,
         name: true,
-        email: true,
         role: true,
         profilePhoto: true,
         _count: {

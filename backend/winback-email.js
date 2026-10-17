@@ -12,6 +12,11 @@
 // that file is skipped forever, so re-running never double-emails anyone.
 // Replies go to REPLY_TO. If someone replies "stop", add their email to
 // reports/winback-optout.txt (one per line) and they'll be skipped too.
+//
+// CAN-SPAM: every email must show a valid postal address (a PO box or a
+// registered virtual mailbox is fine). Set it in backend/.env, e.g.
+//   WINBACK_POSTAL_ADDRESS="AutoAI, PO Box 123, Galloway, NJ 08205"
+// --confirm refuses to run without it.
 import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
 import { Resend } from "resend";
@@ -23,6 +28,7 @@ const REPLY_TO = "maz@amazmade.com";
 const TEST_TO = "maz@amazmade.com";
 const IOS_URL = "https://apps.apple.com/us/app/autoai-auto-intelligence/id6764058138";
 const ANDROID_URL = "https://play.google.com/store/apps/details?id=app.automotiveai";
+const POSTAL_ADDRESS = (process.env.WINBACK_POSTAL_ADDRESS || "").trim();
 
 const TEST_EMAILS = ["test@google.com", "apple@test.com"];
 const EXCLUDE_IDS = [6, 100]; // Lauren, Michael's amazmade account
@@ -144,6 +150,7 @@ function compose(u) {
     "",
     "--",
     "You're getting this one-time email because you have an AutoAI account. Reply \"stop\" and I won't email you again.",
+    POSTAL_ADDRESS || "[POSTAL ADDRESS MISSING]",
   ].join("\n");
 
   const btn = (href, label) =>
@@ -158,7 +165,8 @@ function compose(u) {
   <p>${btn(IOS_URL, "Open on iPhone")}${btn(ANDROID_URL, "Open on Android")}</p>
   <p>Michael</p>
   <p style="color:#6b7280;font-size:12px;margin-top:28px;border-top:1px solid #e5e7eb;padding-top:12px;">
-    You're getting this one-time email because you have an AutoAI account. Reply "stop" and I won't email you again.
+    You're getting this one-time email because you have an AutoAI account. Reply "stop" and I won't email you again.<br>
+    ${esc(POSTAL_ADDRESS || "[POSTAL ADDRESS MISSING]")}
   </p>
 </div>`;
   return { subject, text, html };
@@ -171,6 +179,10 @@ async function main() {
   console.log(`${recipients.length} recipient(s): activated, verified, quiet ${QUIET_DAYS}+ days, not emailed before\n`);
   recipients.forEach((u) =>
     console.log(`  #${u.id}  ${u.email}  ${u.vehicles[0] ? `${u.vehicles[0].year} ${u.vehicles[0].make} ${u.vehicles[0].model}` : "(no vehicle)"}  last: ${u.lastSign ? u.lastSign.toISOString().slice(0, 10) : "-"}`));
+
+  if (!POSTAL_ADDRESS) {
+    console.log("WARNING: WINBACK_POSTAL_ADDRESS is not set in .env. --confirm will refuse to send.\n");
+  }
 
   if (MODE === "dry") {
     for (const u of recipients) {
@@ -194,6 +206,10 @@ async function main() {
     if (error) throw new Error(error.message);
     console.log(`\nSample sent to ${TEST_TO}. If it looks right: node winback-email.js --confirm\n`);
     return;
+  }
+
+  if (!POSTAL_ADDRESS) {
+    throw new Error("WINBACK_POSTAL_ADDRESS missing from .env (CAN-SPAM requires a postal address). Nothing sent.");
   }
 
   const log = readJson(SENT_FILE, {});
