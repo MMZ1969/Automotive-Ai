@@ -1,5 +1,5 @@
 import prisma from "../lib/prisma.js";
-import { TEST_ACCOUNT_EMAILS } from "../lib/testAccounts.js";
+import { TEST_ACCOUNT_EMAILS, hideTestAccountsExceptViewer } from "../lib/testAccounts.js";
 import { createAndSendNotification } from "./notification.controller.js";
 
 // GET all posts
@@ -8,7 +8,7 @@ export const getAllPosts = async (req, res) => {
     const { type, search } = req.query;
     const viewerId = req.user?.id;
     const where = {
-      user: { email: { notIn: TEST_ACCOUNT_EMAILS } },
+      AND: [hideTestAccountsExceptViewer(viewerId)],
     };
     if (type && type !== "ALL") where.postType = type;
     if (search) where.content = { contains: search, mode: "insensitive" };
@@ -563,6 +563,7 @@ export const searchPosts = async (req, res) => {
           contains: q,
           mode: "insensitive",
         },
+        AND: [hideTestAccountsExceptViewer(req.user?.id)],
       },
       orderBy: { createdAt: "desc" },
       include: {
@@ -589,6 +590,7 @@ export const getSimilarPosts = async (req, res) => {
       where: {
         postType: post.postType,
         id: { not: id },
+        AND: [hideTestAccountsExceptViewer(req.user?.id)],
       },
       orderBy: { createdAt: "desc" },
       take: 10,

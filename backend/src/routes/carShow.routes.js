@@ -1,6 +1,7 @@
 import express from "express";
 import prisma from "../lib/prisma.js";
 import authMiddleware from "../middleware/authMiddleware.js";
+import { hideTestAccountsExceptViewer } from "../lib/testAccounts.js";
 
 const router = express.Router();
 
@@ -10,6 +11,7 @@ router.get("/", authMiddleware, async (req, res) => {
     const shows = await prisma.carShow.findMany({
       where: {
         date: { gte: new Date() },
+        AND: [hideTestAccountsExceptViewer(req.user?.id)],
       },
       orderBy: { date: "asc" },
       include: {
@@ -17,6 +19,7 @@ router.get("/", authMiddleware, async (req, res) => {
           select: { id: true, name: true, profilePhoto: true, role: true, isVerified: true },
         },
         attendees: {
+  where: hideTestAccountsExceptViewer(req.user?.id),
   select: {
     userId: true,
     user: {

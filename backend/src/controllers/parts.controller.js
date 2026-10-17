@@ -1,4 +1,5 @@
 import prisma from "../lib/prisma.js";
+import { hideTestAccountsExceptViewer } from "../lib/testAccounts.js";
 
 const STATUSES = ["AVAILABLE", "SOLD"];
 const CONTACT_PREFS = ["EMAIL", "PHONE", "BOTH"];
@@ -20,6 +21,7 @@ export async function getParts(req, res) {
       where: {
         status: "AVAILABLE",
         ...(category && category !== "All" ? { category } : {}),
+        AND: [hideTestAccountsExceptViewer(req.user?.id)],
       },
       include: {
         user: {

@@ -8,6 +8,15 @@ export const excludeTestAccountsFilter = {
   email: { notIn: TEST_ACCOUNT_EMAILS },
 };
 
+// Hide reviewer-account content from real users, but still let the
+// reviewer see their own (so Apple/Google can verify posting works).
+// `relation` is the model's relation to User; `fk` is its user id column.
+// Use inside an AND: `where: { AND: [hideTestAccountsExceptViewer(id)] }`.
+export function hideTestAccountsExceptViewer(viewerId, relation = "user", fk = "userId") {
+  const hide = { [relation]: excludeTestAccountsFilter };
+  return viewerId ? { OR: [hide, { [fk]: viewerId }] } : hide;
+}
+
 // For places where we only have a userId (e.g. a notification's actorId)
 // and need to check membership before creating/showing something.
 export async function isTestAccountUser(userId) {

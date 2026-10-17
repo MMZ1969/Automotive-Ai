@@ -118,6 +118,7 @@ export async function searchUsers(req, res) {
       where: {
         AND: [
           { id: { not: currentUserId } },
+          { email: { notIn: TEST_ACCOUNT_EMAILS } },
           {
             OR: [
               { name: { contains: q, mode: "insensitive" } },

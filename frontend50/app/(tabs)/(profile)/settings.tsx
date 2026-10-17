@@ -7,7 +7,6 @@ import { useState } from "react";
 import {
   Alert,
   Linking,
-  Modal,
   ScrollView,
   Text,
   TextInput,
@@ -35,13 +34,6 @@ export default function Settings() {
   const [editingBusinessHours, setEditingBusinessHours] = useState(false);
   const [newBusinessHours, setNewBusinessHours] = useState(user?.businessHours || "");
   const [savingBusinessHours, setSavingBusinessHours] = useState(false);
-
-  const [showVerifyModal, setShowVerifyModal] = useState(false);
-  const [licenseNumber, setLicenseNumber] = useState("");
-  const [shopName, setShopName] = useState("");
-  const [shopLocation, setShopLocation] = useState("");
-  const [experience, setExperience] = useState("");
-  const [submittingVerification, setSubmittingVerification] = useState(false);
 
   const handleSaveName = async () => {
     if (!newName.trim()) return;
@@ -96,23 +88,6 @@ export default function Settings() {
     }
   };
 
-  const handleSubmitVerification = async () => {
-    if (!licenseNumber.trim() || !shopName.trim()) {
-      Alert.alert("Missing fields", "License number and shop name are required.");
-      return;
-    }
-    try {
-      setSubmittingVerification(true);
-      await api.post("/api/users/verification-request", { licenseNumber, shopName, shopLocation, experience });
-      setShowVerifyModal(false);
-      Alert.alert("✅ Request Submitted!", "We'll review your verification request within 24-48 hours.");
-    } catch (err) {
-      Alert.alert("Error", "Could not submit request. Try again.");
-    } finally {
-      setSubmittingVerification(false);
-    }
-  };
-
   const card = { backgroundColor: colors.card, borderRadius: 14, borderWidth: 1, borderColor: colors.border, marginBottom: 8, overflow: "hidden" as const };
   const row = { flexDirection: "row" as const, justifyContent: "space-between" as const, alignItems: "center" as const, padding: 16 };
   const labelStyle = { color: colors.text, fontSize: 16 };
@@ -123,39 +98,6 @@ export default function Settings() {
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: 20 }}>
-
-      {/* VERIFICATION MODAL */}
-      <Modal visible={showVerifyModal} animationType="slide" transparent>
-        <View style={{ flex: 1, backgroundColor: "#00000088", justifyContent: "flex-end" }}>
-          <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: "flex-end" }}>
-            <View style={{ backgroundColor: colors.card, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20 }}>
-              <Text style={{ color: colors.text, fontSize: 22, fontWeight: "900", marginBottom: 4 }}>⭐ Get Verified</Text>
-              <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 20 }}>Submit your credentials to get a verified badge on your profile.</Text>
-
-              <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 6 }}>License / Certification Number *</Text>
-              <TextInput value={licenseNumber} onChangeText={setLicenseNumber} placeholder="e.g. ASE-12345" placeholderTextColor={colors.textMuted} style={inputStyle} />
-
-              <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 6 }}>Shop / Business Name *</Text>
-              <TextInput value={shopName} onChangeText={setShopName} placeholder="e.g. Mike's Auto Repair" placeholderTextColor={colors.textMuted} style={inputStyle} />
-
-              <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 6 }}>Location</Text>
-              <TextInput value={shopLocation} onChangeText={setShopLocation} placeholder="e.g. Newark, NJ" placeholderTextColor={colors.textMuted} style={inputStyle} />
-
-              <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 6 }}>Years of Experience</Text>
-              <TextInput value={experience} onChangeText={setExperience} placeholder="e.g. 10" placeholderTextColor={colors.textMuted} keyboardType="numeric" style={inputStyle} />
-
-              <View style={{ flexDirection: "row", gap: 10, marginTop: 8, marginBottom: 30 }}>
-                <TouchableOpacity onPress={() => setShowVerifyModal(false)} style={{ flex: 1, backgroundColor: colors.border, padding: 14, borderRadius: 12, alignItems: "center" }}>
-                  <Text style={{ color: colors.text, fontWeight: "700" }}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={handleSubmitVerification} disabled={submittingVerification} style={{ flex: 1, backgroundColor: colors.blue, padding: 14, borderRadius: 12, alignItems: "center" }}>
-                  <Text style={{ color: "white", fontWeight: "700" }}>{submittingVerification ? "Submitting..." : "Submit"}</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </ScrollView>
-        </View>
-      </Modal>
 
       {/* HEADER */}
 <View style={{ marginTop: 20, marginBottom: 30 }}>

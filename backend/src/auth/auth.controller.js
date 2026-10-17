@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import { Resend } from "resend";
 import { normalizeEmail } from "../lib/emailNormalize.js";
 import prisma from "../lib/prisma.js";
+import { deleteUserData } from "../lib/deleteUserData.js";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -284,24 +285,7 @@ export const deleteAccount = async (req, res) => {
   try {
     const userId = req.user.id;
 
-    await prisma.carShowAttendee.deleteMany({ where: { userId } });
-    await prisma.carShow.deleteMany({ where: { userId } });
-    await prisma.message.deleteMany({ where: { OR: [{ senderId: userId }, { receiverId: userId }] } });
-    await prisma.conversation.deleteMany({ where: { OR: [{ user1Id: userId }, { user2Id: userId }] } });
-    await prisma.part.deleteMany({ where: { userId } });
-    await prisma.notification.deleteMany({ where: { OR: [{ recipientId: userId }, { actorId: userId }] } });
-    await prisma.report.deleteMany({ where: { reporterId: userId } });
-    await prisma.block.deleteMany({ where: { OR: [{ blockerId: userId }, { blockedId: userId }] } });
-    await prisma.like.deleteMany({ where: { userId } });
-    await prisma.comment.deleteMany({ where: { userId } });
-    await prisma.follow.deleteMany({ where: { OR: [{ followerId: userId }, { followingId: userId }] } });
-    await prisma.bid.deleteMany({ where: { OR: [{ mechanicId: userId }, { job: { userId } }] } });
-    await prisma.review.deleteMany({ where: { OR: [{ reviewerId: userId }, { mechanicId: userId }] } });
-    await prisma.log.deleteMany({ where: { userId } });
-    await prisma.vehicle.deleteMany({ where: { userId } });
-    await prisma.post.deleteMany({ where: { userId } });
-    await prisma.job.deleteMany({ where: { userId } });
-    await prisma.user.delete({ where: { id: userId } });
+    await deleteUserData(prisma, userId);
 
     res.json({ success: true });
   } catch (err) {

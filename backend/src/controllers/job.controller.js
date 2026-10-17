@@ -1,11 +1,15 @@
 import prisma from "../lib/prisma.js";
+import { hideTestAccountsExceptViewer } from "../lib/testAccounts.js";
 import { createAndSendNotification } from "./notification.controller.js";
 
 // GET all jobs (mechanic + diyer map view)
 export const getJobs = async (req, res) => {
   try {
     const jobs = await prisma.job.findMany({
-      where: { status: "OPEN" },
+      where: {
+        status: "OPEN",
+        AND: [hideTestAccountsExceptViewer(req.user?.id, "poster", "userId")],
+      },
       orderBy: { createdAt: "desc" },
       include: {
         poster: { select: { id: true, name: true, profilePhoto: true, role: true } },
