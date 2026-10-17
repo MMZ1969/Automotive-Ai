@@ -426,10 +426,18 @@ export async function getFollowing(req, res) {
 export async function requestVerification(req, res) {
   try {
     const userId = req.user.id;
-    const { licenseNumber, shopName, shopLocation, experience } = req.body;
+    const { licenseNumber, shopName, shopLocation, experience, proofPhotoUrl } = req.body;
 
-    if (!licenseNumber || !shopName) {
-      return res.status(400).json({ error: "License number and shop name are required." });
+    // "Verified" = we checked this is a real, working mechanic. Accept an ASE /
+    // cert number OR a proof photo (work badge, uniform, cert, business card).
+    const hasProofPhoto =
+      typeof proofPhotoUrl === "string" &&
+      proofPhotoUrl.startsWith("https://firebasestorage.googleapis.com/");
+    if (!shopName || !String(shopName).trim()) {
+      return res.status(400).json({ error: "Shop or business name is required." });
+    }
+    if (!(licenseNumber && String(licenseNumber).trim()) && !hasProofPhoto) {
+      return res.status(400).json({ error: "Add your ASE / certification number or a proof photo." });
     }
 
     // Fetch current state BEFORE any writes — same pattern as the
@@ -442,7 +450,14 @@ export async function requestVerification(req, res) {
     });
     const isFirstActivation = !currentUser?.hasCompletedOnboarding;
 
-    const verificationRequest = JSON.stringify({ licenseNumber, shopName, shopLocation, experience });
+    const verificationRequest = JSON.stringify({
+      licenseNumber: licenseNumber || "",
+      shopName,
+      shopLocation,
+      experience,
+      proofPhotoUrl: hasProofPhoto ? proofPhotoUrl : null,
+      submittedAt: new Date().toISOString(),
+    });
 
     await prisma.user.update({
       where: { id: userId },
@@ -501,15 +516,28 @@ export async function verifyMechanic(req, res) {
       return res.status(403).json({ error: "Not authorized" });
     }
 
+    // Clear the request either way. Before, a denied request stayed in the
+    // admin Verify list forever and the mechanic never heard back.
     await prisma.user.update({
       where: { id: targetId },
-      data: {
-        isVerified: approved,
-        verificationRequest: approved ? null : undefined,
-      },
+      data: { isVerified: !!approved, verificationRequest: null },
     });
 
-    res.json({ success: true, verified: approved });
+    try {
+      const { createAndSendNotification } = await import("./notification.controller.js");
+      await createAndSendNotification({
+        recipientId: targetId,
+        actorId: adminId,
+        type: "verification_result",
+        message: approved
+          ? "🏁 You're a Verified Mechanic! Your badge is live and you now appear on the Near Me map."
+          : "Your verification request needs more info. Please resubmit with your ASE number or a photo of your work ID, uniform, or business card.",
+      });
+    } catch (notifyErr) {
+      console.error("VERIFY RESULT NOTIFY ERROR:", notifyErr);
+    }
+
+    res.json({ success: true, verified: !!approved });
   } catch (err) {
     console.error("VERIFY MECHANIC ERROR:", err);
     res.status(500).json({ error: "Failed to verify mechanic" });

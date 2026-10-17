@@ -315,7 +315,7 @@ export default function Settings() {
                 <Text style={{ color: colors.green, fontSize: 13 }}>Active</Text>
               </View>
             ) : (
-              <TouchableOpacity style={row} onPress={() => setShowVerifyModal(true)}>
+              <TouchableOpacity style={row} onPress={() => router.push("/(tabs)/mechanic/verify" as any)}>
                 <View>
                   <Text style={labelStyle}>⭐ Get Verified</Text>
                   <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 2 }}>Submit credentials for a verified badge</Text>

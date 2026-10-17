@@ -7,6 +7,7 @@ import {
   Alert,
   FlatList,
   Image,
+  Linking,
   RefreshControl,
   Text,
   TouchableOpacity,
@@ -307,7 +308,7 @@ export default function AdminPanel() {
                 {/* VERIFICATION DETAILS */}
                 <View style={{ backgroundColor: colors.background, borderRadius: 10, padding: 12, marginBottom: 14, borderWidth: 1, borderColor: colors.border }}>
                   <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6 }}>
-                    <Text style={{ color: colors.textSecondary, fontSize: 12 }}>License / Cert</Text>
+                    <Text style={{ color: colors.textSecondary, fontSize: 12 }}>ASE / Cert #</Text>
                     <Text style={{ color: colors.text, fontSize: 12, fontWeight: "600" }}>{details.licenseNumber || "—"}</Text>
                   </View>
                   <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6 }}>
@@ -323,6 +324,16 @@ export default function AdminPanel() {
                     <Text style={{ color: colors.text, fontSize: 12, fontWeight: "600" }}>{details.experience ? `${details.experience} years` : "—"}</Text>
                   </View>
                 </View>
+
+                {/* PROOF PHOTO (work ID / uniform / cert / business card). Tap to open full size. */}
+                {details.proofPhotoUrl ? (
+                  <TouchableOpacity onPress={() => Linking.openURL(details.proofPhotoUrl)} style={{ marginBottom: 14 }}>
+                    <Image source={{ uri: details.proofPhotoUrl }} style={{ width: "100%", height: 220, borderRadius: 10, backgroundColor: colors.background }} resizeMode="contain" />
+                    <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 4, textAlign: "center" }}>📷 Proof photo · tap to enlarge</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <Text style={{ color: colors.textMuted, fontSize: 12, marginBottom: 14 }}>No proof photo{details.licenseNumber ? " (cert # only)" : ""}</Text>
+                )}
 
                 {/* APPROVE / DENY BUTTONS */}
                 <View style={{ flexDirection: "row", gap: 10 }}>
