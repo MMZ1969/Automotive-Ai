@@ -50,8 +50,10 @@ function RouteGuard() {
     const inPublicRoute = PUBLIC_ROUTES.includes(segments[0]);
     const inOnboarding = segments[0] === "onboarding";
 
-    // First time user — show onboarding
-    if (!hasSeenOnboarding && !inOnboarding && !inAuthGroup && !user) {
+    // First time user — show onboarding. Public routes (forgot/reset password,
+    // guidelines) are exempt, otherwise "Forgot password" bounced to onboarding
+    // and then Welcome on any phone without the hasSeenOnboarding flag.
+    if (!hasSeenOnboarding && !inOnboarding && !inAuthGroup && !inPublicRoute && !user) {
       router.replace("/onboarding");
       return;
     }

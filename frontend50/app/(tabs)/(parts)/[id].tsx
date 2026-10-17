@@ -71,6 +71,7 @@ export default function PartDetailScreen() {
 
   if (!part) return null;
   const isOwner = user?.id === part.userId;
+  const canDelete = isOwner || !!user?.isAdmin;
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: colors.background }}>
@@ -144,9 +145,9 @@ export default function PartDetailScreen() {
           </View>
         )}
 
-        {isOwner && (
+        {canDelete && (
           <TouchableOpacity
-            onPress={() => Alert.alert("Delete Listing", "Are you sure?", [
+            onPress={() => Alert.alert(isOwner ? "Delete Listing" : "Remove Listing (admin)", "Are you sure?", [
               { text: "Cancel", style: "cancel" },
               { text: "Delete", style: "destructive", onPress: async () => { try { await api.delete(`/api/parts/${id}`); router.back(); } catch { Alert.alert("Error", "Could not delete listing."); } } },
             ])}

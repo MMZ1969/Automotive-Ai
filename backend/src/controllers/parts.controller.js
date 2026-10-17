@@ -185,8 +185,11 @@ export async function deletePart(req, res) {
     const id = Number(req.params.id);
 
     const existing = await prisma.part.findUnique({ where: { id } });
-    if (!existing || existing.userId !== userId) {
-      return res.status(403).json({ error: "Unauthorized" });
+    if (!existing) return res.status(404).json({ error: "Listing not found" });
+    if (existing.userId !== userId) {
+      // Admins can remove any listing (moderation, reviewer test posts)
+      const me = await prisma.user.findUnique({ where: { id: userId }, select: { isAdmin: true } });
+      if (!me?.isAdmin) return res.status(403).json({ error: "Unauthorized" });
     }
 
     await prisma.part.delete({ where: { id } });
