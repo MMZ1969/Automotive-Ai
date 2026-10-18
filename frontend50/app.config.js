@@ -4,7 +4,7 @@ export default {
   expo: {
     name: "AutoAI",
     slug: "frontend50",
-    version: "1.0.25",
+    version: "1.0.26",
     orientation: "portrait",
     icon: "./assets/autoai_icon_1024_tm.png",
     userInterfaceStyle: "light",
@@ -32,7 +32,7 @@ export default {
         backgroundColor: "#050509",
       },
       package: "app.automotiveai",
-      versionCode: 27,
+      versionCode: 28,
       // Required for push on Android: expo-notifications gets the device token
       // through FCM, which needs this file (Firebase app "AutoAI Android").
       googleServicesFile: "./google-services.json",
