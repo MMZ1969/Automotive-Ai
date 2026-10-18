@@ -89,6 +89,7 @@ export default function Search() {
         <FlatList
           data={results}
           keyExtractor={(item) => item.id.toString()}
+          keyboardShouldPersistTaps="handled"
           ListEmptyComponent={
             searched ? (
               <View style={{ alignItems: "center", marginTop: 80 }}>
@@ -141,7 +142,7 @@ export default function Search() {
             )
           }
           renderItem={({ item }) => searchType === "users" ? (
-            <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: colors.card, marginHorizontal: 16, marginTop: 12, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 16 }}>
+            <TouchableOpacity onPress={() => router.push(`/(tabs)/user/${item.id}`)} style={{ flexDirection: "row", alignItems: "center", backgroundColor: colors.card, marginHorizontal: 16, marginTop: 12, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 16 }}>
               <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: colors.border, justifyContent: "center", alignItems: "center", borderWidth: 2, borderColor: item.role === "MECHANIC" ? colors.blue : colors.green, overflow: "hidden", marginRight: 14 }}>
                 {item.profilePhoto ? (
                   <Image source={{ uri: item.profilePhoto }} style={{ width: 52, height: 52, borderRadius: 26 }} />
@@ -161,7 +162,7 @@ export default function Search() {
                   <Text style={{ color: "white", fontSize: 13, fontWeight: "700" }}>{following[item.id] ? "Following" : "Follow"}</Text>
                 </TouchableOpacity>
               )}
-            </View>
+            </TouchableOpacity>
           ) : (
             <TouchableOpacity onPress={() => router.push(`/(tabs)/post/${item.id}`)} style={{ backgroundColor: colors.card, marginHorizontal: 16, marginTop: 12, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 16 }}>
               <View style={{ alignSelf: "flex-start", backgroundColor: item.postType === "QUESTION" ? "#1e3a8a" : "#064e3b", paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10, marginBottom: 10 }}>
