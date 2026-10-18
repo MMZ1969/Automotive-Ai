@@ -1,5 +1,6 @@
 import { useAuth } from "@context/AuthContext";
 import { useTheme } from "@context/ThemeContext";
+import { suggestEmailFix } from "@lib/emailTypo";
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { Alert, Linking, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
@@ -22,22 +23,33 @@ export default function Register() {
     typeof params.code === "string" ? params.code.toUpperCase() : ""
   );
 
-  const handleRegister = async () => {
-    if (!name || !email || !password) { Alert.alert("Missing fields", "All fields are required."); return; }
+  const handleRegister = async (emailOverride?: string) => {
+    const cleanEmail = (emailOverride ?? email).trim();
+    if (!name || !cleanEmail || !password) { Alert.alert("Missing fields", "All fields are required."); return; }
+    // gmail.comn / gmail.coms etc. — the code would bounce and the person
+    // would be stuck. Offer the one-tap fix before we create anything.
+    const fix = suggestEmailFix(cleanEmail);
+    if (fix) {
+      Alert.alert("Check your email", `Did you mean ${fix}?`, [
+        { text: "Edit", style: "cancel" },
+        { text: `Use ${fix}`, onPress: () => { setEmail(fix); handleRegister(fix); } },
+      ]);
+      return;
+    }
     if (!agreedToTerms) { Alert.alert("Terms Required", "You must agree to the Terms of Service and Community Guidelines to create an account."); return; }
     if (password.length < 8) { Alert.alert("Weak Password", "Password must be at least 8 characters."); return; }
     if (!/[0-9]/.test(password)) { Alert.alert("Weak Password", "Password must contain at least one number."); return; }
     if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) { Alert.alert("Weak Password", "Password must contain at least one special character (!@#$%^&* etc)."); return; }
     try {
       setLoading(true);
-      await register({ name, email, password, role, referralCode: referralCode.trim() || undefined });
+      await register({ name, email: cleanEmail, password, role, referralCode: referralCode.trim() || undefined });
     } catch (err: any) {
       if (err?.needsVerification) {
         // Verification code entry lives on its own persistent route now —
         // not local state here — so it survives this screen unmounting,
         // the app backgrounding, a force-close, anything. See
         // app/(auth)/verify-email.tsx.
-        router.push({ pathname: "/(auth)/verify-email", params: { email } });
+        router.push({ pathname: "/(auth)/verify-email", params: { email: cleanEmail } });
       } else {
         // Show the server's reason ("Email already in use", "Please use a real,
         // permanent email address...") instead of axios's generic
@@ -63,6 +75,7 @@ export default function Register() {
         placeholder="Email" placeholderTextColor={colors.textMuted}
         style={{ backgroundColor: colors.input, color: colors.text, padding: 12, borderRadius: 8, marginBottom: 12, borderWidth: 1, borderColor: colors.border }}
         value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address"
+        autoCorrect={false} autoComplete="email" textContentType="emailAddress"
       />
 
       {/* PASSWORD WITH EYE */}
@@ -136,7 +149,7 @@ export default function Register() {
 
       <TouchableOpacity
         style={{ backgroundColor: loading || !agreedToTerms ? colors.card : colors.blue, padding: 16, borderRadius: 12, marginTop: 4 }}
-        onPress={handleRegister}
+        onPress={() => handleRegister()}
         disabled={loading || !agreedToTerms}
       >
         <Text style={{ color: "white", textAlign: "center", fontWeight: "bold", fontSize: 16 }}>{loading ? "Creating account..." : "Sign Up"}</Text>

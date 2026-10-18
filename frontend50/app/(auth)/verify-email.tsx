@@ -60,7 +60,13 @@ export default function VerifyEmail() {
       <Text style={{ fontSize: 60, marginBottom: 20 }}>📧</Text>
       <Text style={{ color: colors.text, fontSize: 24, fontWeight: "900", textAlign: "center", marginBottom: 12 }}>Enter Your Code</Text>
       <Text style={{ color: colors.textSecondary, fontSize: 15, textAlign: "center", lineHeight: 24, marginBottom: 8 }}>We sent a 6-digit code to:</Text>
-      <Text style={{ color: colors.blue, fontSize: 15, fontWeight: "700", textAlign: "center", marginBottom: 24 }}>{email || "your email"}</Text>
+      <Text style={{ color: colors.blue, fontSize: 15, fontWeight: "700", textAlign: "center", marginBottom: 6 }}>{email || "your email"}</Text>
+      {/* Typo'd addresses never get the code — give people an obvious way out
+          instead of hammering Resend Code at an inbox that doesn't exist.
+          Back keeps the register form filled in so it's a one-character fix. */}
+      <TouchableOpacity onPress={() => (router.canGoBack() ? router.back() : router.replace("/(auth)/register"))} style={{ marginBottom: 24 }}>
+        <Text style={{ color: colors.textMuted, fontSize: 13, textDecorationLine: "underline" }}>Wrong email? Go back and fix it</Text>
+      </TouchableOpacity>
 
       <TextInput
         placeholder="123456" placeholderTextColor={colors.textMuted}

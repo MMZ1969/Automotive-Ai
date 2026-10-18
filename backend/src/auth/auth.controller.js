@@ -3,6 +3,7 @@ import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import { Resend } from "resend";
 import { normalizeEmail } from "../lib/emailNormalize.js";
+import { suggestEmailFix } from "../lib/emailTypo.js";
 import prisma from "../lib/prisma.js";
 import { deleteUserData } from "../lib/deleteUserData.js";
 
@@ -72,6 +73,14 @@ export const register = async (req, res) => {
 
     if (isDisposableEmail(email)) {
       return res.status(400).json({ message: "Please use a real, permanent email address to sign up." });
+    }
+
+    // Typo'd big-provider address (gmail.comn, gmail.coms...) can never get
+    // the verification code. Reject with the fix so older app builds that
+    // don't check client-side still show the person what went wrong.
+    const emailFix = suggestEmailFix(email);
+    if (emailFix) {
+      return res.status(400).json({ message: `That email looks mistyped. Did you mean ${emailFix}?`, suggestedEmail: emailFix });
     }
 
     if (isProfane(name)) {
