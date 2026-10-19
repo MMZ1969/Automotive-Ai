@@ -7,6 +7,8 @@ import {
   ActivityIndicator, FlatList, Image, ScrollView, Text, TextInput, TouchableOpacity, View,
 } from "react-native";
 
+type SearchType = "posts" | "users" | "parts";
+
 export default function Search() {
   const { user } = useAuth();
   const { colors } = useTheme();
@@ -16,20 +18,27 @@ export default function Search() {
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [following, setFollowing] = useState<Record<number, boolean>>({});
-  const [searchType, setSearchType] = useState<"users" | "posts">("posts");
+  const [searchType, setSearchType] = useState<SearchType>("posts");
   const [suggestions, setSuggestions] = useState<any[]>([]);
 
   useFocusEffect(useCallback(() => {
     api.get("/api/users/suggestions").then(res => setSuggestions(res.data)).catch(() => {});
   }, []));
 
-  const handleSearch = async (text: string) => {
+  // `type` is passed explicitly on tab switches — setSearchType() hasn't
+  // landed yet at that point, so reading searchType here would search with
+  // the OLD tab and render its results with the new tab's card.
+  const handleSearch = async (text: string, type: SearchType = searchType) => {
     setQuery(text);
     if (text.trim().length < 2) { setResults([]); setSearched(false); return; }
+    const q = encodeURIComponent(text.trim());
     try {
       setLoading(true);
-      if (searchType === "users") {
-        const res = await api.get(`/api/users/search?q=${text}`);
+      if (type === "parts") {
+        const res = await api.get(`/api/parts?q=${q}`);
+        setResults(res.data); setSearched(true);
+      } else if (type === "users") {
+        const res = await api.get(`/api/users/search?q=${q}`);
         setResults(res.data); setSearched(true);
         const followStatuses: Record<number, boolean> = {};
         await Promise.all(res.data.map(async (u: any) => {
@@ -40,7 +49,7 @@ export default function Search() {
         }));
         setFollowing(followStatuses);
       } else {
-        const res = await api.get(`/api/posts/search?q=${text}`);
+        const res = await api.get(`/api/posts/search?q=${q}`);
         setResults(res.data); setSearched(true);
       }
     } catch (err) { console.error("SEARCH ERROR:", err); }
@@ -54,9 +63,23 @@ export default function Search() {
     } catch (err) { console.error("FOLLOW ERROR:", err); }
   };
 
-  const handleTypeChange = (type: "users" | "posts") => {
+  const handleTypeChange = (type: SearchType) => {
     setSearchType(type); setResults([]); setSearched(false);
-    if (query.trim().length >= 2) handleSearch(query);
+    if (query.trim().length >= 2) handleSearch(query, type);
+  };
+
+  const formatPrice = (part: any) => {
+    if (part.priceType === "FREE") return "🎁 Free";
+    if (part.priceType === "TRADE") return "🔄 Trade";
+    if (part.priceType === "OBO") return `$${part.price} OBO`;
+    if (part.price) return `$${part.price}`;
+    return "Make offer";
+  };
+
+  const TYPE_LABELS: Record<SearchType, { tab: string; placeholder: string; noun: string }> = {
+    posts: { tab: "🔧 Posts", placeholder: "Search posts...", noun: "posts" },
+    users: { tab: "👥 People", placeholder: "Search by name...", noun: "users" },
+    parts: { tab: "🔩 Parts", placeholder: "Search parts for sale...", noun: "parts" },
   };
 
   return (
@@ -65,17 +88,16 @@ export default function Search() {
         <Text style={{ color: colors.text, fontSize: 28, fontWeight: "900", marginBottom: 12 }}>🔍 Search</Text>
 
         <View style={{ flexDirection: "row", backgroundColor: colors.card, borderRadius: 12, padding: 4, marginBottom: 12 }}>
-          <TouchableOpacity onPress={() => handleTypeChange("posts")} style={{ flex: 1, paddingVertical: 8, borderRadius: 10, alignItems: "center", backgroundColor: searchType === "posts" ? colors.blue : "transparent" }}>
-            <Text style={{ color: searchType === "posts" ? "white" : colors.textMuted, fontWeight: "700", fontSize: 14 }}>🔧 Posts</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => handleTypeChange("users")} style={{ flex: 1, paddingVertical: 8, borderRadius: 10, alignItems: "center", backgroundColor: searchType === "users" ? colors.blue : "transparent" }}>
-            <Text style={{ color: searchType === "users" ? "white" : colors.textMuted, fontWeight: "700", fontSize: 14 }}>👥 People</Text>
-          </TouchableOpacity>
+          {(["posts", "users", "parts"] as SearchType[]).map((t) => (
+            <TouchableOpacity key={t} onPress={() => handleTypeChange(t)} style={{ flex: 1, paddingVertical: 8, borderRadius: 10, alignItems: "center", backgroundColor: searchType === t ? colors.blue : "transparent" }}>
+              <Text style={{ color: searchType === t ? "white" : colors.textMuted, fontWeight: "700", fontSize: 14 }}>{TYPE_LABELS[t].tab}</Text>
+            </TouchableOpacity>
+          ))}
         </View>
 
         <TextInput
           value={query} onChangeText={handleSearch}
-          placeholder={searchType === "posts" ? "Search posts..." : "Search by name..."}
+          placeholder={TYPE_LABELS[searchType].placeholder}
           placeholderTextColor={colors.textMuted} autoCapitalize="none"
           style={{ backgroundColor: colors.card, color: colors.text, paddingHorizontal: 16, paddingVertical: 12, borderRadius: 12, borderWidth: 1, borderColor: colors.border, fontSize: 16 }}
         />
@@ -94,7 +116,7 @@ export default function Search() {
             searched ? (
               <View style={{ alignItems: "center", marginTop: 80 }}>
                 <Text style={{ fontSize: 48 }}>🔧</Text>
-                <Text style={{ color: colors.text, fontSize: 20, fontWeight: "bold", marginTop: 16 }}>No {searchType === "posts" ? "posts" : "users"} found</Text>
+                <Text style={{ color: colors.text, fontSize: 20, fontWeight: "bold", marginTop: 16 }}>No {TYPE_LABELS[searchType].noun} found</Text>
                 <Text style={{ color: colors.textSecondary, marginTop: 8 }}>Try a different search term</Text>
               </View>
             ) : searchType === "users" ? (
@@ -133,6 +155,12 @@ export default function Search() {
                   </View>
                 )}
               </ScrollView>
+            ) : searchType === "parts" ? (
+              <View style={{ alignItems: "center", marginTop: 80 }}>
+                <Text style={{ fontSize: 48 }}>🔩</Text>
+                <Text style={{ color: colors.text, fontSize: 20, fontWeight: "bold", marginTop: 16 }}>Search Parts</Text>
+                <Text style={{ color: colors.textSecondary, marginTop: 8, textAlign: "center", paddingHorizontal: 40 }}>Find parts for sale or trade, e.g. "civic alternator"</Text>
+              </View>
             ) : (
               <View style={{ alignItems: "center", marginTop: 80 }}>
                 <Text style={{ fontSize: 48 }}>🔧</Text>
@@ -141,7 +169,22 @@ export default function Search() {
               </View>
             )
           }
-          renderItem={({ item }) => searchType === "users" ? (
+          renderItem={({ item }) => searchType === "parts" ? (
+            <TouchableOpacity onPress={() => router.push(`/(tabs)/(parts)/${item.id}`)} style={{ flexDirection: "row", backgroundColor: colors.card, marginHorizontal: 16, marginTop: 12, borderRadius: 16, borderWidth: 1, borderColor: colors.border, overflow: "hidden" }}>
+              {item.imageUrl ? (
+                <Image source={{ uri: item.imageUrl }} style={{ width: 96, height: 96 }} resizeMode="cover" />
+              ) : (
+                <View style={{ width: 96, height: 96, backgroundColor: colors.border, justifyContent: "center", alignItems: "center" }}>
+                  <Text style={{ fontSize: 32 }}>🔩</Text>
+                </View>
+              )}
+              <View style={{ flex: 1, padding: 12, justifyContent: "center" }}>
+                <Text style={{ color: colors.text, fontWeight: "700", fontSize: 15 }} numberOfLines={2}>{item.title}</Text>
+                <Text style={{ color: colors.green, fontWeight: "900", fontSize: 15, marginTop: 4 }}>{formatPrice(item)}</Text>
+                <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 4 }} numberOfLines={1}>{item.category} · {item.condition} · {item.user?.name || "Anonymous"}</Text>
+              </View>
+            </TouchableOpacity>
+          ) : searchType === "users" ? (
             <TouchableOpacity onPress={() => router.push(`/(tabs)/user/${item.id}`)} style={{ flexDirection: "row", alignItems: "center", backgroundColor: colors.card, marginHorizontal: 16, marginTop: 12, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 16 }}>
               <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: colors.border, justifyContent: "center", alignItems: "center", borderWidth: 2, borderColor: item.role === "MECHANIC" ? colors.blue : colors.green, overflow: "hidden", marginRight: 14 }}>
                 {item.profilePhoto ? (

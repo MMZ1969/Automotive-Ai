@@ -12,16 +12,32 @@ function parsePrice(price) {
   return Number.isFinite(n) ? n : null;
 }
 
+// Keyword search over title + description. Every word must appear in one
+// of them (case-insensitive), so "2014 silverado headlight" narrows
+// instead of widening. Capped so a pasted paragraph can't build a huge query.
+function partsSearchFilter(rawQ) {
+  const q = typeof rawQ === "string" ? rawQ.trim().slice(0, 80) : "";
+  if (q.length < 2) return [];
+  const words = q.split(/\s+/).filter((w) => w.length >= 1).slice(0, 6);
+  return words.map((w) => ({
+    OR: [
+      { title: { contains: w, mode: "insensitive" } },
+      { description: { contains: w, mode: "insensitive" } },
+    ],
+  }));
+}
+
 // GET /api/parts — browse all available parts
+// Optional: ?category=Engine  ?q=silverado headlight  (combinable)
 export async function getParts(req, res) {
   try {
-    const { category } = req.query;
+    const { category, q } = req.query;
 
     const parts = await prisma.part.findMany({
       where: {
         status: "AVAILABLE",
         ...(category && category !== "All" ? { category } : {}),
-        AND: [hideTestAccountsExceptViewer(req.user?.id)],
+        AND: [hideTestAccountsExceptViewer(req.user?.id), ...partsSearchFilter(q)],
       },
       include: {
         user: {

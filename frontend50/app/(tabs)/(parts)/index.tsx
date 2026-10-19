@@ -1,10 +1,10 @@
 import { useTheme } from "@context/ThemeContext";
 import api from "@lib/api";
 import { useFocusEffect, useRouter } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator, FlatList, Image, RefreshControl,
-  ScrollView, Text, TouchableOpacity, View,
+  ScrollView, Text, TextInput, TouchableOpacity, View,
 } from "react-native";
 
 const CATEGORIES = ["All", "Engine", "Suspension", "Brakes", "Body", "Interior", "Tires", "Exhaust", "Electrical", "Other"];
@@ -16,20 +16,44 @@ export default function PartsScreen() {
   const [parts, setParts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [searching, setSearching] = useState(false);
   const [activeCategory, setActiveCategory] = useState("All");
+  const [query, setQuery] = useState("");
+  const queryRef = useRef("");
+  // Only the newest request is allowed to set results, so a slow response
+  // for "sil" can't overwrite the results for "silverado".
+  const requestId = useRef(0);
 
-  const fetchParts = async (category = activeCategory) => {
+  const fetchParts = async (category = activeCategory, q = queryRef.current) => {
+    const myId = ++requestId.current;
     try {
-      const url = category === "All" ? "/api/parts" : `/api/parts?category=${encodeURIComponent(category)}`;
-      const res = await api.get(url);
-      setParts(res.data);
+      const params = new URLSearchParams();
+      if (category !== "All") params.set("category", category);
+      if (q.trim().length >= 2) params.set("q", q.trim());
+      const qs = params.toString();
+      const res = await api.get(qs ? `/api/parts?${qs}` : "/api/parts");
+      if (myId === requestId.current) setParts(res.data);
     } catch (err) { console.error("FETCH PARTS ERROR:", err); }
-    finally { setLoading(false); setRefreshing(false); }
+    finally {
+      if (myId === requestId.current) { setLoading(false); setRefreshing(false); setSearching(false); }
+    }
   };
 
   useFocusEffect(useCallback(() => { fetchParts(activeCategory); }, [activeCategory]));
   const onRefresh = () => { setRefreshing(true); fetchParts(activeCategory); };
-  const handleCategoryChange = (category: string) => { setActiveCategory(category); setLoading(true); fetchParts(category); };
+  const handleCategoryChange = (category: string) => { setActiveCategory(category); setSearching(true); fetchParts(category); };
+
+  // Debounced search: wait until typing pauses before hitting the server.
+  const didMount = useRef(false);
+  useEffect(() => {
+    queryRef.current = query;
+    if (!didMount.current) { didMount.current = true; return; } // focus effect does the first load
+    const trimmed = query.trim();
+    if (trimmed.length === 1) return; // one letter is too broad to bother
+    setSearching(true);
+    const t = setTimeout(() => fetchParts(activeCategory, query), 300);
+    return () => clearTimeout(t);
+  }, [query]);
 
   const formatPrice = (part: any) => {
     if (part.priceType === "FREE") return "🎁 Free";
@@ -47,6 +71,8 @@ export default function PartsScreen() {
     );
   }
 
+  const isFiltered = query.trim().length >= 2 || activeCategory !== "All";
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <View style={{ paddingTop: 60, paddingHorizontal: 20, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}>
@@ -59,7 +85,25 @@ export default function PartsScreen() {
             <Text style={{ color: "white", fontWeight: "700", fontSize: 14 }}>+ List Part</Text>
           </TouchableOpacity>
         </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 14 }} contentContainerStyle={{ gap: 8 }}>
+
+        <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: colors.card, borderRadius: 12, borderWidth: 1, borderColor: colors.border, marginTop: 14 }}>
+          <TextInput
+            value={query} onChangeText={setQuery}
+            placeholder="Search parts (e.g. silverado headlight)"
+            placeholderTextColor={colors.textMuted}
+            autoCapitalize="none" autoCorrect={false} returnKeyType="search"
+            style={{ flex: 1, color: colors.text, paddingHorizontal: 14, paddingVertical: 10, fontSize: 15 }}
+          />
+          {searching ? (
+            <ActivityIndicator color={colors.blue} size="small" style={{ marginRight: 12 }} />
+          ) : query.length > 0 ? (
+            <TouchableOpacity onPress={() => setQuery("")} style={{ paddingHorizontal: 12, paddingVertical: 8 }}>
+              <Text style={{ color: colors.textMuted, fontSize: 16 }}>✕</Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
+
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 12 }} contentContainerStyle={{ gap: 8 }} keyboardShouldPersistTaps="handled">
           {CATEGORIES.map((cat) => (
             <TouchableOpacity key={cat} onPress={() => handleCategoryChange(cat)}
               style={{ backgroundColor: activeCategory === cat ? colors.blue : colors.card, paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, borderWidth: 1, borderColor: activeCategory === cat ? colors.blue : colors.border }}>
@@ -72,17 +116,30 @@ export default function PartsScreen() {
       <FlatList
         data={parts}
         keyExtractor={(item) => item.id.toString()}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.blue} />}
         contentContainerStyle={{ padding: 16, gap: 12 }}
         ListEmptyComponent={
-          <View style={{ alignItems: "center", marginTop: 80 }}>
-            <Text style={{ fontSize: 48 }}>🔩</Text>
-            <Text style={{ color: colors.text, fontSize: 20, fontWeight: "bold", marginTop: 16 }}>No parts listed yet</Text>
-            <Text style={{ color: colors.textSecondary, marginTop: 8, textAlign: "center", paddingHorizontal: 40 }}>Be the first to list a part for sale or trade!</Text>
-            <TouchableOpacity onPress={() => router.push("/(tabs)/(parts)/add")} style={{ backgroundColor: colors.blue, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 20, marginTop: 20 }}>
-              <Text style={{ color: "white", fontWeight: "700" }}>+ List a Part</Text>
-            </TouchableOpacity>
-          </View>
+          isFiltered ? (
+            <View style={{ alignItems: "center", marginTop: 80 }}>
+              <Text style={{ fontSize: 48 }}>🔍</Text>
+              <Text style={{ color: colors.text, fontSize: 20, fontWeight: "bold", marginTop: 16 }}>No matching parts</Text>
+              <Text style={{ color: colors.textSecondary, marginTop: 8, textAlign: "center", paddingHorizontal: 40 }}>
+                {query.trim().length >= 2 ? `Nothing listed for "${query.trim()}"` : "Nothing listed in this category yet"}
+                {activeCategory !== "All" ? ` in ${activeCategory}` : ""}. Try fewer words or another category.
+              </Text>
+            </View>
+          ) : (
+            <View style={{ alignItems: "center", marginTop: 80 }}>
+              <Text style={{ fontSize: 48 }}>🔩</Text>
+              <Text style={{ color: colors.text, fontSize: 20, fontWeight: "bold", marginTop: 16 }}>No parts listed yet</Text>
+              <Text style={{ color: colors.textSecondary, marginTop: 8, textAlign: "center", paddingHorizontal: 40 }}>Be the first to list a part for sale or trade!</Text>
+              <TouchableOpacity onPress={() => router.push("/(tabs)/(parts)/add")} style={{ backgroundColor: colors.blue, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 20, marginTop: 20 }}>
+                <Text style={{ color: "white", fontWeight: "700" }}>+ List a Part</Text>
+              </TouchableOpacity>
+            </View>
+          )
         }
         renderItem={({ item }) => (
           <TouchableOpacity onPress={() => router.push(`/(tabs)/(parts)/${item.id}`)}
