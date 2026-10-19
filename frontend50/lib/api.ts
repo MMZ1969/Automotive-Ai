@@ -13,7 +13,17 @@ let isLoggingOut = false;
 
 // Auto logout on expired token
 api.interceptors.response.use(
-  response => response,
+  response => {
+    // Sliding session: the server re-issues a fresh 90-day token on requests
+    // made with a token older than a day. Save it so regular users never get
+    // logged out; anyone gone 90+ days just logs in again.
+    const fresh = response.headers?.["x-refreshed-token"];
+    if (typeof fresh === "string" && fresh.length > 20 && !isLoggingOut) {
+      api.defaults.headers.common["Authorization"] = `Bearer ${fresh}`;
+      AsyncStorage.setItem("token", fresh).catch(() => {});
+    }
+    return response;
+  },
   async error => {
     if (error.response?.status === 401 && !isLoggingOut) {
       isLoggingOut = true;

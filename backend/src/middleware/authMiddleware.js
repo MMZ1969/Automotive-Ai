@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 import prisma from "../lib/prisma.js";
+import { REFRESH_AFTER_SECONDS, signToken } from "../lib/authToken.js";
 
 const LAST_SEEN_THROTTLE_MS = 15 * 60 * 1000;
 
@@ -17,10 +18,10 @@ export default async function authMiddleware(req, res, next) {
 
     // Check ban status on every request, not just at login — this is
     // what makes a ban take effect immediately instead of waiting out
-    // an already-issued 7-day token.
+    // an already-issued token.
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
-      select: { isBanned: true, lastSeenAt: true },
+      select: { isBanned: true, lastSeenAt: true, role: true },
     });
 
     if (!user) {
@@ -38,6 +39,14 @@ export default async function authMiddleware(req, res, next) {
       prisma.user
         .update({ where: { id: decoded.userId }, data: { lastSeenAt: new Date(now) } })
         .catch((e) => console.error("LAST SEEN UPDATE ERROR:", e.message));
+    }
+
+    // Sliding session: a token more than a day old gets swapped for a fresh
+    // 90-day one. Role comes from the DB so a role change sticks too.
+    // Builds that don't read this header just ignore it.
+    const ageSeconds = Math.floor(now / 1000) - (decoded.iat || 0);
+    if (ageSeconds > REFRESH_AFTER_SECONDS) {
+      res.setHeader("X-Refreshed-Token", signToken({ id: decoded.userId, role: user.role }));
     }
 
     req.user = { id: decoded.userId, role: decoded.role };

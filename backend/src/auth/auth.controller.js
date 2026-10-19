@@ -6,6 +6,7 @@ import { normalizeEmail } from "../lib/emailNormalize.js";
 import { suggestEmailFix } from "../lib/emailTypo.js";
 import prisma from "../lib/prisma.js";
 import { deleteUserData } from "../lib/deleteUserData.js";
+import { signToken } from "../lib/authToken.js";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -231,11 +232,7 @@ export const login = async (req, res) => {
       });
     }
 
-    const token = jwt.sign(
-      { userId: user.id, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: "7d" }
-    );
+    const token = signToken(user);
 
     res.json({
       token,
@@ -629,11 +626,7 @@ export const verifyEmailCode = async (req, res) => {
       },
     });
 
-    const jwtToken = jwt.sign(
-      { userId: user.id, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: "7d" }
-    );
+    const jwtToken = signToken(user);
 
     res.json({
       message: "Email verified!",
