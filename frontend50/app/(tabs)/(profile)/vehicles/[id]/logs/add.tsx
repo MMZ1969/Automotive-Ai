@@ -1,6 +1,7 @@
 import { useTheme } from "@context/ThemeContext";
 import api from "@lib/api";
 import { createLog } from "@lib/logs";
+import { addMonthsToDay, createReminder, suggestedMonths, todayDay } from "@lib/reminders";
 import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
@@ -23,11 +24,13 @@ try {
 }
 
 export default function AddLogScreen() {
-  const { id } = useLocalSearchParams();
+  // title/skipRemind come from a reminder's "Done → Add to log", which
+  // already rolled the reminder forward, so don't offer another one.
+  const { id, title: presetTitle, skipRemind } = useLocalSearchParams();
   const router = useRouter();
   const { colors } = useTheme();
 
-  const [title, setTitle] = useState("");
+  const [title, setTitle] = useState(typeof presetTitle === "string" ? presetTitle : "");
   const [description, setDescription] = useState("");
   const [cost, setCost] = useState("");
   const [mileage, setMileage] = useState("");
@@ -36,6 +39,9 @@ export default function AddLogScreen() {
   const [scanning, setScanning] = useState(false);
   const [receiptImage, setReceiptImage] = useState<string | null>(null);
   const [listening, setListening] = useState(false);
+  // After a successful save: offer "remind me again in N months".
+  const [remindPrompt, setRemindPrompt] = useState<null | { title: string; baseDay: string; options: { months: number; day: string }[] }>(null);
+  const [savingReminder, setSavingReminder] = useState<number | null>(null);
 
   const handleScanReceipt = async () => {
     try {
@@ -125,6 +131,20 @@ export default function AddLogScreen() {
   }
 };
 
+  const goToLogs = () => router.push(`/(tabs)/(profile)/vehicles/${id}/logs`);
+
+  const handleRemind = async (months: number, day: string) => {
+    if (!remindPrompt) return;
+    setSavingReminder(months);
+    try {
+      await createReminder({ vehicleId: id as string, title: remindPrompt.title, intervalMonths: months, dueAt: day });
+      goToLogs();
+    } catch (err: any) {
+      Alert.alert("Couldn't set reminder", err?.response?.data?.message || "Your log was saved. Try adding the reminder from the vehicle screen.");
+      setSavingReminder(null);
+    }
+  };
+
   const handleSave = async () => {
     if (!title.trim()) {
       Alert.alert("Missing Title", "Please enter a log title.");
@@ -139,7 +159,18 @@ export default function AddLogScreen() {
         mileage: mileage ? parseInt(mileage) : undefined,
         performedAt: performedAt ? new Date(performedAt).toISOString() : undefined,
       });
-      router.push(`/(tabs)/(profile)/vehicles/${id}/logs`);
+      // Count the interval from when the work was done, and only offer
+      // intervals that land in the future (logging a 2-year-old job
+      // shouldn't create an already-overdue reminder).
+      const baseDay = /^\d{4}-\d{2}-\d{2}$/.test(performedAt) ? performedAt : todayDay();
+      const options = [3, 6, 12]
+        .map((months) => ({ months, day: addMonthsToDay(baseDay, months) }))
+        .filter((o) => o.day > todayDay());
+      if (options.length && skipRemind !== "1") {
+        setRemindPrompt({ title: title.trim(), baseDay, options });
+      } else {
+        goToLogs();
+      }
     } catch (err) {
       console.error("Error creating log:", err);
       Alert.alert("Error", "Failed to save log.");
@@ -147,6 +178,47 @@ export default function AddLogScreen() {
       setLoading(false);
     }
   };
+
+  if (remindPrompt) {
+    const suggested = suggestedMonths(remindPrompt.title);
+    const fmt = (day: string) => {
+      const [y, m, d] = day.split("-").map(Number);
+      return new Date(y, m - 1, d).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+    };
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: "center", padding: 24 }}>
+        <Text style={{ fontSize: 48, textAlign: "center" }}>✅</Text>
+        <Text style={{ color: colors.text, fontSize: 22, fontWeight: "900", textAlign: "center", marginTop: 12 }}>Log saved</Text>
+        <Text style={{ color: colors.textSecondary, fontSize: 15, textAlign: "center", marginTop: 8, marginBottom: 28, lineHeight: 22 }}>
+          🔔 Want a reminder to do “{remindPrompt.title}” again?
+        </Text>
+        {remindPrompt.options.map((o) => {
+          const highlight = o.months === suggested;
+          return (
+            <TouchableOpacity
+              key={o.months}
+              disabled={savingReminder !== null}
+              onPress={() => handleRemind(o.months, o.day)}
+              style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", backgroundColor: highlight ? colors.blue : colors.card, borderWidth: 1, borderColor: highlight ? colors.blue : colors.border, borderRadius: 14, paddingVertical: 16, paddingHorizontal: 18, marginBottom: 10 }}
+            >
+              <Text style={{ color: highlight ? "white" : colors.text, fontSize: 16, fontWeight: "700" }}>In {o.months} months</Text>
+              {savingReminder === o.months ? (
+                <ActivityIndicator color={highlight ? "white" : colors.blue} size="small" />
+              ) : (
+                <Text style={{ color: highlight ? "white" : colors.textSecondary, fontSize: 14 }}>{fmt(o.day)}</Text>
+              )}
+            </TouchableOpacity>
+          );
+        })}
+        <TouchableOpacity disabled={savingReminder !== null} onPress={goToLogs} style={{ padding: 16, alignItems: "center", marginTop: 6 }}>
+          <Text style={{ color: colors.textMuted, fontSize: 15 }}>No thanks</Text>
+        </TouchableOpacity>
+        <Text style={{ color: colors.textMuted, fontSize: 12, textAlign: "center", marginTop: 8 }}>
+          You'll get a push on the due date. It repeats until you remove it.
+        </Text>
+      </SafeAreaView>
+    );
+  }
 
   if (loading) {
     return (

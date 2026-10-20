@@ -20,6 +20,8 @@ import logsRoutes from "./routes/logs.routes.js";
 import messagesRoutes from "./routes/messages.routes.js";
 import notificationRoutes from "./routes/notification.routes.js";
 import partsRoutes from "./routes/parts.routes.js";
+import remindersRoutes from "./routes/reminders.routes.js";
+import { startReminderScheduler } from "./jobs/reminderPush.js";
 import postsRoutes from "./routes/posts.js";
 import reviewRoutes from "./routes/reviews.js";
 import uploadRoutes from "./routes/upload.js";
@@ -185,6 +187,7 @@ app.use("/api/upload", uploadRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/jobs", jobRoutes);
 app.use("/api/parts", partsRoutes);
+app.use("/api/reminders", remindersRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/car-shows", carShowRoutes);
 app.use("/api/messages", messagesRoutes);
@@ -935,4 +938,5 @@ const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  startReminderScheduler();
 });

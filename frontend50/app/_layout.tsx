@@ -3,8 +3,9 @@ import { LogProvider } from "@context/LogContext";
 import { ThemeProvider } from "@context/ThemeContext";
 import { VehicleProvider } from "@context/VehicleContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Notifications from "expo-notifications";
 import { Slot, useRouter, useSegments } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Text, TouchableOpacity, View } from "react-native";
 
 const PUBLIC_ROUTES = ["forgot-password", "reset-password", "change-password", "guidelines"];
@@ -33,6 +34,23 @@ function RouteGuard() {
   const router = useRouter();
   const [onboardingChecked, setOnboardingChecked] = useState(false);
   const [hasSeenOnboarding, setHasSeenOnboarding] = useState(false);
+
+  // Push taps. Covers both a running app and a cold start from the
+  // notification. Reminder pushes carry { type: "REMINDER", vehicleId } and
+  // open that vehicle; waits until the session is restored so the route
+  // guard doesn't bounce it to Welcome.
+  const lastResponse = Notifications.useLastNotificationResponse();
+  const handledPush = useRef<string | null>(null);
+  useEffect(() => {
+    if (!lastResponse || loading || !user) return;
+    const pushId = lastResponse.notification.request.identifier;
+    if (handledPush.current === pushId) return;
+    handledPush.current = pushId;
+    const data: any = lastResponse.notification.request.content.data || {};
+    if (data.type === "REMINDER" && data.vehicleId) {
+      router.push(`/(tabs)/(profile)/vehicles/${data.vehicleId}`);
+    }
+  }, [lastResponse, loading, user]);
 
   useEffect(() => {
     const checkOnboarding = async () => {

@@ -1,8 +1,10 @@
 import prisma from "../lib/prisma.js";
 import { isTestAccountUser } from "../lib/testAccounts.js";
 
-// Helper function to send push notification
-export async function sendPushNotification(pushToken, title, body, badgeCount = 1) {
+// Helper function to send push notification.
+// badgeCount null = leave the app badge alone. data rides along to the app
+// (e.g. { type: "REMINDER", vehicleId } so a tap opens that vehicle).
+export async function sendPushNotification(pushToken, title, body, badgeCount = 1, data = undefined) {
   if (!pushToken || !pushToken.startsWith("ExponentPushToken")) return;
 
   try {
@@ -14,7 +16,8 @@ export async function sendPushNotification(pushToken, title, body, badgeCount = 
         title,
         body,
         sound: "default",
-        badge: badgeCount,
+        ...(typeof badgeCount === "number" ? { badge: badgeCount } : {}),
+        ...(data ? { data } : {}),
       }),
     });
   } catch (err) {

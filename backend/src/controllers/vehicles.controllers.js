@@ -198,6 +198,7 @@ export const deleteVehicle = async (req, res) => {
     }
 
     await prisma.log.deleteMany({ where: { vehicleId } });
+    await prisma.reminder.deleteMany({ where: { vehicleId } });
     await prisma.vehicle.delete({ where: { id: vehicleId } });
 
     res.json({ message: "Vehicle deleted" });

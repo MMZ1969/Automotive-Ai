@@ -87,6 +87,7 @@ export async function deleteUserData(prisma, userId) {
       await tx.carShow.deleteMany({ where: { id: { in: showIds } } });
 
       // Garage / diagnostics
+      await tx.reminder.deleteMany({ where: { OR: [{ userId }, { vehicle: { userId } }] } });
       await tx.savedDiagnosis.deleteMany({ where: { userId } });
       await tx.diagnosisLog.deleteMany({ where: { userId } });
       await tx.log.deleteMany({ where: { OR: [{ userId }, { vehicle: { userId } }] } });

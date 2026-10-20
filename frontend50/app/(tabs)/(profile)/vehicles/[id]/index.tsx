@@ -15,6 +15,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import VehicleReminders from "@components/VehicleReminders";
 import WrenchButton from "@components/WrenchButton";
 
 // Styles depend on the active theme's colors, so this is a function
@@ -300,21 +301,17 @@ export default function VehicleDetailsScreen() {
               </View>
             </View>
 
-            <TouchableOpacity onPress={openLogs} style={styles.logsButton}>
-            <Text style={styles.logsButtonText}>📋 View Maintenance Logs</Text>
-          </TouchableOpacity>
+            <VehicleReminders vehicleId={id as string} />
 
-                <TouchableOpacity onPress={openLogs} style={styles.logsButton}>
-        <Text style={styles.logsButtonText}>📋 View Maintenance Logs</Text>
-      </TouchableOpacity>
+            <TouchableOpacity onPress={openLogs} style={[styles.logsButton, { marginBottom: 12 }]}>
+              <Text style={styles.logsButtonText}>📋 View Maintenance Logs</Text>
+            </TouchableOpacity>
 
-      <TouchableOpacity onPress={() => router.push(`/(tabs)/(profile)/vehicles/${id}/diagnoses`)} style={styles.logsButton}>
-        <Text style={styles.logsButtonText}>💾 View Saved Diagnoses</Text>
-      </TouchableOpacity>
+            <TouchableOpacity onPress={() => router.push(`/(tabs)/(profile)/vehicles/${id}/diagnoses`)} style={styles.logsButton}>
+              <Text style={styles.logsButtonText}>💾 View Saved Diagnoses</Text>
+            </TouchableOpacity>
 
-      <WrenchButton onPress={() => router.push(`/(tabs)/(profile)/vehicles/${id}/logs/add`)} />
-
-          <WrenchButton onPress={() => router.push(`/(tabs)/(profile)/vehicles/${id}/logs/add`)} />
+            <WrenchButton onPress={() => router.push(`/(tabs)/(profile)/vehicles/${id}/logs/add`)} />
           </>
         ) : (
           // EDIT MODE
