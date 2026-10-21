@@ -1,6 +1,7 @@
 // src/controllers/reports.controller.js
 // Admin-only moderation of user reports (posts and jobs).
 import prisma from "../lib/prisma.js";
+import { setUserBanned } from "../lib/banList.js";
 
 const ACTIONS = [
   "DISMISS",            // report is unfounded; nothing happens to the content
@@ -34,10 +35,10 @@ export async function requireAdmin(req, res) {
 async function banInTx(tx, userId, adminId) {
   if (!userId) throw new ModerationError(400, "No user to ban for this report");
   if (userId === adminId) throw new ModerationError(400, "You can't ban yourself");
-  const target = await tx.user.findUnique({ where: { id: userId }, select: { isAdmin: true } });
+  const target = await tx.user.findUnique({ where: { id: userId }, select: { id: true, email: true, isAdmin: true } });
   if (!target) throw new ModerationError(404, "User not found");
   if (target.isAdmin) throw new ModerationError(400, "Can't ban an admin account");
-  await tx.user.update({ where: { id: userId }, data: { isBanned: true } });
+  await setUserBanned(tx, target, true, "Banned from a report");
 }
 
 // GET /api/admin/reports?status=open|resolved   (default open)

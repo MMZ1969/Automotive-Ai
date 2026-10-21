@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import { normalizeEmail } from "../lib/emailNormalize.js";
+import { setUserBanned } from "../lib/banList.js";
 import prisma from "../lib/prisma.js";
 import { grantReferralReward } from "../lib/referrals.js";
 import { TEST_ACCOUNT_EMAILS } from "../lib/testAccounts.js";
@@ -120,6 +121,9 @@ export async function searchUsers(req, res) {
           { id: { not: currentUserId } },
           { email: { notIn: TEST_ACCOUNT_EMAILS } },
           { isBanned: false },
+          // Unfinished signups (never entered the email code) can't log in,
+          // so finding or messaging them goes nowhere.
+          { emailVerified: true },
           // Name only: matching on email would let anyone probe whether an
           // address has an account.
           { name: { contains: q, mode: "insensitive" } },
@@ -156,6 +160,8 @@ export async function getLeaderboard(req, res) {
       where: {
         ...(role ? { role: role.toUpperCase() } : {}),
         email: { notIn: TEST_ACCOUNT_EMAILS },
+        emailVerified: true,
+        isBanned: false,
       },
       orderBy: { repPoints: "desc" },
       take: 20,
@@ -587,6 +593,8 @@ export async function getMechanics(req, res) {
         role: "MECHANIC",
         location: { not: null },
         email: { notIn: TEST_ACCOUNT_EMAILS },
+        emailVerified: true,
+        isBanned: false,
       },
       select: {
         id: true,
@@ -618,12 +626,13 @@ export async function banUser(req, res) {
     const target = await prisma.user.findUnique({ where: { id: targetId } });
     if (!target) return res.status(404).json({ error: "User not found" });
 
-    const updated = await prisma.user.update({
-      where: { id: targetId },
-      data: { isBanned: !target.isBanned },
-    });
+    const banning = !target.isBanned;
+    if (banning && target.isAdmin) return res.status(400).json({ error: "Can't ban an admin account" });
 
-    res.json({ isBanned: updated.isBanned });
+    // Also adds/removes the email on the signup ban list (see lib/banList.js).
+    await prisma.$transaction((tx) => setUserBanned(tx, target, banning));
+
+    res.json({ isBanned: banning });
   } catch (err) {
     console.error("BAN USER ERROR:", err);
     res.status(500).json({ error: "Failed to update ban status" });
