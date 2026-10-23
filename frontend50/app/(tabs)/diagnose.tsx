@@ -1,6 +1,7 @@
 import { useTheme } from "@context/ThemeContext";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import api from "@lib/api";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as ImagePicker from "expo-image-picker";
 import { useFocusEffect, useRouter } from "expo-router";
 import * as Speech from "expo-speech";
@@ -25,6 +26,7 @@ const LOADING_STAGES = [
   { icon: "clipboard-text-outline", text: "Compiling your diagnosis..." },
 ];
 const LOADING_STAGE_DURATION_MS = 8000;
+const LAST_VEHICLE_KEY = "diagnose:lastVehicleId";
 
 function buildReadAloudScript(result: any): string {
   const parts: (string | null)[] = [
@@ -69,12 +71,33 @@ export default function Diagnose() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const loadingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Auto-pick a vehicle so the AI always has context: the one they last used
+  // here, else the only one in the garage. Tapping a chip still overrides.
   useFocusEffect(useCallback(() => {
     const loadVehicles = async () => {
-      try { const res = await api.get("/api/vehicles"); setVehicles(res.data || []); } catch {}
+      try {
+        const res = await api.get("/api/vehicles");
+        const list = res.data || [];
+        setVehicles(list);
+        let lastId: string | null = null;
+        try { lastId = await AsyncStorage.getItem(LAST_VEHICLE_KEY); } catch {}
+        setSelectedVehicle((current: any) => {
+          if (current && list.some((v: any) => v.id === current.id)) return list.find((v: any) => v.id === current.id);
+          if (lastId === "none") return null;
+          const remembered = lastId ? list.find((v: any) => String(v.id) === lastId) : null;
+          if (remembered) return remembered;
+          return list.length === 1 ? list[0] : null;
+        });
+      } catch {}
     };
     loadVehicles();
   }, []));
+
+  const selectVehicle = (vehicle: any) => {
+    const next = selectedVehicle?.id === vehicle.id ? null : vehicle;
+    setSelectedVehicle(next);
+    AsyncStorage.setItem(LAST_VEHICLE_KEY, next ? String(next.id) : "none").catch(() => {});
+  };
 
   useSpeechRecognitionEvent("result", (event: any) => {
     if (event.results[0]?.transcript) setQuery(event.results[0].transcript);
@@ -174,7 +197,7 @@ export default function Diagnose() {
   setLoading(true); setResult(null); setVideos([]); setScanImage(null);
   let diagRes;
   try {
-    diagRes = await api.post("/api/diagnose", { query, vehicle: selectedVehicle || null });
+    diagRes = await api.post("/api/diagnose", { query, vehicle: selectedVehicle || null, noVehicle: !selectedVehicle && vehicles.length > 0 });
   } catch (diagErr: any) {
     if (diagErr?.response?.status === 429) {
       Alert.alert("Daily Limit Reached", "You get 8 free diagnoses per day. Come back tomorrow! 🚗");
@@ -259,7 +282,7 @@ finally { setLoading(false); }
             <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: "600", marginBottom: 8 }}>🚗 SELECT YOUR VEHICLE</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
               {vehicles.map((vehicle) => (
-                <TouchableOpacity key={vehicle.id} onPress={() => setSelectedVehicle(selectedVehicle?.id === vehicle.id ? null : vehicle)}
+                <TouchableOpacity key={vehicle.id} onPress={() => selectVehicle(vehicle)}
                   style={{ backgroundColor: selectedVehicle?.id === vehicle.id ? colors.blue : colors.card, borderRadius: 12, borderWidth: 1, borderColor: selectedVehicle?.id === vehicle.id ? colors.blue : colors.border, paddingHorizontal: 14, paddingVertical: 10, alignItems: "center", minWidth: 100 }}>
                   <Text style={{ fontSize: 18 }}>🚗</Text>
                   <Text style={{ color: selectedVehicle?.id === vehicle.id ? "white" : colors.textSecondary, fontSize: 12, fontWeight: "700", marginTop: 4, textAlign: "center" }}>{vehicle.year} {vehicle.make}</Text>

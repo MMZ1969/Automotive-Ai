@@ -259,16 +259,77 @@ async function recordDiagnosis({ userId, cacheKey, query, vehicle, result, cache
   }
 }
 
+// ─── DIAGNOSIS CONTEXT ────────────────────────────────────────────────────────
+// The app only sends a vehicle if the user tapped a chip this visit, so most
+// requests arrived with vehicle=null and the model asked for year/make/model
+// even when a VIN-decoded vehicle was in the garage (user 235). Resolve the
+// vehicle server-side instead:
+//   1. vehicle.id sent → load the full row from the DB (must belong to user)
+//   2. nothing sent, user has exactly one vehicle → use it
+//   3. nothing sent, several vehicles → use the one from their last diagnosis
+//      in the past FOLLOWUP_WINDOW_MS, if it matches one of their vehicles
+const FOLLOWUP_WINDOW_MS = 30 * 60 * 1000;
+const FOLLOWUP_MAX_WORDS = 12;
+
+async function resolveDiagnosisVehicle(userId, bodyVehicle, lastLog) {
+  try {
+    if (bodyVehicle?.id) {
+      const v = await prisma.vehicle.findFirst({ where: { id: Number(bodyVehicle.id), userId } });
+      if (v) return v;
+    }
+    if (bodyVehicle?.year && bodyVehicle?.make && bodyVehicle?.model) return bodyVehicle;
+
+    const garage = await prisma.vehicle.findMany({ where: { userId }, orderBy: { updatedAt: "desc" } });
+    if (garage.length === 1) return garage[0];
+    if (garage.length > 1 && lastLog?.vehicleLabel) {
+      const match = garage.find((v) => vehicleLabelOf(v) === lastLog.vehicleLabel);
+      if (match) return match;
+    }
+  } catch (err) {
+    console.error("RESOLVE VEHICLE ERROR:", err.message);
+  }
+  return null;
+}
+
+// A short message right after a previous diagnosis ("what about the rotors?",
+// "is it safe to drive?") is almost always a follow-up. Hand the model the
+// previous question + summary so it doesn't treat it as a fresh, context-free ask.
+function getFollowupContext(query, lastLog) {
+  if (!lastLog) return null;
+  const words = String(query).trim().split(/\s+/).filter(Boolean).length;
+  if (words > FOLLOWUP_MAX_WORDS) return null;
+  if (lastLog.query.trim().toLowerCase() === String(query).trim().toLowerCase()) return null;
+  return { query: lastLog.query.slice(0, 500), summary: lastLog.summary || "" };
+}
+
 // AI Diagnosis route
 app.post("/api/diagnose", authMiddleware, async (req, res) => {
   const t0 = Date.now();
   console.log("DIAGNOSIS REQUEST RECEIVED");
   try {
-    const { query, vehicle } = req.body;
+    const { query } = req.body;
+    if (!query || !String(query).trim()) {
+      return res.status(400).json({ error: "Query required" });
+    }
+
+    const lastLog = await prisma.diagnosisLog.findFirst({
+      where: { userId: req.user.id, createdAt: { gte: new Date(Date.now() - FOLLOWUP_WINDOW_MS) } },
+      orderBy: { createdAt: "desc" },
+      select: { query: true, summary: true, vehicleLabel: true },
+    });
+    // noVehicle=true: the user (1.0.27+) deliberately deselected — respect it.
+    // Older builds never send it, so they get the server-side fallback.
+    const vehicle = req.body.noVehicle === true
+      ? null
+      : await resolveDiagnosisVehicle(req.user.id, req.body.vehicle, lastLog);
+    const followup = getFollowupContext(query, lastLog);
+    console.log(`DIAGNOSIS CONTEXT | vehicle=${vehicleLabelOf(vehicle) || "none"} | sent=${req.body.vehicle ? "yes" : "no"} | followup=${followup ? "yes" : "no"}`);
 
     // ─── CACHE CHECK ───────────────────────────────────────────────────
+    // Follow-up answers depend on the previous question, so they are never
+    // read from or written to the shared cache.
     const cacheKey = getDiagnosisCacheKey(query, vehicle);
-    const cached = diagnosisCache.get(cacheKey);
+    const cached = followup ? null : diagnosisCache.get(cacheKey);
     if (cached && Date.now() - cached.cachedAt < DIAGNOSIS_CACHE_TTL_MS) {
       console.log(`CACHE HIT +${Date.now() - t0}ms`);
       // Still enforce the daily limit and award rep for a cached diagnosis —
@@ -362,8 +423,12 @@ app.post("/api/diagnose", authMiddleware, async (req, res) => {
 6. Step by step instructions — see INTENT and STEP FORMAT below
 7. A list of parts the user would likely need to purchase to fix this problem
 
-${vehicle ? `Vehicle: ${vehicle.year} ${vehicle.make} ${vehicle.model}${vehicle.trim ? ` ${vehicle.trim}` : ""}${vehicle.engine ? ` | Engine: ${vehicle.engine}` : ""}${vehicle.engineCylinders ? ` ${vehicle.engineCylinders}-cyl` : ""}${vehicle.driveType ? ` | Drive: ${vehicle.driveType}` : ""}${vehicle.vin ? ` | VIN: ${vehicle.vin}` : ""}` : "No specific vehicle provided."}
-
+${vehicle ? `Vehicle: ${vehicle.year} ${vehicle.make} ${vehicle.model}${vehicle.trim ? ` ${vehicle.trim}` : ""}${vehicle.engine ? ` | Engine: ${vehicle.engine}` : ""}${vehicle.engineCylinders ? ` ${vehicle.engineCylinders}-cyl` : ""}${vehicle.driveType ? ` | Drive: ${vehicle.driveType}` : ""}${vehicle.vin ? ` | VIN: ${vehicle.vin}` : ""}
+This vehicle is confirmed from the user's garage${vehicle.vin ? " (decoded from VIN)" : ""}. Do NOT ask the user for year, make, model, or engine — use the details above.` : "No specific vehicle provided."}
+${followup ? `
+This is a follow-up in the same session. The user's previous question was: "${followup.query}"${followup.summary ? ` — your previous answer summarized it as: "${followup.summary}"` : ""}
+Interpret the new message in that context (e.g. "what about the rotors?" means rotors for that same job on that same vehicle). If it's clearly a new, unrelated problem, treat it as new.
+` : ""}
 User's problem: "${query}"
 
 INTENT — determine what the user is actually asking for and match your steps to it:
@@ -402,7 +467,7 @@ For part numbers: NEVER provide specific part numbers. Instead mention the part 
 
 For the parts array: list only parts the user would need to BUY (not tools). Use simple generic names like "alternator", "brake pads", "serpentine belt". Maximum 4 parts. If no parts need to be purchased (e.g. just a fluid top-up or adjustment), return an empty array.
 
-If no vehicle is provided, ask the user to select their vehicle for better accuracy.
+If no vehicle is provided, still give the best general answer you can — never respond with only a request for vehicle details. Note in proTip that selecting their vehicle in the app gets exact specs.
 
 IMPORTANT: If the user's input is clearly NOT about a vehicle or automotive issue (e.g. cooking, trivia, anything unrelated to cars, trucks, or motorcycles), do NOT attempt a diagnosis. Instead respond ONLY with this exact JSON, nothing else:
 {"error": "not_automotive"}
@@ -472,7 +537,8 @@ parsed.ebayParts = ebayParts;
     await recordDiagnosis({ userId, cacheKey, query, vehicle, result: parsed, cached: false });
 
     // Store in cache for next time this exact vehicle+query comes in
-    diagnosisCache.set(cacheKey, { data: parsed, cachedAt: Date.now() });
+    // (skip follow-ups — their answer depends on the previous question)
+    if (!followup) diagnosisCache.set(cacheKey, { data: parsed, cachedAt: Date.now() });
 
     console.log(`RESPONSE SENT +${Date.now() - t0}ms`);
     res.json(parsed);
