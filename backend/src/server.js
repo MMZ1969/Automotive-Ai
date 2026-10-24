@@ -441,7 +441,9 @@ app.post("/api/diagnose", authMiddleware, async (req, res) => {
       },
       body: JSON.stringify({
         model: "claude-sonnet-4-5",
-        max_tokens: 1500,
+        // Was 1500 â€” a 3-search shocks answer used 1314, so longer procedures
+        // risked truncated JSON. Only tokens actually generated are billed.
+        max_tokens: 3000,
         tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 4 }],
         messages: [
           {
@@ -523,7 +525,10 @@ After you finish any searching, respond with ONLY the final JSON object below â€
     });
 
     const data = await response.json();
-    console.log(`ANTHROPIC RESPONSE RECEIVED +${Date.now() - t0}ms`);
+    console.log(`ANTHROPIC RESPONSE RECEIVED +${Date.now() - t0}ms | stop=${data.stop_reason} | out=${data.usage?.output_tokens} | searches=${data.usage?.server_tool_use?.web_search_requests ?? 0}`);
+    if (data.stop_reason === "max_tokens") {
+      console.warn(`DIAGNOSIS TRUNCATED | output_tokens=${data.usage?.output_tokens}`);
+    }
     console.log("ANTHROPIC RESPONSE:", JSON.stringify(data));
     if (!data.content || data.content.length === 0) {
       return res.status(500).json({ error: "AI service error", details: data });
@@ -665,7 +670,7 @@ app.post("/api/analyze-image-diagnosis", authMiddleware, async (req, res) => {
       },
       body: JSON.stringify({
         model: "claude-opus-4-5",
-        max_tokens: 1000,
+        max_tokens: 2000,
         messages: [
           {
             role: "user",
