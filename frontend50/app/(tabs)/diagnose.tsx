@@ -68,6 +68,10 @@ export default function Diagnose() {
   const [scanning, setScanning] = useState(false);
   const [vehicles, setVehicles] = useState<any[]>([]);
   const [selectedVehicle, setSelectedVehicle] = useState<any>(null);
+  // True only when the user deliberately deselected (tapped the active chip).
+  // Merely having no chip picked is NOT a choice — the server then infers the
+  // vehicle from the question / last diagnosis.
+  const [explicitNone, setExplicitNone] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const loadingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -81,6 +85,7 @@ export default function Diagnose() {
         setVehicles(list);
         let lastId: string | null = null;
         try { lastId = await AsyncStorage.getItem(LAST_VEHICLE_KEY); } catch {}
+        setExplicitNone(lastId === "none");
         setSelectedVehicle((current: any) => {
           if (current && list.some((v: any) => v.id === current.id)) return list.find((v: any) => v.id === current.id);
           if (lastId === "none") return null;
@@ -96,6 +101,7 @@ export default function Diagnose() {
   const selectVehicle = (vehicle: any) => {
     const next = selectedVehicle?.id === vehicle.id ? null : vehicle;
     setSelectedVehicle(next);
+    setExplicitNone(!next);
     AsyncStorage.setItem(LAST_VEHICLE_KEY, next ? String(next.id) : "none").catch(() => {});
   };
 
@@ -197,7 +203,7 @@ export default function Diagnose() {
   setLoading(true); setResult(null); setVideos([]); setScanImage(null);
   let diagRes;
   try {
-    diagRes = await api.post("/api/diagnose", { query, vehicle: selectedVehicle || null, noVehicle: !selectedVehicle && vehicles.length > 0 });
+    diagRes = await api.post("/api/diagnose", { query, vehicle: selectedVehicle || null, noVehicle: !selectedVehicle && explicitNone });
   } catch (diagErr: any) {
     if (diagErr?.response?.status === 429) {
       Alert.alert("Daily Limit Reached", "You get 8 free diagnoses per day. Come back tomorrow! 🚗");

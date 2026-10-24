@@ -356,7 +356,7 @@ app.post("/api/diagnose", authMiddleware, async (req, res) => {
     if (followup && req.body.vehicle && vehicleLabelOf(vehicle) !== lastLog.vehicleLabel) {
       followup = null;
     }
-    console.log(`DIAGNOSIS CONTEXT | vehicle=${vehicleLabelOf(vehicle) || "none"} | sent=${req.body.vehicle ? "yes" : "no"} | followup=${followup ? "yes" : "no"}`);
+    console.log(`DIAGNOSIS CONTEXT | vehicle=${vehicleLabelOf(vehicle) || "none"} | sent=${req.body.vehicle ? "yes" : "no"} | optOut=${req.body.noVehicle === true ? "yes" : "no"} | followup=${followup ? "yes" : "no"}`);
 
     // ─── CACHE CHECK ───────────────────────────────────────────────────
     // Follow-up answers depend on the previous question, so they are never
