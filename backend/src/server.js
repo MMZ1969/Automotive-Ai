@@ -266,12 +266,15 @@ async function recordDiagnosis({ userId, cacheKey, query, vehicle, result, cache
 // vehicle server-side instead:
 //   1. vehicle.id sent → load the full row from the DB (must belong to user)
 //   2. nothing sent, user has exactly one vehicle → use it
-//   3. nothing sent, several vehicles → use the one from their last diagnosis
-//      in the past FOLLOWUP_WINDOW_MS, if it matches one of their vehicles
+//   3. nothing sent, several vehicles → the one named in the question (make/
+//      model), else the one from their most recent diagnosis that had a vehicle
 const FOLLOWUP_WINDOW_MS = 30 * 60 * 1000;
 const FOLLOWUP_MAX_WORDS = 12;
 
-async function resolveDiagnosisVehicle(userId, bodyVehicle, lastLog) {
+// Lowercase, strip punctuation, pad with spaces so " jeep " matches whole words only.
+const normWords = (s) => ` ${String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()} `;
+
+async function resolveDiagnosisVehicle(userId, bodyVehicle, query) {
   try {
     if (bodyVehicle?.id) {
       const v = await prisma.vehicle.findFirst({ where: { id: Number(bodyVehicle.id), userId } });
@@ -281,9 +284,34 @@ async function resolveDiagnosisVehicle(userId, bodyVehicle, lastLog) {
 
     const garage = await prisma.vehicle.findMany({ where: { userId }, orderBy: { updatedAt: "desc" } });
     if (garage.length === 1) return garage[0];
-    if (garage.length > 1 && lastLog?.vehicleLabel) {
-      const match = garage.find((v) => vehicleLabelOf(v) === lastLog.vehicleLabel);
-      if (match) return match;
+    if (garage.length > 1) {
+      // 1. The question names a vehicle ("jeep front shocks", "my f150 won't start")
+      //    → use it if exactly one garage vehicle matches. Model is more specific,
+      //    so try it before make (two Fords, one F-150).
+      const q = normWords(query);
+      const qJoined = q.replace(/ /g, "");
+      const hits = (field) => garage.filter((v) => {
+        const w = normWords(v[field]);
+        return w.trim() && (q.includes(w) || qJoined.includes(w.replace(/ /g, "")));
+      });
+      const byModel = hits("model");
+      if (byModel.length === 1) return byModel[0];
+      const byMake = hits("make");
+      if (byMake.length === 1) return byMake[0];
+
+      // 2. Otherwise, the vehicle from their most recent diagnosis that had one —
+      //    limited to the named make if the question named one ("ford brakes"
+      //    with two Fords must not fall back to the Honda).
+      const pool = byMake.length > 1 ? byMake : garage;
+      const lastWithVehicle = await prisma.diagnosisLog.findFirst({
+        where: { userId, vehicleLabel: { not: null } },
+        orderBy: { createdAt: "desc" },
+        select: { vehicleLabel: true },
+      });
+      if (lastWithVehicle) {
+        const match = pool.find((v) => vehicleLabelOf(v) === lastWithVehicle.vehicleLabel);
+        if (match) return match;
+      }
     }
   } catch (err) {
     console.error("RESOLVE VEHICLE ERROR:", err.message);
@@ -317,12 +345,17 @@ app.post("/api/diagnose", authMiddleware, async (req, res) => {
       orderBy: { createdAt: "desc" },
       select: { query: true, summary: true, vehicleLabel: true },
     });
+    let followup = getFollowupContext(query, lastLog);
     // noVehicle=true: the user (1.0.27+) deliberately deselected — respect it.
     // Older builds never send it, so they get the server-side fallback.
     const vehicle = req.body.noVehicle === true
       ? null
-      : await resolveDiagnosisVehicle(req.user.id, req.body.vehicle, lastLog);
-    const followup = getFollowupContext(query, lastLog);
+      : await resolveDiagnosisVehicle(req.user.id, req.body.vehicle, followup ? `${followup.query} ${query}` : query);
+    // The user explicitly picked a different vehicle than last time → new topic,
+    // not a follow-up (e.g. "jeep front shocks" then tapping the Harley).
+    if (followup && req.body.vehicle && vehicleLabelOf(vehicle) !== lastLog.vehicleLabel) {
+      followup = null;
+    }
     console.log(`DIAGNOSIS CONTEXT | vehicle=${vehicleLabelOf(vehicle) || "none"} | sent=${req.body.vehicle ? "yes" : "no"} | followup=${followup ? "yes" : "no"}`);
 
     // ─── CACHE CHECK ───────────────────────────────────────────────────
