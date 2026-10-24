@@ -323,7 +323,10 @@ export const forgotPassword = async (req, res) => {
       },
     });
 
-    const resetLink = `https://automotive-ai-production.up.railway.app/api/auth/reset-password-redirect?token=${token}`;
+    // PUBLIC_API_URL (Railway variable) = https://api.automotiveai.app once the
+    // custom domain is verified; until then the Railway URL keeps working.
+    const apiBase = (process.env.PUBLIC_API_URL || "https://automotive-ai-production.up.railway.app").replace(/\/+$/, "");
+    const resetLink = `${apiBase}/api/auth/reset-password-redirect?token=${token}`;
 
     const { error } = await resend.emails.send({
       to: email,

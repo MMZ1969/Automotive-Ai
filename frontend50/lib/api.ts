@@ -2,8 +2,15 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { DeviceEventEmitter } from "react-native";
 
+// Our own domain, CNAME'd to the host: moving hosts later is a DNS change,
+// not an app update. The Railway URL stays as a fallback. If the custom
+// domain can't be reached at all (DNS/cert trouble), the request is retried
+// once against Railway and the app stays on Railway for the rest of the session.
+const PRIMARY_URL = "https://api.automotiveai.app";
+const FALLBACK_URL = "https://automotive-ai-production.up.railway.app";
+
 const api = axios.create({
-  baseURL: "https://automotive-ai-production.up.railway.app",
+  baseURL: PRIMARY_URL,
   headers: {
     "Content-Type": "application/json",
   },
@@ -25,6 +32,15 @@ api.interceptors.response.use(
     return response;
   },
   async error => {
+    // No response at all (DNS failure, TLS error, host unreachable) while on
+    // the custom domain → switch to Railway and retry this request once.
+    const cfg = error.config;
+    if (!error.response && !axios.isCancel(error) && cfg && !cfg._retriedFallback && api.defaults.baseURL === PRIMARY_URL) {
+      api.defaults.baseURL = FALLBACK_URL;
+      cfg._retriedFallback = true;
+      cfg.baseURL = FALLBACK_URL;
+      return api.request(cfg);
+    }
     if (error.response?.status === 401 && !isLoggingOut) {
       isLoggingOut = true;
       await AsyncStorage.removeItem("token");
