@@ -2,7 +2,8 @@ import { useTheme } from "@context/ThemeContext";
 import api from "@lib/api";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
@@ -25,7 +26,7 @@ export default function ForgotPasswordScreen() {
   };
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.background }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
       <View style={{ paddingTop: 60, paddingHorizontal: 20, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: colors.border, flexDirection: "row", alignItems: "center", gap: 12 }}>
         <TouchableOpacity onPress={() => router.back()}>
           <Text style={{ color: colors.blue, fontSize: 16 }}>← Back</Text>
@@ -33,7 +34,7 @@ export default function ForgotPasswordScreen() {
         <Text style={{ color: colors.text, fontSize: 20, fontWeight: "900" }}>Forgot Password</Text>
       </View>
 
-      <View style={{ flex: 1, padding: 24 }}>
+      <KeyboardAwareScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1, padding: 24 }} keyboardShouldPersistTaps="handled" bottomOffset={24}>
         {!sent ? (
           <>
             <Text style={{ fontSize: 48, textAlign: "center", marginBottom: 16 }}>🔧</Text>
@@ -71,7 +72,7 @@ export default function ForgotPasswordScreen() {
             </TouchableOpacity>
           </View>
         )}
-      </View>
-    </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
+    </View>
   );
 }

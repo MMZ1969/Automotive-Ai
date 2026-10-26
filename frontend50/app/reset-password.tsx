@@ -2,7 +2,8 @@ import { useTheme } from "@context/ThemeContext";
 import api from "@lib/api";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 
 export default function ResetPasswordScreen() {
   const { token } = useLocalSearchParams();
@@ -35,12 +36,12 @@ export default function ResetPasswordScreen() {
   const inputStyle = { backgroundColor: colors.input, color: colors.text, paddingHorizontal: 16, paddingVertical: 14, borderRadius: 12, borderWidth: 1, borderColor: colors.border, fontSize: 16, marginBottom: 20 };
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.background }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
       <View style={{ paddingTop: 60, paddingHorizontal: 20, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}>
         <Text style={{ color: colors.text, fontSize: 20, fontWeight: "900" }}>Reset Password</Text>
       </View>
 
-      <View style={{ flex: 1, padding: 24 }}>
+      <KeyboardAwareScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1, padding: 24 }} keyboardShouldPersistTaps="handled" bottomOffset={24}>
         <Text style={{ fontSize: 48, textAlign: "center", marginBottom: 16 }}>🔐</Text>
         <Text style={{ color: colors.text, fontSize: 22, fontWeight: "900", textAlign: "center", marginBottom: 8 }}>Set New Password</Text>
         <Text style={{ color: colors.textSecondary, fontSize: 15, textAlign: "center", marginBottom: 8 }}>Enter your new password below.</Text>
@@ -55,7 +56,7 @@ export default function ResetPasswordScreen() {
         <TouchableOpacity onPress={handleReset} disabled={submitting} style={{ backgroundColor: submitting ? colors.card : colors.blue, paddingVertical: 16, borderRadius: 12, alignItems: "center" }}>
           {submitting ? <ActivityIndicator color="white" /> : <Text style={{ color: "white", fontWeight: "700", fontSize: 16 }}>Reset Password</Text>}
         </TouchableOpacity>
-      </View>
-    </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
+    </View>
   );
 }

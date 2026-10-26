@@ -7,12 +7,12 @@ import { useState } from "react";
 import {
   Alert,
   Linking,
-  ScrollView,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 
 export default function Settings() {
   const { user, logout, isMechanic, updateName, switchRole } = useAuth();
@@ -97,7 +97,7 @@ export default function Settings() {
   const inputStyle = { backgroundColor: colors.background, color: colors.text, padding: 12, borderRadius: 10, borderWidth: 1, borderColor: colors.border, marginBottom: 12, fontSize: 15 };
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: 20 }}>
+    <KeyboardAwareScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: 20 }} keyboardShouldPersistTaps="handled" bottomOffset={24}>
 
       {/* HEADER */}
 <View style={{ marginTop: 20, marginBottom: 30 }}>
@@ -371,6 +371,6 @@ export default function Settings() {
         <Text style={{ color: "white", fontWeight: "700", fontSize: 18 }}>Log Out</Text>
       </TouchableOpacity>
 
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 }

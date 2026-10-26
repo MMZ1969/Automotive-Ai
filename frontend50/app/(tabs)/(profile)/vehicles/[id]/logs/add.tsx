@@ -9,12 +9,12 @@ import {
   ActivityIndicator,
   Alert,
   Image,
-  ScrollView,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { SafeAreaView } from "react-native-safe-area-context";
 let ExpoSpeechRecognitionModule: any = null;
 try {
@@ -233,7 +233,7 @@ export default function AddLogScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-      <ScrollView contentContainerStyle={{ padding: 20 }}>
+      <KeyboardAwareScrollView contentContainerStyle={{ padding: 20 }} keyboardShouldPersistTaps="handled" bottomOffset={24}>
         {/* HEADER */}
         <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 24 }}>
           <TouchableOpacity onPress={() => router.push(`/(tabs)/(profile)/vehicles/${id}/logs`)} style={{ marginRight: 12 }}>
@@ -306,7 +306,7 @@ export default function AddLogScreen() {
         <TouchableOpacity style={{ backgroundColor: colors.blue, padding: 16, borderRadius: 14, alignItems: "center", marginTop: 24, marginBottom: 40 }} onPress={handleSave}>
           <Text style={{ color: "white", fontSize: 17, fontWeight: "700" }}>💾 Save Log</Text>
         </TouchableOpacity>
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </SafeAreaView>
   );
 }

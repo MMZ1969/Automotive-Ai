@@ -7,8 +7,9 @@ import { useRouter } from "expo-router";
 import { getDownloadURL, ref, uploadBytesResumable } from "firebase/storage";
 import { useState } from "react";
 import {
-    ActivityIndicator, Alert, Image, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, TouchableOpacity, View,
+    ActivityIndicator, Alert, Image, Text, TextInput, TouchableOpacity, View,
 } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { storage } from "../../../firebaseConfig.js";
 
 export default function VerifyMechanic() {
@@ -99,8 +100,8 @@ export default function VerifyMechanic() {
   };
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.background }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-      <ScrollView contentContainerStyle={{ padding: 20 }} keyboardShouldPersistTaps="handled">
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <KeyboardAwareScrollView contentContainerStyle={{ padding: 20 }} keyboardShouldPersistTaps="handled" bottomOffset={24}>
         {/* HEADER */}
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingTop: 50, marginBottom: 24 }}>
           <TouchableOpacity onPress={() => router.back()}>
@@ -196,7 +197,7 @@ export default function VerifyMechanic() {
             {submitting ? "Submitting..." : "Submit for Review"}
           </Text>
         </TouchableOpacity>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
+    </View>
   );
 }

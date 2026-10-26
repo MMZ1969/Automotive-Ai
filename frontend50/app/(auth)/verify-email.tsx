@@ -4,6 +4,7 @@ import api from "@lib/api";
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { Alert, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 
 // Dedicated, always-reachable route for entering a verification code.
 //
@@ -56,7 +57,12 @@ export default function VerifyEmail() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background, justifyContent: "center", alignItems: "center", padding: 30 }}>
+    <KeyboardAwareScrollView
+      style={{ flex: 1, backgroundColor: colors.background }}
+      contentContainerStyle={{ flexGrow: 1, justifyContent: "center", alignItems: "center", padding: 30 }}
+      keyboardShouldPersistTaps="handled"
+      bottomOffset={24}
+    >
       <Text style={{ fontSize: 60, marginBottom: 20 }}>📧</Text>
       <Text style={{ color: colors.text, fontSize: 24, fontWeight: "900", textAlign: "center", marginBottom: 12 }}>Enter Your Code</Text>
       <Text style={{ color: colors.textSecondary, fontSize: 15, textAlign: "center", lineHeight: 24, marginBottom: 8 }}>We sent a 6-digit code to:</Text>
@@ -98,6 +104,6 @@ export default function VerifyEmail() {
       <TouchableOpacity onPress={() => router.replace("/(auth)/login")}>
         <Text style={{ color: colors.textMuted, fontSize: 14, marginTop: 8 }}>Back to Login</Text>
       </TouchableOpacity>
-    </View>
+    </KeyboardAwareScrollView>
   );
 }

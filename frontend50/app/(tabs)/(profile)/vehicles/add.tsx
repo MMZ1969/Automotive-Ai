@@ -5,13 +5,13 @@ import React, { useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useAuth } from "@context/AuthContext";
@@ -183,7 +183,7 @@ export default function AddVehicleScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#050509" }}>
-      <ScrollView contentContainerStyle={{ padding: 20 }}>
+      <KeyboardAwareScrollView contentContainerStyle={{ padding: 20 }} keyboardShouldPersistTaps="handled" bottomOffset={24}>
         {/* HEADER */}
         <View style={{
           flexDirection: "row",
@@ -317,7 +317,7 @@ export default function AddVehicleScreen() {
         <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
           <Text style={styles.saveButtonText}>🚗 Add Vehicle</Text>
         </TouchableOpacity>
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </SafeAreaView>
   );
 }

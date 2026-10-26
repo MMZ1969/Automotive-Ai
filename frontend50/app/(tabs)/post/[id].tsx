@@ -10,6 +10,7 @@ import {
   FlatList, Image, KeyboardAvoidingView,
   Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View
 } from "react-native";
+import { KeyboardAvoidingView as KCKeyboardAvoidingView } from "react-native-keyboard-controller";
 import RichText from "../../../components/RichText";
 
 export default function PostDetail() {
@@ -202,7 +203,7 @@ export default function PostDetail() {
   const isMyPost = post?.user?.id === user?.id;
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.background }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+    <KCKeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.background }} behavior="padding">
 
       {/* PHOTO ZOOM LIGHTBOX */}
       <ImageLightbox
@@ -488,6 +489,6 @@ export default function PostDetail() {
           <Text style={{ color: "white", fontWeight: "700" }}>Post</Text>
         </TouchableOpacity>
       </View>
-    </KeyboardAvoidingView>
+    </KCKeyboardAvoidingView>
   );
 }

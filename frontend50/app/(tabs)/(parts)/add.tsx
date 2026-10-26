@@ -7,9 +7,9 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { getDownloadURL, ref, uploadBytesResumable } from "firebase/storage";
 import { useEffect, useState } from "react";
 import {
-  ActivityIndicator, Alert, Image, KeyboardAvoidingView, Platform,
-  ScrollView, Text, TextInput, TouchableOpacity, View,
+  ActivityIndicator, Alert, Image, ScrollView, Text, TextInput, TouchableOpacity, View,
 } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { storage } from "../../../firebaseConfig.js";
 
 const CATEGORIES = ["Engine", "Suspension", "Brakes", "Body", "Interior", "Tires", "Exhaust", "Electrical", "Other"];
@@ -163,8 +163,8 @@ export default function AddPartScreen() {
   }
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.background }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-      <ScrollView contentContainerStyle={{ padding: 20 }}>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <KeyboardAwareScrollView contentContainerStyle={{ padding: 20 }} keyboardShouldPersistTaps="handled" bottomOffset={24}>
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 40, marginBottom: 24 }}>
           <TouchableOpacity onPress={() => (isEdit ? router.back() : router.push("/(tabs)/(parts)"))}>
             <Text style={{ color: colors.blue, fontSize: 16 }}>← Back</Text>
@@ -264,7 +264,7 @@ export default function AddPartScreen() {
         )}
 
         <View style={{ height: 40 }} />
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
+    </View>
   );
 }

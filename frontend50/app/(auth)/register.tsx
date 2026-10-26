@@ -3,7 +3,8 @@ import { useTheme } from "@context/ThemeContext";
 import { suggestEmailFix } from "@lib/emailTypo";
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { Alert, Linking, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Alert, Linking, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 
 export default function Register() {
   const { register } = useAuth();
@@ -63,7 +64,7 @@ export default function Register() {
   };
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: 20, justifyContent: "center", flexGrow: 1 }}>
+    <KeyboardAwareScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: 20, justifyContent: "center", flexGrow: 1 }} keyboardShouldPersistTaps="handled" bottomOffset={24}>
       <Text style={{ fontSize: 32, fontWeight: "bold", color: colors.text, marginBottom: 24, textAlign: "center" }}>Create Account</Text>
 
       <TextInput
@@ -158,6 +159,6 @@ export default function Register() {
       <TouchableOpacity onPress={() => router.push("/(auth)/login")}>
         <Text style={{ color: colors.blue, textAlign: "center", marginTop: 16, fontSize: 16 }}>Already have an account? Login</Text>
       </TouchableOpacity>
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 }

@@ -7,9 +7,9 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { getDownloadURL, ref, uploadBytesResumable } from "firebase/storage";
 import { useState } from "react";
 import {
-  ActivityIndicator, Alert, Image, Keyboard, KeyboardAvoidingView,
-  Platform, ScrollView, Text, TextInput, TouchableOpacity, View,
+  ActivityIndicator, Alert, Image, Keyboard, Text, TextInput, TouchableOpacity, View,
 } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { storage } from "../../firebaseConfig";
 
 const MAX_PHOTOS = 5;
@@ -184,7 +184,7 @@ export default function CreatePostScreen() {
   const isUploading = uploadingIndex !== null || uploadingBefore || uploadingAfter;
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.background }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
       {/* HEADER */}
       <View style={{ paddingTop: 60, paddingHorizontal: 20, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: colors.border, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
         <TouchableOpacity onPress={() => { Keyboard.dismiss(); setContent(""); setPhotoUris([]); setPhotoUrls([]); router.push("/(tabs)/feed"); }}>
@@ -197,7 +197,7 @@ export default function CreatePostScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView keyboardShouldPersistTaps="handled">
+      <KeyboardAwareScrollView keyboardShouldPersistTaps="handled" bottomOffset={24}>
         {/* ROLE BADGE */}
         <View style={{ paddingHorizontal: 20, paddingTop: 16, flexDirection: "row", alignItems: "center", gap: 10 }}>
           <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: colors.border, justifyContent: "center", alignItems: "center", borderWidth: 2, borderColor: user?.role === "MECHANIC" ? colors.blue : colors.green }}>
@@ -346,7 +346,7 @@ export default function CreatePostScreen() {
         )}
 
         <View style={{ height: 40 }} />
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
+    </View>
   );
 }

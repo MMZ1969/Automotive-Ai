@@ -12,13 +12,12 @@ import {
   Alert,
   FlatList,
   Image,
-  KeyboardAvoidingView,
-  Platform,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
+import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import ImageLightbox from "../../../components/ImageLightbox";
 import { storage } from "../../../firebaseConfig";
 
@@ -256,7 +255,7 @@ export default function ChatScreen() {
   }
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.background }} behavior={Platform.OS === "ios" ? "padding" : undefined} keyboardVerticalOffset={0}>
+    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.background }} behavior="padding">
 
       {/* PHOTO ZOOM — single image at a time, matching how it's used in feed/post detail */}
       <ImageLightbox
