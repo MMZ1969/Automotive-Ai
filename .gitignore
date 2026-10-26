@@ -44,3 +44,6 @@ backend/.env
 frontend50/.env
 automotive-ai-494517-8839964aa276.json
 backend/ban-emails-batch.js
+
+store/raw/*
+!store/raw/README.txt

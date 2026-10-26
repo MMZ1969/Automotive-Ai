@@ -7,9 +7,10 @@ import { useFocusEffect, useRouter } from "expo-router";
 import * as Speech from "expo-speech";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator, Alert, Image, KeyboardAvoidingView, Linking,
-  Platform, ScrollView, Text, TextInput, TouchableOpacity, View,
+  ActivityIndicator, Alert, Image, Linking,
+  ScrollView, Text, TextInput, TouchableOpacity, View,
 } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 
 let ExpoSpeechRecognitionModule: any = null;
 let useSpeechRecognitionEvent: any = () => {};
@@ -272,7 +273,7 @@ finally { setLoading(false); }
   };
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.background }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
       <View style={{ paddingTop: 60, paddingHorizontal: 20, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: colors.border, flexDirection: "row", alignItems: "center", gap: 10 }}>
         <MaterialCommunityIcons name="car-brake-alert" size={30} color="#facc15" />
         <View>
@@ -281,7 +282,9 @@ finally { setLoading(false); }
         </View>
       </View>
 
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }} keyboardShouldPersistTaps="handled">
+      {/* Keyboard-aware: scrolls the focused input (and the caret in the
+          multiline box as it grows) above the keyboard on iOS and Android. */}
+      <KeyboardAwareScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }} keyboardShouldPersistTaps="handled" bottomOffset={24}>
 
         {vehicles.length > 0 && (
           <View style={{ marginBottom: 16 }}>
@@ -549,7 +552,7 @@ finally { setLoading(false); }
 
           </View>
         )}
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
+    </View>
   );
 }

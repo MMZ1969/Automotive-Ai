@@ -1,7 +1,7 @@
 import { useAuth } from "@context/AuthContext";
 import { useTheme } from "@context/ThemeContext";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 
 export default function LoginScreen() {
   const { login } = useAuth();
@@ -21,6 +22,7 @@ export default function LoginScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const passwordRef = useRef<TextInput>(null);
 
   const handleLogin = async () => {
     setError(null);
@@ -47,7 +49,12 @@ export default function LoginScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background, justifyContent: "center", alignItems: "center", paddingHorizontal: 30 }}>
+    <KeyboardAwareScrollView
+      style={{ flex: 1, backgroundColor: colors.background }}
+      contentContainerStyle={{ flexGrow: 1, justifyContent: "center", alignItems: "center", paddingHorizontal: 30, paddingVertical: 40 }}
+      keyboardShouldPersistTaps="handled"
+      bottomOffset={24}
+    >
       <Image
         source={require("../../assets/autoai_icon_1024_tm.png")}
         style={{ width: 200, height: 200, marginBottom: 8 }}
@@ -64,6 +71,11 @@ export default function LoginScreen() {
         placeholderTextColor={colors.textMuted}
         autoCapitalize="none"
         keyboardType="email-address"
+        autoComplete="email"
+        textContentType="emailAddress"
+        returnKeyType="next"
+        onSubmitEditing={() => passwordRef.current?.focus()}
+        submitBehavior="submit"
         style={{ width: "100%", backgroundColor: colors.input, color: colors.text, paddingHorizontal: 16, paddingVertical: 12, borderRadius: 10, marginBottom: 12, borderWidth: 1, borderColor: colors.border }}
       />
 
@@ -71,8 +83,13 @@ export default function LoginScreen() {
       <View style={{ width: "100%", flexDirection: "row", alignItems: "center", backgroundColor: colors.input, borderRadius: 10, marginBottom: 8, borderWidth: 1, borderColor: colors.border }}>
         <TextInput
           value={password}
+          ref={passwordRef}
           onChangeText={setPassword}
           placeholder="Password"
+          autoComplete="password"
+          textContentType="password"
+          returnKeyType="go"
+          onSubmitEditing={handleLogin}
           placeholderTextColor={colors.textMuted}
           secureTextEntry={!showPassword}
           style={{ flex: 1, color: colors.text, paddingHorizontal: 16, paddingVertical: 12 }}
@@ -107,6 +124,6 @@ export default function LoginScreen() {
       <TouchableOpacity onPress={() => router.push("/(auth)/register")}>
         <Text style={{ color: colors.blue, fontSize: 15 }}>Don't have an account? Sign Up</Text>
       </TouchableOpacity>
-    </View>
+    </KeyboardAwareScrollView>
   );
 }

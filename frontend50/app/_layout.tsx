@@ -7,6 +7,7 @@ import * as Notifications from "expo-notifications";
 import { Slot, useRouter, useSegments } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Text, TouchableOpacity, View } from "react-native";
+import { KeyboardProvider } from "react-native-keyboard-controller";
 
 const PUBLIC_ROUTES = ["forgot-password", "reset-password", "change-password", "guidelines"];
 
@@ -92,14 +93,16 @@ function RouteGuard() {
 
 export default function RootLayout() {
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <VehicleProvider>
-          <LogProvider>
-            <RouteGuard />
-          </LogProvider>
-        </VehicleProvider>
-      </AuthProvider>
-    </ThemeProvider>
+    <KeyboardProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <VehicleProvider>
+            <LogProvider>
+              <RouteGuard />
+            </LogProvider>
+          </VehicleProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </KeyboardProvider>
   );
 }
