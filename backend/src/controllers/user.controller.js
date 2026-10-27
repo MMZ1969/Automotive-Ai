@@ -520,11 +520,27 @@ export async function verifyMechanic(req, res) {
       return res.status(403).json({ error: "Not authorized" });
     }
 
+    // The verify form collects a shop location, but Near Me only reads
+    // user.location. On approval, carry it over if the mechanic hasn't set
+    // one, so "you now appear on the Near Me map" is actually true.
+    const target = await prisma.user.findUnique({
+      where: { id: targetId },
+      select: { location: true, verificationRequest: true },
+    });
+    let shopLocation = null;
+    try {
+      shopLocation = JSON.parse(target?.verificationRequest || "{}").shopLocation?.trim() || null;
+    } catch {}
+
     // Clear the request either way. Before, a denied request stayed in the
     // admin Verify list forever and the mechanic never heard back.
     await prisma.user.update({
       where: { id: targetId },
-      data: { isVerified: !!approved, verificationRequest: null },
+      data: {
+        isVerified: !!approved,
+        verificationRequest: null,
+        ...(approved && !target?.location && shopLocation ? { location: shopLocation } : {}),
+      },
     });
 
     try {
