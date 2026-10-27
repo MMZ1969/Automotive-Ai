@@ -2,10 +2,12 @@ import { useAuth } from "@context/AuthContext";
 import { useTheme } from "@context/ThemeContext";
 import api from "@lib/api";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Animated,
   FlatList,
   Image,
   Modal,
@@ -16,6 +18,7 @@ import {
 } from "react-native";
 import Svg, { Circle, Line } from "react-native-svg";
 import ImageLightbox from "../../components/ImageLightbox";
+import CheckeredFlag from "../../components/CheckeredFlag";
 import RichText from "../../components/RichText";
 
 const logo = require("../../assets/autoai_icon_1024_tm.png");
@@ -34,6 +37,8 @@ const FILTERS = [
 ] as const;
 
 type FilterKey = typeof FILTERS[number]["key"];
+
+const FILTER_HINT_KEY = "seenFeedFilterHint";
 
 function HashtagText({ text, colors, onHashtagPress }: { text: string; colors: any; onHashtagPress: (tag: string) => void }) {
   const parts = text.split(/(#\w+)/g);
@@ -63,6 +68,33 @@ export default function Feed() {
   const [activeTab, setActiveTab] = useState<MainTab>("forYou");
   const [activeFilter, setActiveFilter] = useState<FilterKey>("ALL");
   const [filterModalVisible, setFilterModalVisible] = useState(false);
+
+  // First-run hint for the steering-wheel filter: a bare icon gets ignored,
+  // so wiggle the wheel and show a one-line hint until it's opened once.
+  const [showFilterHint, setShowFilterHint] = useState(false);
+  const wheelWiggle = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    AsyncStorage.getItem(FILTER_HINT_KEY)
+      .then((seen) => {
+        if (seen) return;
+        setShowFilterHint(true);
+        const turn = (v: number) => Animated.timing(wheelWiggle, { toValue: v, duration: 160, useNativeDriver: true });
+        Animated.sequence([
+          Animated.delay(900),
+          turn(1), turn(-1), turn(0.6), turn(0),
+          Animated.delay(1200),
+          turn(1), turn(-1), turn(0),
+        ]).start();
+      })
+      .catch(() => {});
+  }, []);
+  const dismissFilterHint = () => {
+    if (!showFilterHint) return;
+    setShowFilterHint(false);
+    AsyncStorage.setItem(FILTER_HINT_KEY, "1").catch(() => {});
+  };
+  const openFilter = () => { dismissFilterHint(); setFilterModalVisible(true); };
+  const wheelRotate = wheelWiggle.interpolate({ inputRange: [-1, 1], outputRange: ["-40deg", "40deg"] });
   const [menuPost, setMenuPost] = useState<any>(null);
   const [lightboxVisible, setLightboxVisible] = useState(false);
   const [lightboxImages, setLightboxImages] = useState<string[]>([]);
@@ -200,6 +232,7 @@ export default function Feed() {
   };
 
   const filterActive = activeFilter !== "ALL";
+  const activeFilterDef = FILTERS.find((f) => f.key === activeFilter);
   const wheelColor = filterActive ? "white" : colors.textMuted;
 
   if (loading) {
@@ -355,10 +388,12 @@ export default function Feed() {
 
           {/* STEERING WHEEL CENTER */}
           <TouchableOpacity
-            onPress={() => setFilterModalVisible(true)}
+            onPress={openFilter}
+            accessibilityLabel="Filter posts"
             style={{ alignItems: "center", justifyContent: "center", marginBottom: 4, paddingHorizontal: 8 }}
           >
-            <View style={{
+            <Animated.View style={{
+              transform: [{ rotate: wheelRotate }],
               width: 40, height: 40, borderRadius: 20,
               backgroundColor: filterActive ? colors.blue : colors.card,
               borderWidth: 1.5,
@@ -372,9 +407,9 @@ export default function Feed() {
                 <Line x1="3.68" y1="17" x2="9.74" y2="13.5" stroke={wheelColor} strokeWidth="1.8" strokeLinecap="round" />
                 <Line x1="20.32" y1="17" x2="14.26" y2="13.5" stroke={wheelColor} strokeWidth="1.8" strokeLinecap="round" />
               </Svg>
-            </View>
-            <Text style={{ color: filterActive ? colors.blue : colors.textMuted, fontSize: 9, fontWeight: "600", marginTop: 2, letterSpacing: 0.5 }}>
-              {filterActive ? "ON" : "FILTER"}
+            </Animated.View>
+            <Text numberOfLines={1} style={{ color: filterActive ? colors.blue : colors.textMuted, fontSize: 9, fontWeight: "700", marginTop: 2, letterSpacing: 0.5, maxWidth: 76 }}>
+              {filterActive ? activeFilterDef?.label.toUpperCase() : "FILTER"}
             </Text>
           </TouchableOpacity>
 
@@ -390,6 +425,35 @@ export default function Feed() {
 
         </View>
       </View>
+
+      {/* FILTER HINT — first run only */}
+      {showFilterHint && !filterActive && (
+        <TouchableOpacity
+          onPress={openFilter}
+          activeOpacity={0.8}
+          style={{ flexDirection: "row", alignItems: "center", gap: 10, marginHorizontal: 16, marginTop: 10, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12, backgroundColor: colors.blue + "1A", borderWidth: 1, borderColor: colors.blue + "55" }}
+        >
+          <Text style={{ flex: 1, color: colors.text, fontSize: 13, lineHeight: 18 }}>
+            <Text style={{ fontWeight: "800" }}>Steer your feed. </Text>
+            Tap the wheel to see just Q&A, Before/After, Service posts and more.
+          </Text>
+          <TouchableOpacity onPress={dismissFilterHint} hitSlop={12}>
+            <Text style={{ color: colors.textMuted, fontSize: 16, fontWeight: "700" }}>✕</Text>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      )}
+
+      {/* ACTIVE FILTER BAR — so a filtered feed never looks like an empty one */}
+      {filterActive && (
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginHorizontal: 16, marginTop: 10, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.blue + "55" }}>
+          <Text style={{ color: colors.text, fontSize: 13 }}>
+            {activeFilterDef?.icon} Showing <Text style={{ fontWeight: "800" }}>{activeFilterDef?.label}</Text> only
+          </Text>
+          <TouchableOpacity onPress={() => handleFilterSelect("ALL")} hitSlop={12}>
+            <Text style={{ color: colors.blue, fontSize: 13, fontWeight: "700" }}>Clear ✕</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* POSTS LIST */}
       <FlatList
@@ -568,8 +632,8 @@ export default function Feed() {
             )}
 
             <View style={{ flexDirection: "row", marginTop: 14, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border, gap: 20 }}>
-              <TouchableOpacity onPress={() => handleLike(item.id)} style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                <Text style={{ fontSize: 18 }}>{item.likes?.some((l: any) => l.userId === user?.id) ? "❤️" : "🤍"}</Text>
+              <TouchableOpacity onPress={() => handleLike(item.id)} accessibilityLabel="Give the checkered flag" style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                <CheckeredFlag active={!!item.likes?.some((l: any) => l.userId === user?.id)} size={21} activeColor={colors.green} inactiveColor={colors.textSecondary} />
                 <Text style={{ color: colors.textSecondary, fontSize: 14 }}>{item.likes?.length || 0}</Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={() => router.push(`/(tabs)/post/${item.id}`)} style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>

@@ -217,7 +217,7 @@ export const toggleLike = async (req, res) => {
               actorId: userId,
               type: "like",
               postId,
-              message: `${actor?.name || "Someone"} liked your post ❤️`,
+              message: `${actor?.name || "Someone"} gave your post the checkered flag 🏁`,
             });
           } catch (notifyErr) {
             console.error("LIKE NOTIFICATION ERROR:", notifyErr);
@@ -359,7 +359,7 @@ export const toggleCommentLike = async (req, res) => {
               actorId: userId,
               type: "comment_like",
               postId: comment.postId,
-              message: `${actor?.name || "Someone"} liked your comment ❤️`,
+              message: `${actor?.name || "Someone"} gave your comment the checkered flag 🏁`,
             });
           } catch (notifyErr) {
             console.error("COMMENT LIKE NOTIFICATION ERROR:", notifyErr);

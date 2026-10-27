@@ -10,7 +10,7 @@ import {
   FlatList, Image, KeyboardAvoidingView,
   Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View
 } from "react-native";
-import { KeyboardAvoidingView as KCKeyboardAvoidingView } from "react-native-keyboard-controller";
+import CheckeredFlag from "../../../components/CheckeredFlag";
 import RichText from "../../../components/RichText";
 
 export default function PostDetail() {
@@ -203,7 +203,7 @@ export default function PostDetail() {
   const isMyPost = post?.user?.id === user?.id;
 
   return (
-    <KCKeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.background }} behavior="padding">
+    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.background }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
 
       {/* PHOTO ZOOM LIGHTBOX */}
       <ImageLightbox
@@ -371,8 +371,8 @@ export default function PostDetail() {
               )}
 
               <View style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border }}>
-                <Text style={{ fontSize: 16 }}>❤️</Text>
-                <Text style={{ color: colors.textSecondary, fontSize: 14 }}>{post?.likes?.length || 0} likes</Text>
+                <CheckeredFlag active={!!post?.likes?.some((l: any) => l.userId === user?.id)} size={18} activeColor={colors.green} inactiveColor={colors.textSecondary} />
+                <Text style={{ color: colors.textSecondary, fontSize: 14 }}>{post?.likes?.length || 0}</Text>
                 <Text style={{ color: colors.textSecondary, fontSize: 14, marginLeft: 12 }}>💬 {post?.comments?.length || 0} comments</Text>
               </View>
             </View>
@@ -409,7 +409,7 @@ export default function PostDetail() {
                 />
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 16, paddingLeft: 36 }}>
                   <TouchableOpacity onPress={() => handleCommentLike(item.id)} style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                    <Text style={{ fontSize: 13 }}>{commentLiked ? "❤️" : "🤍"}</Text>
+                    <CheckeredFlag active={!!commentLiked} size={15} activeColor={colors.green} inactiveColor={colors.textMuted} />
                     <Text style={{ color: colors.textMuted, fontSize: 12, fontWeight: "600" }}>{item.likes?.length || 0}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity onPress={() => { setReplyingTo(isReplying ? null : item); setReplyText(""); setTimeout(() => replyInputRef.current?.focus(), 100); }}>
@@ -489,6 +489,6 @@ export default function PostDetail() {
           <Text style={{ color: "white", fontWeight: "700" }}>Post</Text>
         </TouchableOpacity>
       </View>
-    </KCKeyboardAvoidingView>
+    </KeyboardAvoidingView>
   );
 }
