@@ -111,7 +111,7 @@ export default function VerifyMechanic() {
         </View>
 
         <Text style={{ color: colors.textSecondary, fontSize: 14, lineHeight: 20, marginBottom: 16 }}>
-          Verified mechanics get a badge on their profile, appear in Near Me searches, and build more trust with customers.
+          Verified mechanics get a badge on their profile, a gold 🏁 pin on the Near Me map, and more trust from customers.
         </Text>
 
         <View style={{ backgroundColor: colors.card, borderRadius: 12, borderWidth: 1, borderColor: colors.border, padding: 14, marginBottom: 20 }}>
