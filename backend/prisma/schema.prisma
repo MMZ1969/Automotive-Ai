@@ -417,3 +417,27 @@ model DiagnosisLog {
   @@index([userId, queryKey, createdAt])
   @@index([createdAt])
 }
+
+// Persistent diagnosis cache / the start of the diagnosis library. One row per
+// vehicle + normalized question (same key as DiagnosisLog.queryKey, so the two
+// join). Not tied to a user: the answer is shared by everyone who asks the same
+// thing. Follow-ups are never stored. Disclosed in docs/privacy-policy.html.
+model DiagnosisAnswer {
+  id           Int      @id @default(autoincrement())
+  queryKey     String   @unique // sha256 of the cache key
+  vehicleLabel String?
+  year         Int?
+  make         String?
+  model        String?
+  engine       String?
+  query        String
+  result       Json     // full parsed answer as sent to the app, incl. ebayParts
+  generatedAt  DateTime @default(now()) // when Claude produced this answer; TTL runs from here
+  hitCount     Int      @default(0)     // times served from cache
+  lastServedAt DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([make, model, year])
+  @@index([generatedAt])
+}

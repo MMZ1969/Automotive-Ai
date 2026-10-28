@@ -197,16 +197,93 @@ app.use("/api/admin", adminRoutes);
 // Keyed by vehicle + exact query text. Two users (or the same user twice)
 // asking the same question about the same vehicle get an instant cached
 // answer instead of re-running the full search+generation pipeline.
-// TTL is generous (7 days) since vehicle specs don't change; this doesn't
-// touch search depth or prompt logic at all, so it carries no accuracy risk.
+//
+// Two layers:
+//   - DiagnosisAnswer table (Postgres) — the source of truth. Survives
+//     redeploys, so paid-for answers are no longer wiped on every push. Rows
+//     are kept indefinitely (they're the start of the diagnosis library); the
+//     TTL below only decides when an answer is too old to SERVE, after which
+//     the next ask regenerates it and overwrites the row.
+//   - diagnosisCache Map — hot layer in front of the DB, capped in size.
+// Every DB call here is wrapped so a DB hiccup (or the table not existing yet)
+// degrades to "cache miss", never to a failed diagnosis.
 const diagnosisCache = new Map();
-const DIAGNOSIS_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const DIAGNOSIS_CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days (was 7; eBay prices are the main thing that ages)
+const DIAGNOSIS_HOT_CACHE_MAX = 500;
 
 function getDiagnosisCacheKey(query, vehicle) {
   const vehicleKey = vehicle
     ? `${vehicle.year}-${vehicle.make}-${vehicle.model}-${vehicle.trim || ""}-${vehicle.engine || ""}`
     : "no-vehicle";
   return `${vehicleKey}::${query.trim().toLowerCase()}`;
+}
+
+const hashCacheKey = (cacheKey) => createHash("sha256").update(cacheKey).digest("hex");
+
+function hotCacheSet(cacheKey, entry) {
+  diagnosisCache.delete(cacheKey); // re-insert so it counts as newest
+  diagnosisCache.set(cacheKey, entry);
+  while (diagnosisCache.size > DIAGNOSIS_HOT_CACHE_MAX) {
+    diagnosisCache.delete(diagnosisCache.keys().next().value); // drop oldest
+  }
+}
+
+// Returns { data, cachedAt, source } or null. Memory first, then DB.
+async function getCachedDiagnosis(cacheKey) {
+  const hot = diagnosisCache.get(cacheKey);
+  if (hot && Date.now() - hot.cachedAt < DIAGNOSIS_CACHE_TTL_MS) {
+    return { ...hot, source: "memory" };
+  }
+  try {
+    const row = await prisma.diagnosisAnswer.findUnique({
+      where: { queryKey: hashCacheKey(cacheKey) },
+      select: { result: true, generatedAt: true },
+    });
+    if (row && Date.now() - row.generatedAt.getTime() < DIAGNOSIS_CACHE_TTL_MS) {
+      const entry = { data: row.result, cachedAt: row.generatedAt.getTime() };
+      hotCacheSet(cacheKey, entry);
+      return { ...entry, source: "db" };
+    }
+  } catch (err) {
+    console.error("DIAGNOSIS CACHE READ ERROR:", err.message);
+  }
+  return null;
+}
+
+// Fire-and-forget: bump the served counter. updateMany so a missing row is a no-op.
+function markDiagnosisServed(cacheKey) {
+  prisma.diagnosisAnswer
+    .updateMany({
+      where: { queryKey: hashCacheKey(cacheKey) },
+      data: { hitCount: { increment: 1 }, lastServedAt: new Date() },
+    })
+    .catch((err) => console.error("DIAGNOSIS CACHE HIT-COUNT ERROR:", err.message));
+}
+
+// Write a fresh answer to both layers. Called (not awaited) after res.json(),
+// so the user never waits on it.
+async function storeDiagnosis(cacheKey, query, vehicle, data) {
+  const now = new Date();
+  hotCacheSet(cacheKey, { data, cachedAt: now.getTime() });
+  try {
+    const fields = {
+      vehicleLabel: vehicleLabelOf(vehicle),
+      year: vehicle?.year ? Number(vehicle.year) || null : null,
+      make: vehicle?.make || null,
+      model: vehicle?.model || null,
+      engine: vehicle?.engine || null,
+      query: String(query).slice(0, 2000),
+      result: data,
+      generatedAt: now,
+    };
+    await prisma.diagnosisAnswer.upsert({
+      where: { queryKey: hashCacheKey(cacheKey) },
+      create: { queryKey: hashCacheKey(cacheKey), ...fields },
+      update: fields, // regenerated after TTL: replace the answer, keep hitCount
+    });
+  } catch (err) {
+    console.error("DIAGNOSIS CACHE WRITE ERROR:", err.message);
+  }
 }
 
 // ─── DIAGNOSIS ACCOUNTING ─────────────────────────────────────────────────────
@@ -224,7 +301,7 @@ function vehicleLabelOf(vehicle) {
 
 async function recordDiagnosis({ userId, cacheKey, query, vehicle, result, cached }) {
   try {
-    const queryKey = createHash("sha256").update(cacheKey).digest("hex");
+    const queryKey = hashCacheKey(cacheKey);
     const repeat = await prisma.diagnosisLog.findFirst({
       where: { userId, queryKey, createdAt: { gte: new Date(Date.now() - REPEAT_WINDOW_MS) } },
       select: { id: true, createdAt: true },
@@ -366,9 +443,9 @@ app.post("/api/diagnose", authMiddleware, async (req, res) => {
     // Follow-up answers depend on the previous question, so they are never
     // read from or written to the shared cache.
     const cacheKey = getDiagnosisCacheKey(query, vehicle);
-    const cached = followup ? null : diagnosisCache.get(cacheKey);
-    if (cached && Date.now() - cached.cachedAt < DIAGNOSIS_CACHE_TTL_MS) {
-      console.log(`CACHE HIT +${Date.now() - t0}ms`);
+    const cached = followup ? null : await getCachedDiagnosis(cacheKey);
+    if (cached) {
+      console.log(`CACHE HIT (${cached.source}) +${Date.now() - t0}ms`);
       // Still enforce the daily limit and award rep for a cached diagnosis —
       // from the user's perspective they ran a diagnosis, they just got it
       // fast because someone already asked this exact question.
@@ -396,6 +473,7 @@ app.post("/api/diagnose", authMiddleware, async (req, res) => {
         }
       }
       await recordDiagnosis({ userId, cacheKey, query, vehicle, result: cached.data, cached: true });
+      markDiagnosisServed(cacheKey);
       console.log(`RESPONSE SENT (cached) +${Date.now() - t0}ms`);
       return res.json(cached.data);
     }
@@ -578,12 +656,19 @@ parsed.ebayParts = ebayParts;
     // Count it, log it, and award rep unless it's a repeat within 24h
     await recordDiagnosis({ userId, cacheKey, query, vehicle, result: parsed, cached: false });
 
-    // Store in cache for next time this exact vehicle+query comes in
-    // (skip follow-ups — their answer depends on the previous question)
-    if (!followup) diagnosisCache.set(cacheKey, { data: parsed, cachedAt: Date.now() });
-
     console.log(`RESPONSE SENT +${Date.now() - t0}ms`);
     res.json(parsed);
+
+    // Store for next time this exact vehicle+query comes in — memory + DB,
+    // after the response so the user doesn't wait on the write.
+    // (Skip follow-ups — their answer depends on the previous question.)
+    // Not awaited: anything thrown here must never reach the catch below,
+    // which would try to send a second response (ERR_HTTP_HEADERS_SENT).
+    if (!followup) {
+      storeDiagnosis(cacheKey, query, vehicle, parsed).catch((err) =>
+        console.error("DIAGNOSIS CACHE STORE ERROR:", err.message)
+      );
+    }
   } catch (err) {
     console.error("DIAGNOSE ERROR:", err);
     res.status(500).json({ error: "Failed to diagnose" });
