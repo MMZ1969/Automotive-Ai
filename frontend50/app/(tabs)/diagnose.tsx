@@ -75,6 +75,10 @@ export default function Diagnose() {
   const [explicitNone, setExplicitNone] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const loadingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // `disabled={loading}` only applies after a re-render, so quick taps can
+  // fire several requests (user 235 sent 3 in the same second). A ref blocks
+  // that synchronously.
+  const diagnoseInFlight = useRef(false);
 
   // Auto-pick a vehicle so the AI always has context: the one they last used
   // here, else the only one in the garage. Tapping a chip still overrides.
@@ -196,7 +200,8 @@ export default function Diagnose() {
   };
 
   const handleDiagnose = async () => {
-    if (!query.trim()) return;
+    if (!query.trim() || diagnoseInFlight.current) return;
+    diagnoseInFlight.current = true;
     Speech.stop(); setIsSpeaking(false);
     const vehicleContext = selectedVehicle ? `Vehicle: ${selectedVehicle.year} ${selectedVehicle.make} ${selectedVehicle.model}. ` : "";
     const fullQuery = vehicleContext + query;
@@ -219,7 +224,7 @@ export default function Diagnose() {
   const videoRes = await api.get(`/api/youtube?query=${encodeURIComponent(fullQuery)}`);
   setResult(diagRes.data); setVideos(videoRes.data);
 } catch { console.error("DIAGNOSE ERROR"); }
-finally { setLoading(false); }
+finally { setLoading(false); diagnoseInFlight.current = false; }
   };
 
   const handleShareToFeed = () => {

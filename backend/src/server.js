@@ -227,16 +227,20 @@ async function recordDiagnosis({ userId, cacheKey, query, vehicle, result, cache
     const queryKey = createHash("sha256").update(cacheKey).digest("hex");
     const repeat = await prisma.diagnosisLog.findFirst({
       where: { userId, queryKey, createdAt: { gte: new Date(Date.now() - REPEAT_WINDOW_MS) } },
-      select: { id: true },
+      select: { id: true, createdAt: true },
+      orderBy: { createdAt: "desc" },
     });
     const repAwarded = !repeat;
+    // Same question within 2 min = a double/triple tap, not a new diagnosis
+    // (user 235 sent 3 in one second). Still logged, but it doesn't use up
+    // one of the 8 daily diagnoses or inflate the total.
+    const isDoubleTap = !!repeat && Date.now() - repeat.createdAt.getTime() < 2 * 60 * 1000;
     await prisma.$transaction([
       prisma.user.update({
         where: { id: userId },
         data: {
           ...(repAwarded ? { repPoints: { increment: DIAGNOSIS_REP } } : {}),
-          dailyDiagnoses: { increment: 1 },
-          totalDiagnoses: { increment: 1 },
+          ...(isDoubleTap ? {} : { dailyDiagnoses: { increment: 1 }, totalDiagnoses: { increment: 1 } }),
           lastDiagnosisDate: new Date(),
         },
       }),
