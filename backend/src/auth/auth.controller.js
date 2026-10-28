@@ -132,9 +132,14 @@ export const register = async (req, res) => {
     // missing codes are silently ignored — a bad code shouldn't block
     // registration, it just means no referral relationship gets set.
     let referredById = null;
-    if (referralCode) {
+    // Codes are stored uppercase. Some Android keyboards ignore
+    // autoCapitalize, and pasted codes can carry spaces, so normalize first.
+    const cleanReferralCode = typeof referralCode === "string"
+      ? referralCode.replace(/\s+/g, "").toUpperCase()
+      : "";
+    if (cleanReferralCode) {
       const referrer = await prisma.user.findUnique({
-        where: { referralCode },
+        where: { referralCode: cleanReferralCode },
         select: { id: true, email: true },
       });
       // Referring yourself through an alias of your own inbox earns nothing.
