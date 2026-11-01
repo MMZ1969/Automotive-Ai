@@ -2,6 +2,10 @@ import prisma from "../lib/prisma.js";
 import { TEST_ACCOUNT_EMAILS, hideTestAccountsExceptViewer } from "../lib/testAccounts.js";
 import { createAndSendNotification } from "./notification.controller.js";
 
+// Fields of another user that are safe to send to any client. Never `user: true`:
+// that ships the whole row (password hash, email, resetToken, pushToken...).
+const PUBLIC_USER = { select: { id: true, name: true, profilePhoto: true, role: true, repPoints: true, isVerified: true } };
+
 // GET all posts
 export const getAllPosts = async (req, res) => {
   try {
@@ -27,7 +31,7 @@ export const getAllPosts = async (req, res) => {
               { userId: viewerId },
             ],
           },
-          include: { user: true, likes: true },
+          include: { user: PUBLIC_USER, likes: true },
           orderBy: { createdAt: "asc" },
         },
         likes: {
@@ -63,7 +67,7 @@ export const getPostById = async (req, res) => {
               { userId: viewerId },
             ],
           },
-          include: { user: true, likes: true },
+          include: { user: PUBLIC_USER, likes: true },
           orderBy: { createdAt: "asc" },
         },
         likes: {
@@ -245,7 +249,7 @@ export const addComment = async (req, res) => {
 
     const comment = await prisma.comment.create({
       data: { content, userId, postId },
-      include: { user: true },
+      include: { user: PUBLIC_USER },
     });
 
     res.json(comment);
@@ -292,7 +296,7 @@ export const addReply = async (req, res) => {
 
     const reply = await prisma.comment.create({
       data: { content, userId, postId, parentId },
-      include: { user: true },
+      include: { user: PUBLIC_USER },
     });
 
     res.json(reply);
@@ -435,7 +439,7 @@ export const getFollowingPosts = async (req, res) => {
               { userId },
             ],
           },
-          include: { user: true, likes: true },
+          include: { user: PUBLIC_USER, likes: true },
           orderBy: { createdAt: "asc" },
         },
         likes: {
