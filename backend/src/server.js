@@ -1021,27 +1021,116 @@ If no VIN is visible, respond with:
   }
 });
 
-// YouTube Search route
+// ─── YOUTUBE VIDEOS ──────────────────────────────────────────────────────────
+// The app shows these under every diagnosis and people watch the top one, so
+// order matters. Pull 15 results + their details and rank them:
+//   trusted repair channels first, title mentions the vehicle, real how-to
+//   length (no Shorts, no hour-long streams), then popularity.
+// Results are cached per query: a YouTube search costs 100 of the 10,000
+// daily quota units, so uncached we'd top out around 100 diagnoses/day.
+// Michael's trusted list — edit freely (lowercase, matched as part of the channel name).
+const TRUSTED_CHANNELS = [
+  "trq", "1a auto", "chrisfix", "ericthecarguy", "humble mechanic",
+  "south main auto", "pine hollow auto", "fcp euro", "rainman ray",
+  "mechanic mindset", "pistons and pixie",
+];
+const youtubeCache = new Map();
+const YOUTUBE_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const YOUTUBE_CACHE_MAX = 1000;
+
+// "PT14M3S" -> 843
+function isoDurationSeconds(iso) {
+  const m = /PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/.exec(iso || "");
+  return m ? (+m[1] || 0) * 3600 + (+m[2] || 0) * 60 + (+m[3] || 0) : 0;
+}
+const isTrustedChannel = (name) => {
+  const n = String(name || "").toLowerCase();
+  return TRUSTED_CHANNELS.some((t) => n.includes(t));
+};
+
+// The app sends "Vehicle: 2010 FORD F-150. Oil leak above starter" for text
+// diagnoses, or the AI summary for photo scans. Clean it up and pull out the
+// vehicle so titles that mention it can be preferred.
+function cleanVideoQuery(raw) {
+  const q = String(raw || "")
+    .replace(/^\s*vehicle:\s*/i, "")
+    .replace(/\s*\.\s+/g, " ")
+    .replace(/[^\w\s\-./&']/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 150);
+  const v = /\b((?:19|20)\d{2})\s+([A-Za-z][\w-]*)\s+([\w-]+)/.exec(q);
+  return { q, make: v?.[2]?.toLowerCase() || null, model: v?.[3]?.toLowerCase() || null };
+}
+
+async function findRepairVideos(rawQuery) {
+  const { q, make, model } = cleanVideoQuery(rawQuery);
+  if (!q) return [];
+  const cacheKey = q.toLowerCase();
+  const hit = youtubeCache.get(cacheKey);
+  if (hit && Date.now() - hit.at < YOUTUBE_CACHE_TTL_MS) return hit.videos;
+
+  const key = process.env.YOUTUBE_API_KEY;
+  const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=15&relevanceLanguage=en&safeSearch=moderate&q=${encodeURIComponent(`${q} repair`)}&key=${key}`;
+  const search = await (await fetch(searchUrl)).json();
+  const items = (search.items || []).filter((it) => it.id?.videoId);
+  if (!items.length) return [];
+
+  // Duration + view counts: 1 quota unit for all 15. If it fails, rank without it.
+  let details = {};
+  try {
+    const ids = items.map((it) => it.id.videoId).join(",");
+    const d = await (await fetch(`https://www.googleapis.com/youtube/v3/videos?part=contentDetails,statistics&id=${ids}&key=${key}`)).json();
+    for (const v of d.items || []) {
+      details[v.id] = { seconds: isoDurationSeconds(v.contentDetails?.duration), views: Number(v.statistics?.viewCount) || 0 };
+    }
+  } catch (err) {
+    console.error("YOUTUBE DETAILS ERROR:", err.message);
+  }
+
+  const norm = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  const ranked = items
+    .map((it, idx) => {
+      const title = it.snippet?.title || "";
+      const channel = it.snippet?.channelTitle || "";
+      const det = details[it.id.videoId];
+      const trusted = isTrustedChannel(channel);
+      let score = (15 - idx) * 1.5;                               // YouTube's own relevance
+      if (trusted) score += 30;
+      if (model && norm(title).includes(norm(model))) score += 16; // right vehicle
+      else if (make && norm(title).includes(norm(make))) score += 4;
+      if (det) {
+        if (det.seconds > 0 && det.seconds < 75) score -= 100;     // Shorts
+        if (det.seconds > 60 * 60) score -= 40;                    // streams / marathons
+        if (det.seconds >= 180 && det.seconds <= 35 * 60) score += 4;
+        score += Math.log10(det.views + 1) * 2.5;                  // ~+10 at 10k views, +15 at 1M
+      }
+      return {
+        videoId: it.id.videoId,
+        // YouTube returns HTML entities in titles ("&#39;"); the app shows plain text
+        title: title.replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/&amp;/g, "&"),
+        thumbnail: it.snippet?.thumbnails?.medium?.url,
+        channel,
+        trusted,
+        score,
+      };
+    })
+    .filter((v) => v.score > -50)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 5)
+    .map(({ score, ...v }) => v);
+
+  youtubeCache.set(cacheKey, { videos: ranked, at: Date.now() });
+  while (youtubeCache.size > YOUTUBE_CACHE_MAX) youtubeCache.delete(youtubeCache.keys().next().value);
+  console.log(`YOUTUBE | q="${q}" | top: ${ranked[0] ? `${ranked[0].channel}${ranked[0].trusted ? " (trusted)" : ""}` : "none"}`);
+  return ranked;
+}
+
 app.get("/api/youtube", async (req, res) => {
   try {
     const { query } = req.query;
     if (!query) return res.json([]);
-
-    const searchQuery = encodeURIComponent(`${query} car repair how to fix`);
-    const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${searchQuery}&type=video&maxResults=5&key=${process.env.YOUTUBE_API_KEY}`;
-
-    const response = await fetch(url);
-    const data = await response.json();
-
-    const videos =
-      data.items?.map((item) => ({
-        videoId: item.id.videoId,
-        title: item.snippet.title,
-        thumbnail: item.snippet.thumbnails.medium.url,
-        channel: item.snippet.channelTitle,
-      })) || [];
-
-    res.json(videos);
+    res.json(await findRepairVideos(query));
   } catch (err) {
     console.error("YOUTUBE ERROR:", err);
     res.status(500).json({ error: "Failed to fetch videos" });
