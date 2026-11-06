@@ -435,9 +435,19 @@ model DiagnosisAnswer {
   generatedAt  DateTime @default(now()) // when Claude produced this answer; TTL runs from here
   hitCount     Int      @default(0)     // times served from cache
   lastServedAt DateTime?
+  // Public library (automotiveai.app/problems). Filled by library-review.js,
+  // approved by Michael with library-publish.js. A published row is pinned:
+  // the cache never overwrites it and serves it past the TTL.
+  title          String?   // "2003 Ford Ranger: cracked water pump pulley"
+  slug           String?   // url part under /problems/<make>/<model>/
+  publicQuestion String?   // question rewritten without personal details
+  publishedAt    DateTime?
+  rejectedAt     DateTime?
+  reviewNote     String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
   @@index([make, model, year])
   @@index([generatedAt])
+  @@index([publishedAt])
 }

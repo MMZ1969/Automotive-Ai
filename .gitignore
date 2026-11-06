@@ -47,3 +47,6 @@ backend/ban-emails-batch.js
 
 store/raw/*
 !store/raw/README.txt
+
+# Local reports: contain user emails and questions. Never commit (repo is public).
+backend/reports/

@@ -237,9 +237,10 @@ async function getCachedDiagnosis(cacheKey) {
   try {
     const row = await prisma.diagnosisAnswer.findUnique({
       where: { queryKey: hashCacheKey(cacheKey) },
-      select: { result: true, generatedAt: true },
+      select: { result: true, generatedAt: true, publishedAt: true },
     });
-    if (row && Date.now() - row.generatedAt.getTime() < DIAGNOSIS_CACHE_TTL_MS) {
+    // Published (reviewed) answers never expire.
+    if (row && (row.publishedAt || Date.now() - row.generatedAt.getTime() < DIAGNOSIS_CACHE_TTL_MS)) {
       const entry = { data: row.result, cachedAt: row.generatedAt.getTime() };
       hotCacheSet(cacheKey, entry);
       return { ...entry, source: "db" };
@@ -276,9 +277,16 @@ async function storeDiagnosis(cacheKey, query, vehicle, data) {
       result: data,
       generatedAt: now,
     };
+    const queryKey = hashCacheKey(cacheKey);
+    const existing = await prisma.diagnosisAnswer.findUnique({
+      where: { queryKey },
+      select: { publishedAt: true },
+    });
+    // A reviewed, published answer is pinned: never overwrite it.
+    if (existing?.publishedAt) return;
     await prisma.diagnosisAnswer.upsert({
-      where: { queryKey: hashCacheKey(cacheKey) },
-      create: { queryKey: hashCacheKey(cacheKey), ...fields },
+      where: { queryKey },
+      create: { queryKey, ...fields },
       update: fields, // regenerated after TTL: replace the answer, keep hitCount
     });
   } catch (err) {
