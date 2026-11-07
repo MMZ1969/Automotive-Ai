@@ -10,6 +10,7 @@ dotenv.config();
 
 import prisma from "./lib/prisma.js";
 import { buildDiagnosisPrompt, DIAGNOSIS_MODEL, DIAGNOSIS_MAX_TOKENS, DIAGNOSIS_MAX_SEARCHES } from "./lib/diagnosisPrompt.js";
+import { getVerifiedSpecs } from "./lib/vehicleSpecs.js";
 import authMiddleware from "./middleware/authMiddleware.js";
 
 import authRoutes from "./auth/auth.routes.js";
@@ -211,6 +212,7 @@ app.use("/api/admin", adminRoutes);
 const diagnosisCache = new Map();
 const DIAGNOSIS_CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days (was 7; eBay prices are the main thing that ages)
 const DIAGNOSIS_HOT_CACHE_MAX = 500;
+const DIAGNOSIS_HOT_TTL_MS = 60 * 60 * 1000; // memory copy re-checked against the DB after 1h
 
 function getDiagnosisCacheKey(query, vehicle) {
   const vehicleKey = vehicle
@@ -232,7 +234,10 @@ function hotCacheSet(cacheKey, entry) {
 // Returns { data, cachedAt, source } or null. Memory first, then DB.
 async function getCachedDiagnosis(cacheKey) {
   const hot = diagnosisCache.get(cacheKey);
-  if (hot && Date.now() - hot.cachedAt < DIAGNOSIS_CACHE_TTL_MS) {
+  // Memory copies are trusted for 1 hour only; after that re-check the DB, which
+  // is the source of truth (vehicle-specs.js expires DB answers when a verified
+  // spec is added, and that has to reach this process too).
+  if (hot && Date.now() - hot.cachedAt < DIAGNOSIS_CACHE_TTL_MS && Date.now() - (hot.checkedAt || hot.cachedAt) < DIAGNOSIS_HOT_TTL_MS) {
     return { ...hot, source: "memory" };
   }
   try {
@@ -242,7 +247,7 @@ async function getCachedDiagnosis(cacheKey) {
     });
     // Published (reviewed) answers never expire.
     if (row && (row.publishedAt || Date.now() - row.generatedAt.getTime() < DIAGNOSIS_CACHE_TTL_MS)) {
-      const entry = { data: row.result, cachedAt: row.generatedAt.getTime() };
+      const entry = { data: row.result, cachedAt: row.generatedAt.getTime(), checkedAt: Date.now() };
       hotCacheSet(cacheKey, entry);
       return { ...entry, source: "db" };
     }
@@ -523,6 +528,18 @@ app.post("/api/diagnose", authMiddleware, async (req, res) => {
     // ─────────────────────────────────────────────────────────────────
     console.log(`DAILY LIMIT CHECK DONE +${Date.now() - t0}ms`);
 
+    // Verified specs for this vehicle (spec memory). A lookup failure must
+    // never block a diagnosis — it just runs without them.
+    let verifiedSpecs = [];
+    try {
+      verifiedSpecs = await getVerifiedSpecs(prisma, vehicle);
+    } catch (err) {
+      console.error("VERIFIED SPECS LOOKUP ERROR:", err.message);
+    }
+    if (verifiedSpecs.length) {
+      console.log(`VERIFIED SPECS | ${vehicleLabelOf(vehicle)} | ${verifiedSpecs.map((s) => s.label).join(", ")}`);
+    }
+
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
@@ -539,7 +556,7 @@ app.post("/api/diagnose", authMiddleware, async (req, res) => {
         messages: [
           {
             role: "user",
-            content: buildDiagnosisPrompt({ query, vehicle, followup }),
+            content: buildDiagnosisPrompt({ query, vehicle, followup, verifiedSpecs }),
           },
         ],
       }),

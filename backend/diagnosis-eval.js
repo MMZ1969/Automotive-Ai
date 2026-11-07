@@ -7,6 +7,7 @@
 //         node diagnosis-eval.js --runs 2
 //         node diagnosis-eval.js --models claude-sonnet-4-5,claude-sonnet-5-5
 //         node diagnosis-eval.js --case lug               (only cases whose id contains "lug")
+//         node diagnosis-eval.js --with-specs             (inject verified specs from the DB, like production)
 // Output: console + reports/diagnosis-eval.txt (+ reports/diagnosis-eval-raw.json)
 import "dotenv/config";
 import { mkdirSync, writeFileSync } from "fs";
@@ -28,6 +29,7 @@ const arg = (name, def) => { const i = process.argv.indexOf(`--${name}`); return
 const RUNS = Math.max(1, Number(arg("runs", 3)));
 const MODELS = arg("models", "claude-sonnet-4-5,claude-sonnet-5-5").split(",").map((s) => s.trim()).filter(Boolean);
 const only = arg("case", "");
+const WITH_SPECS = process.argv.includes("--with-specs");
 const cases = CASES.filter((c) => !only || c.id.includes(only));
 
 const out = [];
@@ -56,7 +58,7 @@ function extractSpecs(result) {
 const hedges = (result) => [...(result.diagnosisSteps || []).map(stepText), result.proTip || ""]
   .filter((t) => /sources (vary|disagree|differ)|not confirmed|verify|confirm (the|your) exact|check your owner/i.test(t)).length;
 
-async function runOnce(model, c) {
+async function runOnce(model, c, verifiedSpecs = []) {
   const t0 = Date.now();
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
@@ -65,7 +67,7 @@ async function runOnce(model, c) {
       model,
       max_tokens: DIAGNOSIS_MAX_TOKENS,
       tools: [{ type: "web_search_20250305", name: "web_search", max_uses: DIAGNOSIS_MAX_SEARCHES }],
-      messages: [{ role: "user", content: buildDiagnosisPrompt({ query: c.query, vehicle: c.vehicle }) }],
+      messages: [{ role: "user", content: buildDiagnosisPrompt({ query: c.query, vehicle: c.vehicle, verifiedSpecs }) }],
     }),
   });
   const data = await res.json();
@@ -89,17 +91,29 @@ async function main() {
   log(`${cases.length} questions × ${MODELS.length} models × ${RUNS} runs = ${total} diagnoses. Expect roughly $${(total * 0.08).toFixed(2)}–$${(total * 0.2).toFixed(2)} and ${Math.ceil(total * 35 / 60)} min.`);
   log(`Models: ${MODELS.join(", ")}\n`);
 
+  // Verified specs per case, loaded the same way the server does
+  const specsFor = {};
+  if (WITH_SPECS) {
+    const { PrismaClient } = await import("@prisma/client");
+    const { getVerifiedSpecs } = await import("./src/lib/vehicleSpecs.js");
+    const prisma = new PrismaClient();
+    for (const c of cases) specsFor[c.id] = await getVerifiedSpecs(prisma, c.vehicle);
+    await prisma.$disconnect();
+  }
+  log(`Verified specs: ${WITH_SPECS ? "ON (from DB)" : "off (use --with-specs to inject them like production)"}\n`);
+
   const raw = [];
   const summary = {}; // model -> {ms, cost, searches, n, errors, consistent, cases}
   for (const c of cases) {
     log("────────────────────────────────────────────────────────────────────────");
     log(`${c.id}: ${c.vehicle.year} ${c.vehicle.make} ${c.vehicle.model} ${c.vehicle.engine || ""} — "${c.query}"`);
+    if (WITH_SPECS) log(`  verified specs injected: ${(specsFor[c.id] || []).map((x) => `${x.label} = ${x.value}`).join("; ") || "none for this vehicle"}`);
     for (const model of MODELS) {
       const s = (summary[model] ||= { ms: 0, cost: 0, searches: 0, n: 0, errors: 0, consistent: 0, cases: 0 });
       const runs = [];
       for (let i = 0; i < RUNS; i++) {
         process.stdout.write(`  ${model} run ${i + 1}/${RUNS}…\r`);
-        const r = await runOnce(model, c);
+        const r = await runOnce(model, c, specsFor[c.id] || []);
         runs.push(r);
         raw.push({ case: c.id, model, run: i + 1, ...r });
         if (r.error || !r.result) { s.errors++; continue; }

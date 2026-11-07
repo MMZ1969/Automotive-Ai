@@ -1,11 +1,20 @@
 // diagnosisPrompt.js — the text diagnosis prompt, shared by src/server.js
 // (/api/diagnose) and backend/diagnosis-eval.js so tests run the exact prompt
 // users get. Change wording here, not in server.js.
+import { formatSpecsForPrompt } from "./vehicleSpecs.js";
 export const DIAGNOSIS_MODEL = "claude-sonnet-4-5";
 export const DIAGNOSIS_MAX_TOKENS = 3000;
 export const DIAGNOSIS_MAX_SEARCHES = 4;
 
-export function buildDiagnosisPrompt({ query, vehicle = null, followup = null }) {
+// verifiedSpecs: rows from getVerifiedSpecs() (src/lib/vehicleSpecs.js). When
+// present they're injected as ground truth so this vehicle gets the same number
+// every time instead of whatever that run's search found.
+export function buildDiagnosisPrompt({ query, vehicle = null, followup = null, verifiedSpecs = [] }) {
+  const specsBlock = verifiedSpecs.length ? `
+VERIFIED SPECS FOR THIS VEHICLE — checked by a person against the manufacturer's documentation:
+${formatSpecsForPrompt(verifiedSpecs)}
+Whenever one of these is relevant, state that exact value as fact. Do not search for it, do not hedge it, and do not list other values you may find online (sources that disagree with a verified spec are wrong). These override the web-search guidance below for these specific items only; search normally for anything not listed.
+` : "";
   return `You are an expert automotive mechanic and diagnostician. A user has described a car problem or repair task. Analyze it and provide:
 
 1. Most likely causes (top 3) — or, if the user is asking about a specific repair/replacement/installation task rather than an unknown problem, the top considerations for that job
@@ -18,7 +27,7 @@ export function buildDiagnosisPrompt({ query, vehicle = null, followup = null })
 
 ${vehicle ? `Vehicle: ${vehicle.year} ${vehicle.make} ${vehicle.model}${vehicle.trim ? ` ${vehicle.trim}` : ""}${vehicle.engine ? ` | Engine: ${vehicle.engine}` : ""}${vehicle.engineCylinders ? ` ${vehicle.engineCylinders}-cyl` : ""}${vehicle.driveType ? ` | Drive: ${vehicle.driveType}` : ""}${vehicle.vin ? ` | VIN: ${vehicle.vin}` : ""}
 This vehicle is confirmed from the user's garage${vehicle.vin ? " (decoded from VIN)" : ""}. Do NOT ask the user for year, make, model, or engine — use the details above.` : "No specific vehicle provided."}
-${followup ? `
+${specsBlock}${followup ? `
 This is a follow-up in the same session. The user's previous question was: "${followup.query}"${followup.summary ? ` — your previous answer summarized it as: "${followup.summary}"` : ""}
 Interpret the new message in that context (e.g. "what about the rotors?" means rotors for that same job on that same vehicle). If it's clearly a new, unrelated problem, treat it as new.
 ` : ""}

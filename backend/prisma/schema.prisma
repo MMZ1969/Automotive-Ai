@@ -451,3 +451,29 @@ model DiagnosisAnswer {
   @@index([generatedAt])
   @@index([publishedAt])
 }
+
+// Verified specs per vehicle ("spec memory"). Checked by a person (Michael or a
+// verified mechanic) against a manual. Injected into every diagnosis prompt for
+// matching vehicles so the same car always gets the same number, instead of
+// whichever value that run's web search happened to find.
+// Matching: makeKey/modelKey are slugified ("f-150"); year within yearFrom..yearTo;
+// engine "" = applies to every engine, otherwise matched by displacement ("2.4").
+model VehicleSpec {
+  id         Int      @id @default(autoincrement())
+  makeKey    String   // "jeep"
+  modelKey   String   // "renegade"
+  yearFrom   Int
+  yearTo     Int
+  engine     String   @default("") // "" = all engines; else displacement like "2.4"
+  specKey    String   // "lug-nut-torque"
+  label      String   // "Lug nut torque"
+  value      String   // "89 ft-lbs (120 N·m)"
+  source     String   // "owner's manual"
+  note       String?
+  verifiedBy String   @default("MAZ")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([makeKey, modelKey, yearFrom, yearTo, engine, specKey])
+  @@index([makeKey, modelKey])
+}
