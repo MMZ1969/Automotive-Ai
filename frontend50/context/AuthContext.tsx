@@ -1,11 +1,10 @@
 import api from "@lib/api";
+import { forgetPushSync, syncPushToken } from "@lib/push";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import Constants from "expo-constants";
-import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
 import { router } from "expo-router";
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { AppState, DeviceEventEmitter, Platform } from "react-native";
+import { AppState, DeviceEventEmitter } from "react-native";
 
 interface AuthContextType {
   user: any;
@@ -24,55 +23,10 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-// ─── PUSH TOKEN HELPER ────────────────────────────────────────────────────────
-const registerPushToken = async () => {
-  try {
-    if (!Device.isDevice) return;
-
-    // Android needs a channel set up before tokens/notifications behave.
-    if (Platform.OS === "android") {
-      await Notifications.setNotificationChannelAsync("default", {
-        name: "default",
-        importance: Notifications.AndroidImportance.MAX,
-        vibrationPattern: [0, 250, 250, 250],
-      });
-    }
-
-    const { status: existingStatus } = await Notifications.getPermissionsAsync();
-    let finalStatus = existingStatus;
-
-    if (existingStatus !== "granted") {
-      const { status } = await Notifications.requestPermissionsAsync();
-      finalStatus = status;
-    }
-
-    if (finalStatus !== "granted") {
-      console.log("PUSH: permission not granted, skipping token registration");
-      return;
-    }
-
-    // ── THE FIX ──
-    // getExpoPushTokenAsync() needs the EAS projectId on real store builds.
-    // Without it, it throws on device builds and the token is never saved
-    // (which is exactly why every user had a null pushToken). Pull it from
-    // app config, with a hardcoded fallback so it can never be undefined.
-    const projectId =
-      Constants?.expoConfig?.extra?.eas?.projectId ??
-      (Constants as any)?.easConfig?.projectId ??
-      "6f942beb-c59e-4d1a-b4b0-8317a2566f21";
-
-    const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
-    const pushToken = tokenData.data;
-
-    console.log("PUSH: got token", pushToken);
-
-    await api.put("/api/users/me", { pushToken });
-
-    console.log("PUSH: token saved to backend");
-  } catch (err) {
-    console.error("PUSH TOKEN ERROR:", err);
-  }
-};
+// ─── PUSH TOKEN ───────────────────────────────────────────────────────────────
+// Login/launch never show the notification prompt anymore (see lib/push.ts):
+// they only send the token when permission is already granted. The app asks
+// at useful moments instead (question posted, reminder set, diagnosis card).
 
 // ─── PROVIDER ─────────────────────────────────────────────────────────────────
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
@@ -90,6 +44,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const sub = AppState.addEventListener("change", (state) => {
       if (state === "active") {
         Notifications.setBadgeCountAsync(0);
+        // Back from Settings with notifications newly on: send the token.
+        // (No-op when not granted, logged out, or sent in the last 7 days.)
+        AsyncStorage.getItem("token").then((t) => { if (t) syncPushToken(); });
       }
     });
 
@@ -123,7 +80,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             const freshUser = res.data;
             await AsyncStorage.setItem("user", JSON.stringify(freshUser));
             setUser(freshUser);
-            await registerPushToken();
+            syncPushToken();
           } catch (err) {
             // 401 is now handled globally by the interceptor + session-expired
             // listener above. Any other error here (network blip, etc.) just
@@ -163,7 +120,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       await AsyncStorage.setItem("user", JSON.stringify(userObj));
       api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
       setUser(userObj);
-      await registerPushToken();
+      syncPushToken(true);
     } catch (err) {
       console.error("AUTH LOGIN ERROR:", err);
       throw err;
@@ -184,7 +141,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       await AsyncStorage.setItem("user", JSON.stringify(userObj));
       api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
       setUser(userObj);
-      await registerPushToken();
+      syncPushToken(true);
     } catch (err) {
       console.error("AUTH REGISTER ERROR:", err);
       throw err;
@@ -201,12 +158,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     await AsyncStorage.setItem("user", JSON.stringify(userObj));
     api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
     setUser(userObj);
-    await registerPushToken();
+    syncPushToken(true);
   };
 
   const logout = async () => {
     try {
       await AsyncStorage.multiRemove(["token", "user"]);
+      await forgetPushSync(); // next account on this device re-sends the token
       delete api.defaults.headers.common["Authorization"];
       setUser(null);
     } catch (err) {

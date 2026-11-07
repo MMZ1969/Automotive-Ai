@@ -2,6 +2,7 @@ import { useTheme } from "@context/ThemeContext";
 import api from "@lib/api";
 import { createLog } from "@lib/logs";
 import { addMonthsToDay, createReminder, suggestedMonths, todayDay } from "@lib/reminders";
+import { askForPush } from "@lib/push";
 import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
@@ -139,6 +140,7 @@ export default function AddLogScreen() {
     try {
       await createReminder({ vehicleId: id as string, title: remindPrompt.title, intervalMonths: months, dueAt: day });
       goToLogs();
+      askForPush("reminder");
     } catch (err: any) {
       Alert.alert("Couldn't set reminder", err?.response?.data?.message || "Your log was saved. Try adding the reminder from the vehicle screen.");
       setSavingReminder(null);

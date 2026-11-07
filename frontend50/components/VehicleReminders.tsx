@@ -11,6 +11,7 @@ import {
   repeatLabel,
   todayDay,
 } from "@lib/reminders";
+import { askForPush } from "@lib/push";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
 import {
@@ -84,6 +85,7 @@ export default function VehicleReminders({ vehicleId }: { vehicleId: string }) {
       await createReminder({ vehicleId, title: title.trim(), intervalMonths: months, dueAt: dueDay });
       setAdding(false);
       load();
+      askForPush("reminder");
     } catch (err: any) {
       Alert.alert("Couldn't save", err?.response?.data?.message || "Try again.");
     } finally {

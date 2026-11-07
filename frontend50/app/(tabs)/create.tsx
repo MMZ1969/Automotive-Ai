@@ -1,11 +1,12 @@
 import { useAuth } from "@context/AuthContext";
 import { useTheme } from "@context/ThemeContext";
 import api from "@lib/api";
+import { askForPush } from "@lib/push";
 import { ensureFirebaseAuth } from "@lib/firebaseAuth";
 import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { getDownloadURL, ref, uploadBytesResumable } from "firebase/storage";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator, Alert, Image, Keyboard, Text, TextInput, TouchableOpacity, View,
 } from "react-native";
@@ -19,10 +20,24 @@ export default function CreatePostScreen() {
   const { colors } = useTheme();
   const router = useRouter();
 
-  const { prefillContent } = useLocalSearchParams<{ prefillContent?: string }>();
+  const { prefillContent, prefillType, prefillKey } = useLocalSearchParams<{
+    prefillContent?: string; prefillType?: string; prefillKey?: string;
+  }>();
+  type PostType = "VANITY" | "QUESTION" | "SERVICE" | "BEFORE_AFTER";
+  const asPostType = (t?: string): PostType =>
+    t === "QUESTION" || t === "SERVICE" || t === "BEFORE_AFTER" ? t : "VANITY";
   const [content, setContent] = useState(prefillContent || "");
   const [submitting, setSubmitting] = useState(false);
-  const [postType, setPostType] = useState<"VANITY" | "QUESTION" | "SERVICE" | "BEFORE_AFTER">("VANITY");
+  const [postType, setPostType] = useState<PostType>(asPostType(prefillType));
+
+  // This screen is a tab, so it stays mounted: initial state only applies the
+  // first prefill. Re-apply whenever Diagnose sends a new one (prefillKey
+  // changes on every tap, even for identical text).
+  useEffect(() => {
+    if (!prefillKey) return;
+    setContent(prefillContent || "");
+    setPostType(asPostType(prefillType));
+  }, [prefillKey]);
   const [servicePrice, setServicePrice] = useState("");
   const [serviceLocation, setServiceLocation] = useState("");
 
@@ -173,9 +188,12 @@ export default function CreatePostScreen() {
       setContent(""); setPhotoUris([]); setPhotoUrls([]);
       setBeforeUri(null); setBeforeUrl(null); setAfterUri(null); setAfterUrl(null);
       setPostType("VANITY"); setServicePrice(""); setServiceLocation("");
-      Alert.alert("Posted! 🚗", "Your post is live!", [
-        { text: "View Feed", onPress: () => router.push("/(tabs)/feed") },
-        { text: "Stay here" },
+      const wasQuestion = postType === "QUESTION";
+      Alert.alert(
+        wasQuestion ? "Question posted! 🔧" : "Posted! 🚗",
+        wasQuestion ? "Mechanics in the community can now see it and answer." : "Your post is live!", [
+        { text: "View Feed", onPress: () => { router.push("/(tabs)/feed"); if (wasQuestion) askForPush("question"); } },
+        { text: "Stay here", onPress: () => { if (wasQuestion) askForPush("question"); } },
       ]);
     } catch { Alert.alert("Error", "Could not create post. Try again."); }
     finally { setSubmitting(false); }

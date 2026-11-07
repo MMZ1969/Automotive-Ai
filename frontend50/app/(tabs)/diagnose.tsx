@@ -1,6 +1,7 @@
 import { useTheme } from "@context/ThemeContext";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import api from "@lib/api";
+import PushNudge from "@components/PushNudge";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as ImagePicker from "expo-image-picker";
 import { useFocusEffect, useRouter } from "expo-router";
@@ -241,7 +242,36 @@ finally { setLoading(false); diagnoseInFlight.current = false; }
 
     router.push({
       pathname: "/(tabs)/create",
-      params: { prefillContent: content },
+      params: { prefillContent: content, prefillType: "VANITY", prefillKey: String(Date.now()) },
+    });
+  };
+
+  // "Ask a Mechanic": turn this diagnosis into a Question post so real
+  // mechanics can confirm or correct the AI. Kept under the 500-char post size.
+  const handleAskMechanic = () => {
+    if (!result) return;
+    const clip = (s: string, n: number) => (s && s.length > n ? s.slice(0, n - 1).trimEnd() + "…" : s || "");
+    const v = selectedVehicle;
+    const vehicle = v ? `${v.year} ${v.make} ${v.model}${v.engine ? ` (${v.engine})` : ""}` : null;
+    const build = (nCauses: number) => [
+      vehicle ? `🚗 ${vehicle}` : null,
+      `❓ ${clip(query.trim(), 120)}`,
+      ``,
+      `🤖 AutoAI thinks: ${clip(result.summary, 90)}`,
+      ...(result.causes || []).slice(0, nCauses).map((c: string, i: number) => `${i + 1}. ${clip(c, 60)}`),
+      ``,
+      `Mechanics — does this sound right? What would you check first?`,
+    ].filter((line) => line !== null).join("\n");
+    // Drop causes until it fits the 500-char post, then hard-clip as a last resort
+    let content = build(3);
+    if (content.length > 500) content = build(2);
+    if (content.length > 500) content = build(1);
+    content = clip(content, 500);
+
+    router.push({
+      pathname: "/(tabs)/create",
+      // prefillKey changes every tap so the (already mounted) create tab re-applies it
+      params: { prefillContent: content, prefillType: "QUESTION", prefillKey: String(Date.now()) },
     });
   };
 
@@ -407,6 +437,16 @@ finally { setLoading(false); diagnoseInFlight.current = false; }
 
         {result && (
   <View style={{ gap: 14 }}>
+    <TouchableOpacity
+      onPress={handleAskMechanic}
+      style={{ backgroundColor: colors.blue, borderRadius: 12, paddingVertical: 14, paddingHorizontal: 16, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 10 }}
+    >
+      <MaterialCommunityIcons name="account-wrench" size={22} color="white" />
+      <View style={{ alignItems: "center" }}>
+        <Text style={{ color: "white", fontWeight: "800", fontSize: 16 }}>Ask a Mechanic About This</Text>
+        <Text style={{ color: "#ffffffaa", fontSize: 12, marginTop: 2 }}>Get a real mechanic to confirm or correct it</Text>
+      </View>
+    </TouchableOpacity>
     <View style={{ flexDirection: "row", gap: 10 }}>
       <TouchableOpacity
         onPress={() => { Speech.stop(); setIsSpeaking(false); setResult(null); setVideos([]); setScanImage(null); setQuery(""); }}
@@ -423,6 +463,7 @@ finally { setLoading(false); diagnoseInFlight.current = false; }
         <Text style={{ color: "white", fontWeight: "700" }}>Share to Feed</Text>
       </TouchableOpacity>
     </View>
+    <PushNudge reason="diagnosis" />
 
             <TouchableOpacity
               onPress={handleSaveDiagnosis}

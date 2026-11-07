@@ -16,7 +16,7 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
-import Svg, { Circle, Line } from "react-native-svg";
+import Svg, { Circle, Line, Path } from "react-native-svg";
 import ImageLightbox from "../../components/ImageLightbox";
 import CheckeredFlag from "../../components/CheckeredFlag";
 import RichText from "../../components/RichText";
@@ -57,6 +57,12 @@ function HashtagText({ text, colors, onHashtagPress }: { text: string; colors: a
   );
 }
 
+
+// Steering-wheel filter button colors (same in light and dark themes)
+const WHEEL_BLACK = "#0b0b0f";
+const WHEEL_SILVER = "#c7cbd3";
+const WHEEL_SILVER_EDGE = "#a3a9b4";
+const WHEEL_STRIPE = "#ef4444"; // racing 12-o'clock marker
 export default function Feed() {
   const router = useRouter();
   const { user } = useAuth();
@@ -93,7 +99,13 @@ export default function Feed() {
     setShowFilterHint(false);
     AsyncStorage.setItem(FILTER_HINT_KEY, "1").catch(() => {});
   };
-  const openFilter = () => { dismissFilterHint(); setFilterModalVisible(true); };
+  // "Wheelie": quick turn of the wheel on every tap, then open the filter menu.
+  const openFilter = () => {
+    dismissFilterHint();
+    const turn = (v: number, ms: number) => Animated.timing(wheelWiggle, { toValue: v, duration: ms, useNativeDriver: true });
+    Animated.sequence([turn(-1, 110), turn(0.4, 110), turn(0, 90)]).start();
+    setTimeout(() => setFilterModalVisible(true), 140);
+  };
   const wheelRotate = wheelWiggle.interpolate({ inputRange: [-1, 1], outputRange: ["-40deg", "40deg"] });
   const [menuPost, setMenuPost] = useState<any>(null);
   const [lightboxVisible, setLightboxVisible] = useState(false);
@@ -233,7 +245,6 @@ export default function Feed() {
 
   const filterActive = activeFilter !== "ALL";
   const activeFilterDef = FILTERS.find((f) => f.key === activeFilter);
-  const wheelColor = filterActive ? "white" : colors.textMuted;
 
   if (loading) {
     return (
@@ -390,25 +401,33 @@ export default function Feed() {
           <TouchableOpacity
             onPress={openFilter}
             accessibilityLabel="Filter posts"
-            style={{ alignItems: "center", justifyContent: "center", marginBottom: 4, paddingHorizontal: 8 }}
+            hitSlop={6}
+            style={{ alignItems: "center", justifyContent: "center", marginVertical: 4, paddingHorizontal: 8 }}
           >
             <Animated.View style={{
               transform: [{ rotate: wheelRotate }],
-              width: 40, height: 40, borderRadius: 20,
-              backgroundColor: filterActive ? colors.blue : colors.card,
-              borderWidth: 1.5,
-              borderColor: filterActive ? colors.blue : colors.border,
+              width: 50, height: 50, borderRadius: 25,
+              backgroundColor: filterActive ? colors.blue : colors.blue + "3D",
+              borderWidth: 2,
+              borderColor: colors.blue,
               justifyContent: "center", alignItems: "center",
+              // soft blue glow so it reads as the feed's main control
+              shadowColor: colors.blue, shadowOpacity: 0.6, shadowRadius: 8, shadowOffset: { width: 0, height: 0 },
+              elevation: 6,
             }}>
-              <Svg width={22} height={22} viewBox="0 0 24 24">
-                <Circle cx="12" cy="12" r="10" stroke={wheelColor} strokeWidth="1.8" fill="none" />
-                <Circle cx="12" cy="12" r="2.8" stroke={wheelColor} strokeWidth="1.8" fill="none" />
-                <Line x1="12" y1="2" x2="12" y2="9.2" stroke={wheelColor} strokeWidth="1.8" strokeLinecap="round" />
-                <Line x1="3.68" y1="17" x2="9.74" y2="13.5" stroke={wheelColor} strokeWidth="1.8" strokeLinecap="round" />
-                <Line x1="20.32" y1="17" x2="14.26" y2="13.5" stroke={wheelColor} strokeWidth="1.8" strokeLinecap="round" />
+              {/* Race wheel: flat-bottom black rim with a silver edge, silver spokes + hub, red 12-o'clock stripe */}
+              <Svg width={36} height={36} viewBox="0 0 24 24">
+                <Line x1="3.6" y1="12" x2="9" y2="12" stroke={WHEEL_SILVER} strokeWidth="2.6" strokeLinecap="round" />
+                <Line x1="15" y1="12" x2="20.4" y2="12" stroke={WHEEL_SILVER} strokeWidth="2.6" strokeLinecap="round" />
+                <Line x1="12" y1="14.8" x2="12" y2="18.6" stroke={WHEEL_SILVER} strokeWidth="2.6" strokeLinecap="round" />
+                <Circle cx="12" cy="12" r="3.4" fill={WHEEL_SILVER} stroke={WHEEL_SILVER_EDGE} strokeWidth="0.8" />
+                <Circle cx="12" cy="12" r="1.1" fill={WHEEL_BLACK} />
+                <Path d="M 6.2 19.4 A 9.4 9.4 0 1 1 17.8 19.4 Z" stroke={WHEEL_SILVER_EDGE} strokeWidth="4.2" fill="none" strokeLinejoin="round" />
+                <Path d="M 6.2 19.4 A 9.4 9.4 0 1 1 17.8 19.4 Z" stroke={WHEEL_BLACK} strokeWidth="2.6" fill="none" strokeLinejoin="round" />
+                <Line x1="12" y1="1.3" x2="12" y2="4" stroke={WHEEL_STRIPE} strokeWidth="2.8" />
               </Svg>
             </Animated.View>
-            <Text numberOfLines={1} style={{ color: filterActive ? colors.blue : colors.textMuted, fontSize: 9, fontWeight: "700", marginTop: 2, letterSpacing: 0.5, maxWidth: 76 }}>
+            <Text numberOfLines={1} style={{ color: colors.blue, fontSize: 10, fontWeight: "800", marginTop: 3, letterSpacing: 0.6, maxWidth: 84 }}>
               {filterActive ? activeFilterDef?.label.toUpperCase() : "FILTER"}
             </Text>
           </TouchableOpacity>
