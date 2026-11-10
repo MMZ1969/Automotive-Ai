@@ -41,6 +41,18 @@ export async function getMe(req, res) {
   }
 }
 
+// Near Me geocodes the location text with Google, so a bare town name can land
+// in the wrong state ("Bridgeton" → Bridgeton, MO). Require a region: anything
+// after a comma ("Bridgeton, NJ", "Durban, South Africa") or a 5-digit ZIP.
+const US_STATES = "AL|AK|AZ|AR|CA|CO|CT|DE|DC|FL|GA|HI|ID|IL|IN|IA|KS|KY|LA|ME|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY|PR";
+const LOCATION_HINT = "Add your state or ZIP so people nearby can find you, e.g. Bridgeton, NJ or 08302.";
+function locationNeedsRegion(loc) {
+  const t = String(loc || "").trim();
+  if (!t) return false; // clearing is fine
+  const endsWithState = new RegExp(`\\s(${US_STATES})\\.?$`, "i").test(t); // "Bridgeton NJ"
+  return !(/\b\d{5}\b/.test(t) || /,\s*\S{2,}/.test(t) || endsWithState);
+}
+
 // PUT /users/me
 export async function updateProfile(req, res) {
   try {
@@ -53,7 +65,10 @@ export async function updateProfile(req, res) {
     if (req.body.phone !== undefined) data.phone = req.body.phone;
     if (req.body.role !== undefined) data.role = req.body.role;
     if (req.body.profilePhoto !== undefined) data.profilePhoto = req.body.profilePhoto;
-    if (req.body.location !== undefined) data.location = req.body.location;
+    if (req.body.location !== undefined) {
+      if (locationNeedsRegion(req.body.location)) return res.status(400).json({ error: LOCATION_HINT });
+      data.location = typeof req.body.location === "string" ? req.body.location.trim() : req.body.location;
+    }
     if (req.body.businessHours !== undefined) data.businessHours = req.body.businessHours;
     if (req.body.pushToken !== undefined) data.pushToken = req.body.pushToken;
 
@@ -442,6 +457,9 @@ export async function requestVerification(req, res) {
     }
     if (!(licenseNumber && String(licenseNumber).trim()) && !hasProofPhoto) {
       return res.status(400).json({ error: "Add your ASE / certification number or a proof photo." });
+    }
+    if (locationNeedsRegion(shopLocation)) {
+      return res.status(400).json({ error: LOCATION_HINT });
     }
 
     // Fetch current state BEFORE any writes — same pattern as the
