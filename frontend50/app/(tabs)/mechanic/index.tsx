@@ -64,7 +64,24 @@ export default function MechanicDashboard() {
           <View style={{ flex: 1 }}>
             <Text style={{ color: "#fcd34d", fontSize: 15, fontWeight: "700" }}>Get Verified & Appear on the Map</Text>
             <Text style={{ color: "#9ca3af", fontSize: 13, marginTop: 3 }}>
-              Verified mechanics show up in Near Me searches and get more job requests. Tap to apply.
+              Verified mechanics get a badge and a highlighted pin on Near Me, and more trust from customers. Tap to apply.
+            </Text>
+          </View>
+          <Text style={{ color: "#f59e0b", fontSize: 18 }}>›</Text>
+        </TouchableOpacity>
+      )}
+
+      {/* CERTIFIED UPGRADE — Verified (blue ✓) mechanics can add a license for gold */}
+      {user?.isVerified && !(user as any)?.isCertified && (
+        <TouchableOpacity
+          onPress={() => router.push("/(tabs)/mechanic/verify")}
+          style={{ backgroundColor: "#1a1200", borderWidth: 1, borderColor: "#f59e0b88", borderRadius: 14, padding: 14, marginBottom: 20, marginTop: 10, flexDirection: "row", alignItems: "center", gap: 12 }}
+        >
+          <Text style={{ fontSize: 24 }}>🏁</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: "#fcd34d", fontSize: 14, fontWeight: "700" }}>Go gold: get Certified</Text>
+            <Text style={{ color: "#9ca3af", fontSize: 12, marginTop: 3 }}>
+              You're a ✓ Verified Mechanic. Add your ASE or state license number for the gold 🏁 Certified badge and pin.
             </Text>
           </View>
           <Text style={{ color: "#f59e0b", fontSize: 18 }}>›</Text>

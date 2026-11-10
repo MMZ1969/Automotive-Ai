@@ -115,7 +115,7 @@ export default function PartDetailScreen() {
           </View>
           <View style={{ flex: 1 }}>
             <Text style={{ color: colors.text, fontWeight: "700", fontSize: 15 }}>{part.user?.name || "Anonymous"}</Text>
-            <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 2 }}>⭐ {part.user?.repPoints || 0} rep · {part.user?.role === "MECHANIC" ? "🏁 Mechanic" : "🔧 DIYer"}</Text>
+            <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 2 }}>⭐ {part.user?.repPoints || 0} rep · {part.user?.role === "MECHANIC" ? "🔧 Mechanic" : "🔧 DIYer"}</Text>
           </View>
           <TouchableOpacity onPress={() => router.push(`/(tabs)/user/${part.user?.id}`)}>
             <Text style={{ color: colors.blue, fontSize: 13, fontWeight: "600" }}>View →</Text>

@@ -1,4 +1,5 @@
 import ImageLightbox from "@components/ImageLightbox";
+import MechanicBadge, { mechanicTier, TIER_STYLE } from "@components/MechanicBadge";
 import { useAuth } from "@context/AuthContext";
 import { useTheme } from "@context/ThemeContext";
 import api from "@lib/api";
@@ -288,12 +289,10 @@ export default function PostDetail() {
                   <View style={{ flex: 1, flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
                     <Text style={{ color: colors.text, fontWeight: "700", fontSize: 15 }}>{post?.user?.name || "Anonymous"}</Text>
                     {post?.user?.role === "MECHANIC" && post?.user?.isVerified ? (
-                      <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, borderWidth: 1, borderColor: "#60a5fa", backgroundColor: "#1e3a8a" }}>
-                        <Text style={{ color: "white", fontSize: 10, fontWeight: "700" }}>🏁 Verified Mechanic</Text>
-                      </View>
+                      <MechanicBadge user={post?.user} />
                     ) : (
                       <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, backgroundColor: post?.user?.role === "MECHANIC" ? "#1e3a8a" : "#064e3b", borderWidth: 1, borderColor: post?.user?.role === "MECHANIC" ? colors.blue : colors.green }}>
-                        <Text style={{ color: "white", fontSize: 10, fontWeight: "700" }}>{post?.user?.role === "MECHANIC" ? "🏁 Mechanic" : "🔧 DIYer"}</Text>
+                        <Text style={{ color: "white", fontSize: 10, fontWeight: "700" }}>{post?.user?.role === "MECHANIC" ? "🔧 Mechanic" : "🔧 DIYer"}</Text>
                       </View>
                     )}
                   </View>
@@ -399,11 +398,7 @@ export default function PostDetail() {
                     <Text style={{ color: colors.text, fontSize: 12, fontWeight: "700" }}>{item.user?.name?.[0]?.toUpperCase() || "?"}</Text>
                   </View>
                   <Text style={{ color: colors.blue, fontWeight: "700" }}>{item.user?.name || "Anonymous"}</Text>
-                  {item.user?.role === "MECHANIC" && item.user?.isVerified && (
-                    <View style={{ paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, borderWidth: 1, borderColor: "#60a5fa", backgroundColor: "#1e3a8a" }}>
-                      <Text style={{ color: "white", fontSize: 9, fontWeight: "700" }}>🏁 Verified Mechanic</Text>
-                    </View>
-                  )}
+                  <MechanicBadge user={item.user} size="sm" />
                   <Text style={{ color: colors.textMuted, fontSize: 11, marginLeft: "auto" }}>{new Date(item.createdAt).toLocaleDateString()}</Text>
                 </TouchableOpacity>
                 <RichText
@@ -441,11 +436,7 @@ export default function PostDetail() {
                             <Text style={{ color: colors.text, fontSize: 10, fontWeight: "700" }}>{reply.user?.name?.[0]?.toUpperCase() || "?"}</Text>
                           </View>
                           <Text style={{ color: colors.blue, fontWeight: "700", fontSize: 13 }}>{reply.user?.name || "Anonymous"}</Text>
-                          {reply.user?.role === "MECHANIC" && reply.user?.isVerified && (
-                            <View style={{ paddingHorizontal: 5, paddingVertical: 1, borderRadius: 6, borderWidth: 1, borderColor: "#60a5fa", backgroundColor: "#1e3a8a" }}>
-                              <Text style={{ color: "white", fontSize: 8, fontWeight: "700" }}>🏁 Verified</Text>
-                            </View>
-                          )}
+                          <MechanicBadge user={reply.user} size="xs" />
                           <Text style={{ color: colors.textMuted, fontSize: 10, marginLeft: "auto" }}>{new Date(reply.createdAt).toLocaleDateString()}</Text>
                         </TouchableOpacity>
                         <RichText

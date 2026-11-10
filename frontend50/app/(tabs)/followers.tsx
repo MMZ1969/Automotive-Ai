@@ -64,7 +64,7 @@ export default function FollowersList() {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={{ color: colors.text, fontWeight: "700", fontSize: 16 }}>{item.name}</Text>
-              <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 2 }}>{item.role === "MECHANIC" ? "🏁 Mechanic" : "🔧 DIYer"}</Text>
+              <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 2 }}>{item.role === "MECHANIC" ? "🔧 Mechanic" : "🔧 DIYer"}</Text>
             </View>
             <Text style={{ color: colors.blue, fontSize: 13 }}>View →</Text>
           </TouchableOpacity>

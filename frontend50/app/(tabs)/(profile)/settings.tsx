@@ -142,11 +142,11 @@ export default function Settings() {
           <Text style={labelStyle}>Role</Text>
           {user?.id === 1 ? (
             <TouchableOpacity onPress={async () => { try { await switchRole(); } catch { Alert.alert("Error", "Could not switch role."); } }} style={{ flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: isMechanic ? "#1e3a8a" : "#064e3b", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: isMechanic ? colors.blue : colors.green }}>
-              <Text style={{ color: "white", fontSize: 13, fontWeight: "700" }}>{isMechanic ? "🏁 Mechanic" : "🔧 DIYer"}</Text>
+              <Text style={{ color: "white", fontSize: 13, fontWeight: "700" }}>{isMechanic ? "🔧 Mechanic" : "🔧 DIYer"}</Text>
               <Text style={{ color: colors.textSecondary, fontSize: 11 }}>⇄ Switch</Text>
             </TouchableOpacity>
           ) : (
-            <Text style={valueStyle}>{isMechanic ? "🏁 Mechanic" : "🔧 DIYer"}</Text>
+            <Text style={valueStyle}>{isMechanic ? "🔧 Mechanic" : "🔧 DIYer"}</Text>
           )}
         </View>
 
@@ -248,14 +248,31 @@ export default function Settings() {
         <>
           <Text style={sectionTitle}>Verification</Text>
           <View style={card}>
-            {user?.isVerified ? (
+            {(user as any)?.isCertified ? (
               <View style={row}>
                 <View>
-                  <Text style={labelStyle}>✅ Verified Mechanic</Text>
-                  <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 2 }}>Your credentials are verified</Text>
+                  <Text style={labelStyle}>🏁 Certified Mechanic</Text>
+                  <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 2 }}>Your license / certification is verified</Text>
                 </View>
                 <Text style={{ color: colors.green, fontSize: 13 }}>Active</Text>
               </View>
+            ) : user?.isVerified ? (
+              <>
+                <View style={row}>
+                  <View>
+                    <Text style={labelStyle}>✓ Verified Mechanic</Text>
+                    <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 2 }}>You're confirmed as a working mechanic</Text>
+                  </View>
+                  <Text style={{ color: colors.green, fontSize: 13 }}>Active</Text>
+                </View>
+                <TouchableOpacity style={row} onPress={() => router.push("/(tabs)/mechanic/verify" as any)}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={labelStyle}>🏁 Get Certified</Text>
+                    <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 2 }}>Add your ASE or license number for the gold badge</Text>
+                  </View>
+                  <Text style={{ color: colors.blue, fontSize: 13 }}>Apply →</Text>
+                </TouchableOpacity>
+              </>
             ) : (
               <TouchableOpacity style={row} onPress={() => router.push("/(tabs)/mechanic/verify" as any)}>
                 <View>

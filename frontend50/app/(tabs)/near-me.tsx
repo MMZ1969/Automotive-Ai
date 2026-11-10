@@ -1,4 +1,5 @@
 import { useTheme } from "@context/ThemeContext";
+import MechanicBadge, { TIER_STYLE } from "@components/MechanicBadge";
 import api from "@lib/api";
 import * as Location from "expo-location";
 import { useRouter } from "expo-router";
@@ -23,7 +24,12 @@ interface MechanicPin {
   lat: number;
   lng: number;
   isVerified: boolean;
+  isCertified: boolean;
 }
+
+// Pin color/emoji by badge level: gold 🏁 Certified, blue ✓ Verified, grey 🔧 Mechanic
+const pinStyle = (m: { isVerified: boolean; isCertified: boolean }) =>
+  TIER_STYLE[m.isCertified ? "certified" : m.isVerified ? "verified" : "mechanic"];
 
 export default function NearMe() {
   const router = useRouter();
@@ -90,6 +96,7 @@ export default function NearMe() {
               lat,
               lng,
               isVerified: mechanic.isVerified || false,
+              isCertified: mechanic.isCertified || false,
             });
           }
         } catch (err) {
@@ -203,16 +210,16 @@ export default function NearMe() {
               onPress={() => setSelectedPin(mechanic)}
             >
               <View style={{
-                backgroundColor: mechanic.isVerified ? "#f59e0b" : "#9ca3af",
+                backgroundColor: pinStyle(mechanic).color,
                 borderRadius: 20, padding: 8, borderWidth: 2, borderColor: "white",
-                alignItems: "center", justifyContent: "center",
+                alignItems: "center", justifyContent: "center", minWidth: 34, minHeight: 34,
               }}>
-                <Text style={{ fontSize: 14 }}>{mechanic.isVerified ? "🏁" : "🔧"}</Text>
+                <Text style={{ fontSize: 14, color: "white", fontWeight: "900" }}>{pinStyle(mechanic).emoji}</Text>
               </View>
               <Callout tooltip>
-                <View style={{ backgroundColor: colors.card, borderRadius: 10, padding: 10, borderWidth: 1, borderColor: mechanic.isVerified ? "#f59e0b" : "#9ca3af", minWidth: 140 }}>
+                <View style={{ backgroundColor: colors.card, borderRadius: 10, padding: 10, borderWidth: 1, borderColor: pinStyle(mechanic).color, minWidth: 140 }}>
                   <Text style={{ color: colors.text, fontWeight: "700", fontSize: 13 }}>{mechanic.name}</Text>
-                  {mechanic.isVerified && <Text style={{ color: "#f59e0b", fontSize: 10, fontWeight: "700" }}>🏁 Verified Mechanic</Text>}
+                  {mechanic.isVerified && <Text style={{ color: pinStyle(mechanic).color, fontSize: 10, fontWeight: "700" }}>{pinStyle(mechanic).emoji} {pinStyle(mechanic).label}</Text>}
                   <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 2 }}>📍 {mechanic.location}</Text>
                 </View>
               </Callout>
@@ -229,17 +236,13 @@ export default function NearMe() {
         {selectedPin && (
           <View style={{ position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: colors.card, borderTopLeftRadius: 20, borderTopRightRadius: 20, borderTopWidth: 1, borderColor: colors.border, padding: 20 }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 12 }}>
-              <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: colors.border, borderWidth: 2, borderColor: selectedPin.isVerified ? "#f59e0b" : "#9ca3af", justifyContent: "center", alignItems: "center" }}>
+              <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: colors.border, borderWidth: 2, borderColor: pinStyle(selectedPin).color, justifyContent: "center", alignItems: "center" }}>
                 <Text style={{ color: colors.text, fontSize: 18, fontWeight: "700" }}>{selectedPin.name[0]?.toUpperCase()}</Text>
               </View>
               <View style={{ flex: 1 }}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                   <Text style={{ color: colors.text, fontSize: 17, fontWeight: "700" }}>{selectedPin.name}</Text>
-                  {selectedPin.isVerified && (
-                    <View style={{ backgroundColor: "#1e3a8a", borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1, borderColor: "#60a5fa" }}>
-                      <Text style={{ color: "white", fontSize: 10, fontWeight: "700" }}>🏁 Verified</Text>
-                    </View>
-                  )}
+                  <MechanicBadge user={{ role: "MECHANIC", isVerified: selectedPin.isVerified, isCertified: selectedPin.isCertified }} size="sm" short />
                 </View>
                 <Text style={{ color: colors.textSecondary, fontSize: 13 }}>📍 {selectedPin.location}</Text>
               </View>

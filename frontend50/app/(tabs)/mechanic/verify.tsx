@@ -15,6 +15,8 @@ import { storage } from "../../../firebaseConfig.js";
 export default function VerifyMechanic() {
   const { colors } = useTheme();
   const { user } = useAuth();
+  // Already a blue ✓ Verified Mechanic: this screen is the upgrade to gold 🏁 Certified
+  const alreadyVerified = !!user?.isVerified && !(user as any)?.isCertified;
   const router = useRouter();
 
   const [licenseNumber, setLicenseNumber] = useState("");
@@ -80,6 +82,10 @@ export default function VerifyMechanic() {
       Alert.alert("Missing info", "Shop or business name is required.");
       return;
     }
+    if (alreadyVerified && !licenseNumber.trim()) {
+      Alert.alert("Add your number", "To become Certified, add your ASE number or state license / certification number.");
+      return;
+    }
     if (!licenseNumber.trim() && !proofPhotoUrl) {
       Alert.alert("Add proof", "Add your ASE / certification number or a proof photo (work ID, uniform, cert, or business card).");
       return;
@@ -107,24 +113,31 @@ export default function VerifyMechanic() {
           <TouchableOpacity onPress={() => router.back()}>
             <Text style={{ color: colors.blue, fontSize: 16 }}>← Back</Text>
           </TouchableOpacity>
-          <Text style={{ color: colors.text, fontSize: 22, fontWeight: "900" }}>🏁 Get Verified</Text>
+          <Text style={{ color: colors.text, fontSize: 22, fontWeight: "900" }}>{alreadyVerified ? "🏁 Get Certified" : "Get Verified"}</Text>
         </View>
 
         <Text style={{ color: colors.textSecondary, fontSize: 14, lineHeight: 20, marginBottom: 16 }}>
-          Verified mechanics get a badge on their profile, a gold 🏁 pin on the Near Me map, and more trust from customers.
+          {alreadyVerified
+            ? "You're already a ✓ Verified Mechanic. Add your ASE or state license / certification number to upgrade to the gold 🏁 Certified badge."
+            : "Verified mechanics get a badge on their profile, a highlighted pin on the Near Me map, and more trust from customers. There are two levels:"}
         </Text>
 
-        <View style={{ backgroundColor: colors.card, borderRadius: 12, borderWidth: 1, borderColor: colors.border, padding: 14, marginBottom: 20 }}>
-          <Text style={{ color: colors.text, fontSize: 13, fontWeight: "700", marginBottom: 6 }}>No certificate? No problem.</Text>
+        <View style={{ backgroundColor: colors.card, borderRadius: 12, borderWidth: 1, borderColor: "#60a5fa66", padding: 14, marginBottom: 10 }}>
+          <Text style={{ color: "#93c5fd", fontSize: 13, fontWeight: "800", marginBottom: 4 }}>✓ Verified Mechanic (blue): no license needed</Text>
           <Text style={{ color: colors.textSecondary, fontSize: 13, lineHeight: 19 }}>
-            We just need to confirm you're a working mechanic. Any ONE of these works:{"\n"}
-            • ASE or other certification number{"\n"}
-            • Photo of your work ID, badge, or shop uniform{"\n"}
-            • Photo of your business card or shop sign
+            Show us you're a working mechanic with ONE photo:{"\n"}
+            • Your work ID, badge, or shop uniform{"\n"}
+            • Your business card or shop sign
+          </Text>
+        </View>
+        <View style={{ backgroundColor: colors.card, borderRadius: 12, borderWidth: 1, borderColor: "#f59e0b66", padding: 14, marginBottom: 20 }}>
+          <Text style={{ color: "#fcd34d", fontSize: 13, fontWeight: "800", marginBottom: 4 }}>🏁 Certified Mechanic (gold)</Text>
+          <Text style={{ color: colors.textSecondary, fontSize: 13, lineHeight: 19 }}>
+            Add your ASE number or state license / certification number below. We check it, and you get the gold badge and gold pin.
           </Text>
         </View>
 
-        <Text style={labelStyle}>ASE # or Certification (optional)</Text>
+        <Text style={labelStyle}>{alreadyVerified ? "ASE # or License / Certification #" : "ASE # or License / Certification # (for 🏁 Certified)"}</Text>
         <TextInput
           placeholder="e.g. ASE A1–A8 #12345"
           placeholderTextColor={colors.textMuted}

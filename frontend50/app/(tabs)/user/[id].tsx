@@ -1,4 +1,5 @@
 import { useAuth } from "@context/AuthContext";
+import MechanicBadge, { mechanicTier, TIER_STYLE } from "@components/MechanicBadge";
 import { useTheme } from "@context/ThemeContext";
 import api from "@lib/api";
 import { getBadge } from "@utils/badges";
@@ -114,15 +115,11 @@ export default function UserProfile() {
 
               <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                 <Text style={{ color: colors.text, fontSize: 24, fontWeight: "900" }}>{profile?.name || "Anonymous"}</Text>
-                {profile?.isVerified && (
-                  <View style={{ backgroundColor: "#1e3a8a", borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: colors.blue }}>
-                    <Text style={{ color: colors.blue, fontSize: 11, fontWeight: "700" }}>✅ Verified</Text>
-                  </View>
-                )}
+                <MechanicBadge user={profile} />
               </View>
 
               <View style={{ marginTop: 8, backgroundColor: isMechanic ? colors.blue : colors.green, paddingVertical: 4, paddingHorizontal: 14, borderRadius: 20 }}>
-                <Text style={{ color: "white", fontWeight: "700", fontSize: 13 }}>{isMechanic ? "🏁 MECHANIC" : "🔧 DIYER"}</Text>
+                <Text style={{ color: "white", fontWeight: "700", fontSize: 13 }}>{isMechanic ? "🔧 MECHANIC" : "🔧 DIYER"}</Text>
               </View>
 
               <View style={{ marginTop: 8, backgroundColor: getBadge(profile?.repPoints || 0).color + "22", paddingVertical: 4, paddingHorizontal: 14, borderRadius: 20, borderWidth: 1, borderColor: getBadge(profile?.repPoints || 0).color }}>

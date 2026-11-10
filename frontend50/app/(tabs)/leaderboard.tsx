@@ -125,7 +125,7 @@ export default function Leaderboard() {
           <Text style={{ color: tab === "DIYER" ? "white" : colors.textMuted, fontWeight: "700" }}>🔧 DIYers</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => setTab("MECHANIC")} style={{ flex: 1, paddingVertical: 10, borderRadius: 10, alignItems: "center", backgroundColor: tab === "MECHANIC" ? colors.blue : "transparent" }}>
-          <Text style={{ color: tab === "MECHANIC" ? "white" : colors.textMuted, fontWeight: "700" }}>🏁 Mechanics</Text>
+          <Text style={{ color: tab === "MECHANIC" ? "white" : colors.textMuted, fontWeight: "700" }}>🔧 Mechanics</Text>
         </TouchableOpacity>
       </View>
       <View style={{ paddingHorizontal: 16, marginBottom: 12 }}>

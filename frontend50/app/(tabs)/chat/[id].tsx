@@ -282,7 +282,7 @@ export default function ChatScreen() {
             <View>
               <Text style={{ color: colors.text, fontWeight: "700", fontSize: 15 }}>{otherUser?.name}</Text>
               <Text style={{ color: otherUser?.role === "MECHANIC" ? colors.blue : colors.green, fontSize: 11, fontWeight: "600" }}>
-                {otherUser?.role === "MECHANIC" ? "🏁 Mechanic" : "🔧 DIYer"}
+                {otherUser?.role === "MECHANIC" ? "🔧 Mechanic" : "🔧 DIYer"}
               </Text>
             </View>
           </TouchableOpacity>

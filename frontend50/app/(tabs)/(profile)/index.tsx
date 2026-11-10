@@ -1,4 +1,5 @@
 import { useAuth } from "@context/AuthContext";
+import { mechanicTier, TIER_STYLE } from "@components/MechanicBadge";
 import { useTheme } from "@context/ThemeContext";
 import api from "@lib/api";
 import { ensureFirebaseAuth } from "@lib/firebaseAuth";
@@ -19,6 +20,8 @@ import { storage } from "../../../firebaseConfig";
 
 export default function Profile() {
   const { user, logout, isMechanic, updateProfilePhoto } = useAuth();
+  const myTier = mechanicTier(user as any);
+  const tierStyle = myTier === "certified" || myTier === "verified" ? TIER_STYLE[myTier] : null;
   const { colors } = useTheme();
   const router = useRouter();
   const [uploading, setUploading] = useState(false);
@@ -207,12 +210,13 @@ export default function Profile() {
 
         <View style={{
           marginTop: 10,
-          backgroundColor: user?.isVerified ? "#1e3a8a" : isMechanic ? colors.blue : colors.green,
+          backgroundColor: tierStyle ? tierStyle.bg : isMechanic ? colors.blue : colors.green,
           paddingVertical: 6, paddingHorizontal: 16, borderRadius: 20,
-          borderWidth: user?.isVerified ? 1 : 0, borderColor: "#60a5fa",
+          borderWidth: tierStyle ? 1 : 0,
+          borderColor: tierStyle ? tierStyle.border : "transparent",
         }}>
-          <Text style={{ color: "white", fontWeight: "700", fontSize: 13 }}>
-            {user?.isVerified ? "🏁 Verified Mechanic" : isMechanic ? "🏁 MECHANIC" : "🔧 DIYER"}
+          <Text style={{ color: tierStyle ? tierStyle.text : "white", fontWeight: "700", fontSize: 13 }}>
+            {tierStyle ? `${tierStyle.emoji} ${tierStyle.label}` : isMechanic ? "🔧 MECHANIC" : "🔧 DIYER"}
           </Text>
         </View>
 

@@ -161,12 +161,15 @@ export default function AdminPanel() {
   useFocusEffect(useCallback(() => { setLoading(true); fetchData(); }, [view, reportFilter, diagDays]));
   const onRefresh = () => { setRefreshing(true); fetchData(); };
 
-  const handleVerify = async (userId: number, name: string, approved: boolean) => {
+  // level: "verified" = blue ✓ (proven working mechanic, no license),
+  //        "certified" = gold 🏁 (license / ASE number checked)
+  const handleVerify = async (userId: number, name: string, approved: boolean, level?: "verified" | "certified") => {
+    const badge = level === "certified" ? "🏁 Certified Mechanic (gold)" : "✓ Verified Mechanic (blue)";
     Alert.alert(
-      approved ? "✅ Approve Verification" : "❌ Deny Verification",
+      approved ? `Approve: ${level === "certified" ? "Certified" : "Verified"}` : "❌ Deny Verification",
       approved
-        ? `Grant ${name} the Verified Mechanic badge?`
-        : `Deny ${name}'s verification request?`,
+        ? `Give ${name} the ${badge} badge?`
+        : `Deny ${name}'s request? (If they're already Verified, they keep that.)`,
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -174,12 +177,12 @@ export default function AdminPanel() {
           style: approved ? "default" : "destructive",
           onPress: async () => {
             try {
-              await api.post(`/api/users/${userId}/verify`, { approved });
+              await api.post(`/api/users/${userId}/verify`, { approved, level });
               fetchRequests();
               Alert.alert(
-                approved ? "✅ Verified!" : "❌ Denied",
+                approved ? "✅ Done" : "❌ Denied",
                 approved
-                  ? `${name} is now a Verified Mechanic!`
+                  ? `${name} is now a ${badge}.`
                   : `${name}'s request has been denied.`
               );
             } catch (err) {
@@ -336,20 +339,34 @@ export default function AdminPanel() {
                 )}
 
                 {/* APPROVE / DENY BUTTONS */}
-                <View style={{ flexDirection: "row", gap: 10 }}>
+                {item.isVerified && (
+                  <Text style={{ color: "#93c5fd", fontSize: 12, fontWeight: "700", marginBottom: 10 }}>Already ✓ Verified. This is a request to become 🏁 Certified.</Text>
+                )}
+                <View style={{ flexDirection: "row", gap: 8 }}>
+                  {!item.isVerified && (
+                    <TouchableOpacity
+                      onPress={() => handleVerify(item.id, item.name, true, "verified")}
+                      style={{ flex: 1, backgroundColor: "#1e3a8a", borderWidth: 1, borderColor: "#60a5fa", padding: 12, borderRadius: 10, alignItems: "center" }}
+                    >
+                      <Text style={{ color: "white", fontWeight: "700", fontSize: 13 }}>✓ Verified</Text>
+                    </TouchableOpacity>
+                  )}
                   <TouchableOpacity
-                    onPress={() => handleVerify(item.id, item.name, true)}
-                    style={{ flex: 1, backgroundColor: colors.green, padding: 13, borderRadius: 10, alignItems: "center" }}
+                    onPress={() => handleVerify(item.id, item.name, true, "certified")}
+                    style={{ flex: 1, backgroundColor: "#3a2600", borderWidth: 1, borderColor: details.licenseNumber ? "#f59e0b" : "#f59e0b55", padding: 12, borderRadius: 10, alignItems: "center", opacity: details.licenseNumber ? 1 : 0.6 }}
                   >
-                    <Text style={{ color: "white", fontWeight: "700" }}>✅ Approve</Text>
+                    <Text style={{ color: "#fde68a", fontWeight: "700", fontSize: 13 }}>🏁 Certified</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={() => handleVerify(item.id, item.name, false)}
-                    style={{ flex: 1, backgroundColor: colors.card, padding: 13, borderRadius: 10, alignItems: "center", borderWidth: 1, borderColor: "#ef444444" }}
+                    style={{ flex: 1, backgroundColor: colors.card, padding: 12, borderRadius: 10, alignItems: "center", borderWidth: 1, borderColor: "#ef444444" }}
                   >
-                    <Text style={{ color: "#ef4444", fontWeight: "700" }}>❌ Deny</Text>
+                    <Text style={{ color: "#ef4444", fontWeight: "700", fontSize: 13 }}>❌ Deny</Text>
                   </TouchableOpacity>
                 </View>
+                {!details.licenseNumber && (
+                  <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 6 }}>No license / cert # given, so Verified is the usual choice.</Text>
+                )}
               </View>
             );
           }}
@@ -599,7 +616,8 @@ export default function AdminPanel() {
                 </View>
                 <View style={{ alignItems: "flex-end" }}>
                   <Text style={{ color: colors.textMuted, fontSize: 11 }}>{item.role}</Text>
-                  {item.isVerified && <Text style={{ color: "#f59e0b", fontSize: 11, marginTop: 2 }}>🏁 Verified</Text>}
+                  {item.isCertified ? <Text style={{ color: "#f59e0b", fontSize: 11, marginTop: 2 }}>🏁 Certified</Text>
+                    : item.isVerified ? <Text style={{ color: "#60a5fa", fontSize: 11, marginTop: 2 }}>✓ Verified</Text> : null}
                   {item.isAdmin && <Text style={{ color: colors.blue, fontSize: 11, marginTop: 2 }}>👑 Admin</Text>}
                 </View>
               </View>

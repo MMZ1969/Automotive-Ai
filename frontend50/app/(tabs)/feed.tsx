@@ -1,4 +1,5 @@
 import { useAuth } from "@context/AuthContext";
+import MechanicBadge, { mechanicTier, TIER_STYLE } from "@components/MechanicBadge";
 import { useTheme } from "@context/ThemeContext";
 import api from "@lib/api";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
@@ -542,13 +543,11 @@ export default function Feed() {
                 <View style={{ flex: 1, flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
                   <Text style={{ color: colors.text, fontWeight: "700", fontSize: 15 }}>{item.user?.name || "Anonymous"}</Text>
                   {item.user?.role === "MECHANIC" && item.user?.isVerified ? (
-                    <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, borderWidth: 1, borderColor: "#60a5fa", shadowColor: colors.blue, shadowOpacity: 0.4, shadowRadius: 4, elevation: 4, backgroundColor: "#1e3a8a" }}>
-                      <Text style={{ color: "white", fontSize: 10, fontWeight: "700" }}>🏁 Verified Mechanic</Text>
-                    </View>
+                    <MechanicBadge user={item.user} glow />
                   ) : (
                     <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, backgroundColor: item.user?.role === "MECHANIC" ? "#1e3a8a" : "#064e3b", borderWidth: 1, borderColor: item.user?.role === "MECHANIC" ? colors.blue : colors.green }}>
                       <Text style={{ color: "white", fontSize: 10, fontWeight: "700" }}>
-                        {item.user?.role === "MECHANIC" ? "🏁 Mechanic" : "🔧 DIYer"}
+                        {item.user?.role === "MECHANIC" ? "🔧 Mechanic" : "🔧 DIYer"}
                       </Text>
                     </View>
                   )}

@@ -1,4 +1,5 @@
 import { useTheme } from "@context/ThemeContext";
+import MechanicBadge, { mechanicTier, TIER_STYLE } from "@components/MechanicBadge";
 import api from "@lib/api";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
@@ -68,14 +69,10 @@ export default function Explore() {
       <View style={{ flex: 1 }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
           <Text style={{ color: colors.text, fontSize: 15, fontWeight: "700" }}>{user.name}</Text>
-          {user.isVerified && user.role === "MECHANIC" && (
-            <View style={{ backgroundColor: "#1e3a8a", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, borderWidth: 1, borderColor: "#60a5fa" }}>
-              <Text style={{ color: "white", fontSize: 9, fontWeight: "700" }}>✓ Verified</Text>
-            </View>
-          )}
+          <MechanicBadge user={user} size="sm" short />
         </View>
         <Text style={{ color: user.role === "MECHANIC" ? colors.blue : colors.green, fontSize: 12, marginTop: 2 }}>
-          {user.role === "MECHANIC" ? "🏁 Mechanic" : "🔧 DIYer"}
+          {user.role === "MECHANIC" ? "🔧 Mechanic" : "🔧 DIYer"}
         </Text>
         {user.location && (
           <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 2 }}>📍 {user.location}</Text>
@@ -169,7 +166,7 @@ export default function Explore() {
                     </View>
                     <Text style={{ color: colors.text, fontSize: 12, fontWeight: "600", textAlign: "center" }} numberOfLines={1}>{s.name}</Text>
                     <Text style={{ color: s.role === "MECHANIC" ? colors.blue : colors.green, fontSize: 10, marginTop: 2 }}>
-                      {s.role === "MECHANIC" ? "🏁 Mechanic" : "🚗 DIYer"}
+                      {s.role === "MECHANIC" ? "🔧 Mechanic" : "🚗 DIYer"}
                     </Text>
                   </TouchableOpacity>
                 ))}

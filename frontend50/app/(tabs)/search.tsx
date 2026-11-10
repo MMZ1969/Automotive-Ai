@@ -140,7 +140,7 @@ export default function Search() {
                         <View style={{ flex: 1 }}>
                           <Text style={{ color: colors.text, fontWeight: "700", fontSize: 15 }}>{s.name}</Text>
                           <Text style={{ color: s.role === "MECHANIC" ? colors.blue : colors.green, fontSize: 12, marginTop: 2 }}>
-                            {s.role === "MECHANIC" ? "🏁 Mechanic" : "🔧 DIYer"}
+                            {s.role === "MECHANIC" ? "🔧 Mechanic" : "🔧 DIYer"}
                           </Text>
                         </View>
                         <Text style={{ color: colors.textSecondary }}>→</Text>
@@ -196,7 +196,7 @@ export default function Search() {
               <View style={{ flex: 1 }}>
                 <Text style={{ color: colors.text, fontWeight: "700", fontSize: 16 }}>{item.name || "Anonymous"}</Text>
                 <View style={{ backgroundColor: item.role === "MECHANIC" ? "#1e3a8a" : "#064e3b", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10, alignSelf: "flex-start", marginTop: 4 }}>
-                  <Text style={{ color: "white", fontSize: 11, fontWeight: "600" }}>{item.role === "MECHANIC" ? "🏁 Mechanic" : "🔧 DIYer"}</Text>
+                  <Text style={{ color: "white", fontSize: 11, fontWeight: "600" }}>{item.role === "MECHANIC" ? "🔧 Mechanic" : "🔧 DIYer"}</Text>
                 </View>
                 <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 4 }}>{item._count?.followers || 0} followers · {item._count?.posts || 0} posts</Text>
               </View>
