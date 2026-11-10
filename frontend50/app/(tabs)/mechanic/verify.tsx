@@ -171,7 +171,7 @@ export default function VerifyMechanic() {
 
         <Text style={labelStyle}>Shop Location</Text>
         <TextInput
-          placeholder="e.g. Sandy Springs, GA"
+          placeholder="Town, ST or ZIP (e.g. Bridgeton, NJ)"
           placeholderTextColor={colors.textMuted}
           value={shopLocation}
           onChangeText={setShopLocation}

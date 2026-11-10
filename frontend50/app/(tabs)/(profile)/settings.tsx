@@ -69,7 +69,7 @@ export default function Settings() {
       setEditingLocation(false);
       Alert.alert("✅ Service area updated!");
     } catch (err) {
-      Alert.alert("Error", "Could not update location. Try again.");
+      Alert.alert("Check your location", (err as any)?.response?.data?.error || "Could not update location. Try again.");
     } finally {
       setSavingLocation(false);
     }
@@ -190,7 +190,7 @@ export default function Settings() {
               <View style={{ padding: 16 }}>
                 <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 4 }}>Service Area</Text>
                 <Text style={{ color: colors.textMuted, fontSize: 11, marginBottom: 8 }}>Your city/region shown on the Near Me map.</Text>
-                <TextInput value={newLocation} onChangeText={setNewLocation} style={{ ...inputStyle, borderColor: colors.blue }} autoFocus placeholder="e.g. Newark, NJ" placeholderTextColor={colors.textMuted} />
+                <TextInput value={newLocation} onChangeText={setNewLocation} style={{ ...inputStyle, borderColor: colors.blue }} autoFocus placeholder="Town, ST or ZIP (e.g. Bridgeton, NJ)" placeholderTextColor={colors.textMuted} />
                 <View style={{ flexDirection: "row", gap: 10 }}>
                   <TouchableOpacity onPress={handleSaveLocation} disabled={savingLocation} style={{ flex: 1, backgroundColor: colors.blue, padding: 12, borderRadius: 10, alignItems: "center" }}>
                     <Text style={{ color: "white", fontWeight: "700" }}>{savingLocation ? "Saving..." : "Save"}</Text>
