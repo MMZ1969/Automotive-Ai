@@ -4,7 +4,7 @@ import { createAndSendNotification } from "./notification.controller.js";
 
 // Fields of another user that are safe to send to any client. Never `user: true`:
 // that ships the whole row (password hash, email, resetToken, pushToken...).
-const PUBLIC_USER = { select: { id: true, name: true, profilePhoto: true, role: true, repPoints: true, isVerified: true } };
+const PUBLIC_USER = { select: { id: true, name: true, profilePhoto: true, role: true, repPoints: true, isVerified: true, isCertified: true } };
 
 // GET all posts
 export const getAllPosts = async (req, res) => {
@@ -23,7 +23,7 @@ export const getAllPosts = async (req, res) => {
        { createdAt: "desc" },
       ],
       include: {
-        user: { select: { id: true, name: true, profilePhoto: true, role: true, repPoints: true, isVerified: true } },
+        user: { select: { id: true, name: true, profilePhoto: true, role: true, repPoints: true, isVerified: true, isCertified: true } },
         comments: {
           where: {
             OR: [
@@ -59,7 +59,7 @@ export const getPostById = async (req, res) => {
     const post = await prisma.post.findUnique({
       where: { id },
       include: {
-        user: { select: { id: true, name: true, profilePhoto: true, role: true, repPoints: true, isVerified: true } },
+        user: { select: { id: true, name: true, profilePhoto: true, role: true, repPoints: true, isVerified: true, isCertified: true } },
         comments: {
           where: {
             OR: [
@@ -431,7 +431,7 @@ export const getFollowingPosts = async (req, res) => {
         { createdAt: "desc" },
       ],
       include: {
-        user: { select: { id: true, name: true, profilePhoto: true, role: true, repPoints: true, isVerified: true } },
+        user: { select: { id: true, name: true, profilePhoto: true, role: true, repPoints: true, isVerified: true, isCertified: true } },
         comments: {
           where: {
             OR: [
@@ -571,7 +571,7 @@ export const searchPosts = async (req, res) => {
       },
       orderBy: { createdAt: "desc" },
       include: {
-        user: { select: { id: true, name: true, profilePhoto: true, role: true, repPoints: true, isVerified: true } },
+        user: { select: { id: true, name: true, profilePhoto: true, role: true, repPoints: true, isVerified: true, isCertified: true } },
         likes: true,
         comments: true,
       },

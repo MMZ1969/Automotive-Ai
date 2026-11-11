@@ -21,7 +21,7 @@ export async function getMe(req, res) {
         isAdmin: true,
         location: true,
         createdAt: true,
-        isVerified: true,
+        isVerified: true, isCertified: true,
         isBanned: true,
         isAvailable: true,
         businessHours: true,
@@ -267,7 +267,7 @@ export async function getUserProfile(req, res) {
         role: true,
         profilePhoto: true,
         repPoints: true,
-        isVerified: true,
+        isVerified: true, isCertified: true,
         location: true,
         businessHours: true,
         createdAt: true,
@@ -527,7 +527,7 @@ export async function verifyMechanic(req, res) {
   try {
     const adminId = req.user.id;
     const targetId = Number(req.params.id);
-    const { approved } = req.body;
+    const { approved, level } = req.body; // level: "certified" | "verified" (optional)
 
     const admin = await prisma.user.findUnique({
       where: { id: adminId },
@@ -546,16 +546,26 @@ export async function verifyMechanic(req, res) {
       select: { location: true, verificationRequest: true },
     });
     let shopLocation = null;
+    let hasLicense = false;
     try {
-      shopLocation = JSON.parse(target?.verificationRequest || "{}").shopLocation?.trim() || null;
+      const reqData = JSON.parse(target?.verificationRequest || "{}");
+      shopLocation = reqData.shopLocation?.trim() || null;
+      hasLicense = !!String(reqData.licenseNumber || "").trim();
     } catch {}
+    // Two levels: Certified (gold 🏁, license/ASE checked) and Verified (blue ✓,
+    // proven working mechanic, no license needed). The admin picks; older admin
+    // screens don't send a level, so default to Certified only when a license
+    // number was given.
+    const certified = !!approved && (level ? level === "certified" : hasLicense);
 
     // Clear the request either way. Before, a denied request stayed in the
     // admin Verify list forever and the mechanic never heard back.
     await prisma.user.update({
       where: { id: targetId },
       data: {
-        isVerified: !!approved,
+        // Denying a Verified mechanic's request to become Certified keeps their
+        // existing Verified status; it only declines the upgrade.
+        ...(approved ? { isVerified: true, isCertified: certified } : {}),
         verificationRequest: null,
         ...(approved && !target?.location && shopLocation ? { location: shopLocation } : {}),
       },
@@ -567,15 +577,17 @@ export async function verifyMechanic(req, res) {
         recipientId: targetId,
         actorId: adminId,
         type: "verification_result",
-        message: approved
-          ? "🏁 You're a Verified Mechanic! Your badge is live and you now appear on the Near Me map."
-          : "Your verification request needs more info. Please resubmit with your ASE number or a photo of your work ID, uniform, or business card.",
+        message: !approved
+          ? "Your verification request needs more info. Please resubmit with your ASE number or a photo of your work ID, uniform, or business card."
+          : certified
+            ? "🏁 You're a Certified Mechanic! Your gold badge is live on your profile and the Near Me map."
+            : "✓ You're a Verified Mechanic! Your badge is live and you show on the Near Me map. Add your ASE or license number any time to become Certified (gold 🏁).",
       });
     } catch (notifyErr) {
       console.error("VERIFY RESULT NOTIFY ERROR:", notifyErr);
     }
 
-    res.json({ success: true, verified: !!approved });
+    res.json({ success: true, verified: !!approved, certified });
   } catch (err) {
     console.error("VERIFY MECHANIC ERROR:", err);
     res.status(500).json({ error: "Failed to verify mechanic" });
@@ -599,7 +611,7 @@ export async function getVerificationRequests(req, res) {
     const requests = await prisma.user.findMany({
       where: {
         verificationRequest: { not: null },
-        isVerified: false,
+        isCertified: false, // Verified (blue) mechanics can apply for Certified
       },
       select: {
         id: true,
@@ -609,6 +621,7 @@ export async function getVerificationRequests(req, res) {
         repPoints: true,
         verificationRequest: true,
         createdAt: true,
+        isVerified: true, // already Verified → this request is an upgrade to Certified
       },
     });
 
@@ -636,7 +649,7 @@ export async function getMechanics(req, res) {
         profilePhoto: true,
         repPoints: true,
         location: true,
-        isVerified: true,
+        isVerified: true, isCertified: true,
       },
     });
     res.json(mechanics);
@@ -687,7 +700,7 @@ export async function getAllUsers(req, res) {
         email: true,
         name: true,
         role: true,
-        isVerified: true,
+        isVerified: true, isCertified: true,
         isBanned: true,
         isAdmin: true,
         createdAt: true,
@@ -727,7 +740,7 @@ export async function getSuggestions(req, res) {
         name: true,
         profilePhoto: true,
         role: true,
-        isVerified: true,
+        isVerified: true, isCertified: true,
         repPoints: true,
         location: true,
       },

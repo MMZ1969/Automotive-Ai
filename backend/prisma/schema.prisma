@@ -29,6 +29,7 @@ model User {
   verificationToken     String?
   isAdmin               Boolean        @default(false)
   isVerified            Boolean        @default(false)
+  isCertified           Boolean        @default(false) // gold 🏁: license/ASE checked. isVerified alone = blue ✓
   isBanned              Boolean        @default(false)
   isAvailable           Boolean        @default(true)
   verificationRequest   String?

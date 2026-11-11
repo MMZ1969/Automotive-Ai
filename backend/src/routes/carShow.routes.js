@@ -16,7 +16,7 @@ router.get("/", authMiddleware, async (req, res) => {
       orderBy: { date: "asc" },
       include: {
         user: {
-          select: { id: true, name: true, profilePhoto: true, role: true, isVerified: true },
+          select: { id: true, name: true, profilePhoto: true, role: true, isVerified: true, isCertified: true },
         },
         attendees: {
   where: hideTestAccountsExceptViewer(req.user?.id),
@@ -43,7 +43,7 @@ router.get("/:id", authMiddleware, async (req, res) => {
       where: { id: parseInt(req.params.id) },
       include: {
         user: {
-          select: { id: true, name: true, profilePhoto: true, role: true, isVerified: true },
+          select: { id: true, name: true, profilePhoto: true, role: true, isVerified: true, isCertified: true },
         },
         attendees: {
   select: {
@@ -81,7 +81,7 @@ router.post("/", authMiddleware, async (req, res) => {
       },
       include: {
         user: {
-          select: { id: true, name: true, profilePhoto: true, role: true, isVerified: true },
+          select: { id: true, name: true, profilePhoto: true, role: true, isVerified: true, isCertified: true },
         },
         attendees: {
   select: {
@@ -156,7 +156,7 @@ router.put("/:id", authMiddleware, async (req, res) => {
       },
       include: {
         user: {
-          select: { id: true, name: true, profilePhoto: true, role: true, isVerified: true },
+          select: { id: true, name: true, profilePhoto: true, role: true, isVerified: true, isCertified: true },
         },
         attendees: {
   select: {

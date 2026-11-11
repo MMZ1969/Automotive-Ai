@@ -15,8 +15,8 @@ router.get("/conversations", authMiddleware, async (req, res) => {
       },
       orderBy: { updatedAt: "desc" },
       include: {
-        user1: { select: { id: true, name: true, profilePhoto: true, role: true, isVerified: true } },
-        user2: { select: { id: true, name: true, profilePhoto: true, role: true, isVerified: true } },
+        user1: { select: { id: true, name: true, profilePhoto: true, role: true, isVerified: true, isCertified: true } },
+        user2: { select: { id: true, name: true, profilePhoto: true, role: true, isVerified: true, isCertified: true } },
         messages: {
           orderBy: { createdAt: "desc" },
           take: 1,
@@ -60,8 +60,8 @@ router.post("/conversations", authMiddleware, async (req, res) => {
     let conversation = await prisma.conversation.findUnique({
       where: { user1Id_user2Id: { user1Id, user2Id } },
       include: {
-        user1: { select: { id: true, name: true, profilePhoto: true, role: true, isVerified: true } },
-        user2: { select: { id: true, name: true, profilePhoto: true, role: true, isVerified: true } },
+        user1: { select: { id: true, name: true, profilePhoto: true, role: true, isVerified: true, isCertified: true } },
+        user2: { select: { id: true, name: true, profilePhoto: true, role: true, isVerified: true, isCertified: true } },
         messages: { orderBy: { createdAt: "asc" } },
       },
     });
@@ -70,8 +70,8 @@ router.post("/conversations", authMiddleware, async (req, res) => {
       conversation = await prisma.conversation.create({
         data: { user1Id, user2Id },
         include: {
-          user1: { select: { id: true, name: true, profilePhoto: true, role: true, isVerified: true } },
-          user2: { select: { id: true, name: true, profilePhoto: true, role: true, isVerified: true } },
+          user1: { select: { id: true, name: true, profilePhoto: true, role: true, isVerified: true, isCertified: true } },
+          user2: { select: { id: true, name: true, profilePhoto: true, role: true, isVerified: true, isCertified: true } },
           messages: { orderBy: { createdAt: "asc" } },
         },
       });
