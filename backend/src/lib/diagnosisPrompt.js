@@ -28,7 +28,8 @@ Whenever one of these is relevant, state that exact value as fact. Do not search
 ${vehicle ? `Vehicle: ${vehicle.year} ${vehicle.make} ${vehicle.model}${vehicle.trim ? ` ${vehicle.trim}` : ""}${vehicle.engine ? ` | Engine: ${vehicle.engine}` : ""}${vehicle.engineCylinders ? ` ${vehicle.engineCylinders}-cyl` : ""}${vehicle.driveType ? ` | Drive: ${vehicle.driveType}` : ""}${vehicle.vin ? ` | VIN: ${vehicle.vin}` : ""}
 This vehicle is confirmed from the user's garage${vehicle.vin ? " (decoded from VIN)" : ""}. Do NOT ask the user for year, make, model, or engine — use the details above.` : "No specific vehicle provided."}
 ${specsBlock}${followup ? `
-This is a follow-up in the same session. The user's previous question was: "${followup.query}"${followup.summary ? ` — your previous answer summarized it as: "${followup.summary}"` : ""}
+This is a follow-up in the same session. The user's main question was: "${followup.query}"${followup.summary ? ` — your answer summarized it as: "${followup.summary}"` : ""}${(followup.recent || []).map((r) => `
+Then they asked: "${r.query}"${r.summary ? ` — you answered: "${r.summary}"` : ""}`).join("")}
 Interpret the new message in that context (e.g. "what about the rotors?" means rotors for that same job on that same vehicle). If it's clearly a new, unrelated problem, treat it as new.
 ` : ""}
 User's problem: "${query}"
@@ -73,6 +74,8 @@ If no vehicle is provided, still give the best general answer you can — never 
 
 IMPORTANT: If the user's input is clearly NOT about a vehicle or automotive issue (e.g. cooking, trivia, anything unrelated to cars, trucks, or motorcycles), do NOT attempt a diagnosis. Instead respond ONLY with this exact JSON, nothing else:
 {"error": "not_automotive"}
+
+LANGUAGE: Write summary, causes, immediateAction, diagnosisSteps and proTip in the same language the user wrote their problem in (a question in Czech gets the answer in Czech, Spanish gets Spanish). Keep the JSON keys and the severity and diyDifficulty values exactly as listed below in English, keep estimatedCost in US dollars, and write the parts names in English (they're used for an English parts search).
 
 After you finish any searching, respond with ONLY the final JSON object below — no markdown, no search commentary, no explanation of what you searched for, just the JSON:
 {

@@ -416,13 +416,38 @@ async function resolveDiagnosisVehicle(userId, bodyVehicle, query) {
 
 // A short message right after a previous diagnosis ("what about the rotors?",
 // "is it safe to drive?") is almost always a follow-up. Hand the model the
-// previous question + summary so it doesn't treat it as a fresh, context-free ask.
-function getFollowupContext(query, lastLog) {
-  if (!lastLog) return null;
-  const words = String(query).trim().split(/\s+/).filter(Boolean).length;
-  if (words > FOLLOWUP_MAX_WORDS) return null;
-  if (lastLog.query.trim().toLowerCase() === String(query).trim().toLowerCase()) return null;
-  return { query: lastLog.query.slice(0, 500), summary: lastLog.summary || "" };
+// conversation so far so it doesn't treat it as a fresh, context-free ask.
+//
+// recentLogs: this user's diagnoses in the last 30 min, newest first.
+// - Answers that were "Unable to diagnose" are never used as context (user 272
+//   asked "is it OK?" twice; the 2nd lost context, the 3rd was anchored to that
+//   useless answer).
+// - Repeating the same short question keeps the context instead of dropping it.
+// - The anchor is the main question of the thread: the longest question since
+//   the last long (new-topic) question. Useful short exchanges after it are
+//   included too (max 2).
+const UNHELPFUL_SUMMARY = /^(unable to diagnose|no automotive|not enough (info|information|detail)|need more (detail|info))/i;
+// Real words only: a lone "?" or "-" isn't a word ("Možnost opravy ? Nějaký tmel ?")
+const wordCount = (s) => String(s || "").trim().split(/\s+/).filter((w) => /[\p{L}\p{N}]/u.test(w)).length;
+const sameText = (a, b) => String(a || "").trim().toLowerCase() === String(b || "").trim().toLowerCase();
+
+function getFollowupContext(query, recentLogs) {
+  if (!recentLogs?.length) return null;
+  if (wordCount(query) > FOLLOWUP_MAX_WORDS) return null;
+  const useful = recentLogs.filter((l) => l.summary && !UNHELPFUL_SUMMARY.test(l.summary.trim()));
+  if (!useful.length) return null;
+  // The current thread: everything back to (and including) the newest long question.
+  const startIdx = useful.findIndex((l) => wordCount(l.query) > FOLLOWUP_MAX_WORDS);
+  const thread = startIdx === -1 ? useful : useful.slice(0, startIdx + 1);
+  const candidates = thread.filter((l) => !sameText(l.query, query));
+  if (!candidates.length) return null;
+  const anchor = candidates.reduce((best, l) => (wordCount(l.query) > wordCount(best.query) ? l : best));
+  const recent = candidates
+    .filter((l) => l !== anchor && l.createdAt > anchor.createdAt && !sameText(l.query, anchor.query))
+    .slice(0, 2)
+    .reverse()
+    .map((l) => ({ query: l.query.slice(0, 200), summary: l.summary || "" }));
+  return { query: anchor.query.slice(0, 500), summary: anchor.summary || "", vehicleLabel: anchor.vehicleLabel, recent };
 }
 
 // AI Diagnosis route
@@ -435,12 +460,13 @@ app.post("/api/diagnose", authMiddleware, async (req, res) => {
       return res.status(400).json({ error: "Query required" });
     }
 
-    const lastLog = await prisma.diagnosisLog.findFirst({
+    const recentLogs = await prisma.diagnosisLog.findMany({
       where: { userId: req.user.id, createdAt: { gte: new Date(Date.now() - FOLLOWUP_WINDOW_MS) } },
       orderBy: { createdAt: "desc" },
-      select: { query: true, summary: true, vehicleLabel: true },
+      take: 8,
+      select: { query: true, summary: true, vehicleLabel: true, createdAt: true },
     });
-    let followup = getFollowupContext(query, lastLog);
+    let followup = getFollowupContext(query, recentLogs);
     // noVehicle=true: the user (1.0.27+) deliberately deselected — respect it.
     // Older builds never send it, so they get the server-side fallback.
     const vehicle = req.body.noVehicle === true
@@ -448,7 +474,7 @@ app.post("/api/diagnose", authMiddleware, async (req, res) => {
       : await resolveDiagnosisVehicle(req.user.id, req.body.vehicle, followup ? `${followup.query} ${query}` : query);
     // The user explicitly picked a different vehicle than last time → new topic,
     // not a follow-up (e.g. "jeep front shocks" then tapping the Harley).
-    if (followup && req.body.vehicle && vehicleLabelOf(vehicle) !== lastLog.vehicleLabel) {
+    if (followup && req.body.vehicle && vehicleLabelOf(vehicle) !== followup.vehicleLabel) {
       followup = null;
     }
     console.log(`DIAGNOSIS CONTEXT | vehicle=${vehicleLabelOf(vehicle) || "none"} | sent=${req.body.vehicle ? "yes" : "no"} | optOut=${req.body.noVehicle === true ? "yes" : "no"} | followup=${followup ? "yes" : "no"}`);
