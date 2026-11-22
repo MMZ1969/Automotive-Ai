@@ -431,9 +431,22 @@ const UNHELPFUL_SUMMARY = /^(unable to diagnose|no automotive|not enough (info|i
 const wordCount = (s) => String(s || "").trim().split(/\s+/).filter((w) => /[\p{L}\p{N}]/u.test(w)).length;
 const sameText = (a, b) => String(a || "").trim().toLowerCase() === String(b || "").trim().toLowerCase();
 
+// Short but STANDALONE questions ("What oil does my Renegade take?") used to be
+// swallowed as follow-ups whenever they came within 30 min of another diagnosis,
+// so they were never cached or stored for the library (10/29 test: 5 of 6 fresh
+// runs flagged). A short question now counts as standalone only if it is about a
+// clearly reusable spec/maintenance topic AND has nothing pointing back at the
+// previous answer. Conservative on purpose: anything else (incl. non-English,
+// e.g. "Je to v pořádku?") stays a follow-up, because a cached answer is served
+// to the next person asking the same words for the same vehicle.
+const STANDALONE_TOPIC = /\b(oil|coolant|antifreeze|transmission fluid|brake fluid|power steering fluid|atf|fluid capacity|tire pressure|tyre pressure|psi|torque|spark plugs?|battery|bulbs?|headlight|fuses?|fuse box|air filter|cabin filter|oil filter|fuel filter|serpentine belt|timing belt|timing chain|maintenance|service interval|firing order|recalls?|wiper|lug nuts?|socket size|drain plug)\b/i;
+const DEPENDENT_MARKER = /(^\s*(and|but|so|or|also|then|ok|okay|thanks|thank you|yes|no|what about|how about|what if|why)\b)|\b(that|this|those|these|they|them|there|same|too|instead|else|either|other one|is that|was that|would that|could that|does that|do i need|how much would|how long would)\b/i;
+const isStandaloneShort = (q) => wordCount(q) >= 3 && STANDALONE_TOPIC.test(q) && !DEPENDENT_MARKER.test(q);
+
 function getFollowupContext(query, recentLogs) {
   if (!recentLogs?.length) return null;
   if (wordCount(query) > FOLLOWUP_MAX_WORDS) return null;
+  if (isStandaloneShort(query)) return null; // fresh question: cache + library
   const useful = recentLogs.filter((l) => l.summary && !UNHELPFUL_SUMMARY.test(l.summary.trim()));
   if (!useful.length) return null;
   // The current thread: everything back to (and including) the newest long question.
