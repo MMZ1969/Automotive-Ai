@@ -29,6 +29,21 @@ const LOADING_STAGES = [
 ];
 const LOADING_STAGE_DURATION_MS = 8000;
 const LAST_VEHICLE_KEY = "diagnose:lastVehicleId";
+// Set after the first successful diagnosis on this device. Until then the
+// screen shows a "try your first diagnosis" card with tap-to-fill examples
+// (1.0.31: everyone who came back had run a diagnosis; most who only added a
+// vehicle never did).
+const FIRST_DIAG_DONE_KEY = "diagnose:firstDone";
+
+function starterQuestions(v: any): string[] {
+  const car = v ? `${v.year} ${v.make} ${v.model}` : "my car";
+  const miles = v?.mileage ? `${Number(v.mileage).toLocaleString()} miles` : "its current mileage";
+  return [
+    `What oil and how much does my ${car} take?`,
+    `My check engine light came on. What should I check first on my ${car}?`,
+    `What maintenance is due on my ${car} at ${miles}?`,
+  ];
+}
 
 function buildReadAloudScript(result: any): string {
   const parts: (string | null)[] = [
@@ -75,6 +90,17 @@ export default function Diagnose() {
   // vehicle from the question / last diagnosis.
   const [explicitNone, setExplicitNone] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [firstDiagDone, setFirstDiagDone] = useState(true); // hidden until we know
+  useEffect(() => {
+    AsyncStorage.getItem(FIRST_DIAG_DONE_KEY)
+      .then((v) => setFirstDiagDone(v === "1"))
+      .catch(() => {});
+  }, []);
+  const markFirstDiagDone = () => {
+    if (firstDiagDone) return;
+    setFirstDiagDone(true);
+    AsyncStorage.setItem(FIRST_DIAG_DONE_KEY, "1").catch(() => {});
+  };
   const loadingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   // `disabled={loading}` only applies after a re-render, so quick taps can
   // fire several requests (user 235 sent 3 in the same second). A ref blocks
@@ -192,7 +218,7 @@ export default function Diagnose() {
       if (res.data.error === "not_automotive") {
         Alert.alert("Not Automotive", "This image doesn't appear to show a vehicle problem."); setScanImage(null); return;
       }
-      setResult(res.data);
+      setResult(res.data); markFirstDiagDone();
       if (res.data.summary) {
         try { const videoRes = await api.get(`/api/youtube?query=${encodeURIComponent(res.data.summary)}`); setVideos(videoRes.data); } catch {}
       }
@@ -223,7 +249,7 @@ export default function Diagnose() {
     return;
   }
   const videoRes = await api.get(`/api/youtube?query=${encodeURIComponent(fullQuery)}`);
-  setResult(diagRes.data); setVideos(videoRes.data);
+  setResult(diagRes.data); setVideos(videoRes.data); markFirstDiagDone();
 } catch { console.error("DIAGNOSE ERROR"); }
 finally { setLoading(false); diagnoseInFlight.current = false; }
   };
@@ -343,6 +369,24 @@ finally { setLoading(false); diagnoseInFlight.current = false; }
               <Text style={{ color: "#f59e0b", fontSize: 12, marginTop: 4 }}>
                 💡 Add your VIN in My Garage for even more accurate results
               </Text>
+            )}
+          </View>
+        )}
+
+        {!firstDiagDone && !result && !loading && (
+          <View style={{ backgroundColor: colors.card, borderRadius: 14, borderWidth: 1, borderColor: colors.blue + "55", padding: 14, marginBottom: 14 }}>
+            <Text style={{ color: colors.text, fontSize: 16, fontWeight: "800", marginBottom: 4 }}>👋 Try your first diagnosis</Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 10 }}>
+              Nothing wrong right now? Ask anything about {selectedVehicle ? `your ${selectedVehicle.make}` : "your car"}. Tap one to start:
+            </Text>
+            {starterQuestions(selectedVehicle).map((q) => (
+              <TouchableOpacity key={q} onPress={() => setQuery(q)}
+                style={{ backgroundColor: query === q ? colors.blue + "22" : colors.background, borderRadius: 10, borderWidth: 1, borderColor: query === q ? colors.blue : colors.border, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 6 }}>
+                <Text style={{ color: colors.text, fontSize: 13 }}>{q}</Text>
+              </TouchableOpacity>
+            ))}
+            {!!query && starterQuestions(selectedVehicle).includes(query) && (
+              <Text style={{ color: colors.green, fontSize: 12, marginTop: 4 }}>✓ Added below. Tap Diagnose when ready.</Text>
             )}
           </View>
         )}

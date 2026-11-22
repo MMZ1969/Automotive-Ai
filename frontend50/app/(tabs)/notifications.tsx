@@ -32,7 +32,7 @@ export default function Notifications() {
 
   const handleNotificationPress = (item: any) => {
     switch (item.type) {
-      case "like": case "comment": if (item.postId) router.push(`/(tabs)/post/${item.postId}`); break;
+      case "like": case "comment": case "question": if (item.postId) router.push(`/(tabs)/post/${item.postId}`); break;
       case "follow": if (item.actorId) router.push(`/(tabs)/user/${item.actorId}`); break;
       case "mechanic_verification": router.push("/(tabs)/(profile)/admin"); break;
       case "post_reported": case "job_reported":

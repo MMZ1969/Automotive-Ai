@@ -11,11 +11,13 @@ export default function AddFirstVehicle() {
   const isMechanic = user?.role === "MECHANIC";
 
   // Once the backend confirms onboarding is complete (vehicle added for a
-  // DIYer, or verification submitted for a mechanic), move on to Feed
-  // automatically instead of leaving the user stuck here.
+  // DIYer, or verification submitted for a mechanic), move on automatically
+  // instead of leaving the user stuck here. DIYers go straight to Diagnose
+  // with their new vehicle picked (1.0.31: users who run a diagnosis come
+  // back; users who only add a vehicle mostly don't). Mechanics go to Feed.
   useEffect(() => {
     if (user?.hasCompletedOnboarding) {
-      router.replace("/(tabs)/feed");
+      router.replace(isMechanic ? "/(tabs)/feed" : "/(tabs)/diagnose");
     }
   }, [user?.hasCompletedOnboarding]);
 

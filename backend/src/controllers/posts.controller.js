@@ -119,11 +119,54 @@ export const createPost = async (req, res) => {
     });
 
     res.json(post);
+
+    // After responding: tell mechanics a question landed (fire-and-forget).
+    if (type === "QUESTION") notifyMechanicsOfQuestion(post, userId).catch(() => {});
   } catch (err) {
     console.error("CREATE POST ERROR:", err);
     res.status(500).json({ error: "Failed to create post" });
   }
 };
+
+// New QUESTION post → in-app notification (+ push if they have a token) to
+// every mechanic, so questions get answered and mechanics have a reason to
+// open the app (11/22 reports: 27 mechanic signups, 8 ever used the app).
+// A mechanic gets at most one of these per QUESTION_NOTIFY_GAP_HOURS, so a
+// burst of questions doesn't spam anyone. Skips the author, banned and
+// unverified-email accounts. createAndSendNotification already skips
+// test-account authors.
+const QUESTION_NOTIFY_GAP_HOURS = 3;
+
+async function notifyMechanicsOfQuestion(post, authorId) {
+  try {
+    const mechanics = await prisma.user.findMany({
+      where: { role: "MECHANIC", isBanned: false, emailVerified: true, id: { not: authorId } },
+      select: { id: true },
+    });
+    if (mechanics.length === 0) return;
+
+    const since = new Date(Date.now() - QUESTION_NOTIFY_GAP_HOURS * 3600 * 1000);
+    const recent = await prisma.notification.findMany({
+      where: { type: "question", createdAt: { gte: since }, recipientId: { in: mechanics.map((m) => m.id) } },
+      select: { recipientId: true },
+    });
+    const skip = new Set(recent.map((n) => n.recipientId));
+
+    const firstLine = String(post.content || "").split("\n").find((l) => l.trim()) || "";
+    const preview = firstLine.length > 80 ? `${firstLine.slice(0, 77)}…` : firstLine;
+    const message = `❓ New question: "${preview}" Can you help?`;
+
+    let sent = 0;
+    for (const m of mechanics) {
+      if (skip.has(m.id)) continue;
+      await createAndSendNotification({ recipientId: m.id, actorId: authorId, type: "question", postId: post.id, message });
+      sent++;
+    }
+    console.log(`QUESTION NOTIFY | post=${post.id} | mechanics=${mechanics.length} | sent=${sent} | throttled=${skip.size}`);
+  } catch (err) {
+    console.error("QUESTION NOTIFY ERROR:", err);
+  }
+}
 
 // UPDATE a post
 export const updatePost = async (req, res) => {
