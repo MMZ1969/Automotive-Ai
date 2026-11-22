@@ -1,5 +1,6 @@
 import { useTheme } from "@context/ThemeContext";
 import api from "@lib/api";
+import { askForPushSoon } from "@lib/push";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import {
@@ -25,7 +26,8 @@ export default function Notifications() {
   finally { setLoading(false); setRefreshing(false); }
 };
 
-  useFocusEffect(useCallback(() => { fetchNotifications(); }, []));
+  // Shares the "messages" cooldown with the Messages screen: one ask per 7 days.
+  useFocusEffect(useCallback(() => { fetchNotifications(); askForPushSoon("messages"); }, []));
   const onRefresh = () => { setRefreshing(true); fetchNotifications(); };
 
   const handleNotificationPress = (item: any) => {

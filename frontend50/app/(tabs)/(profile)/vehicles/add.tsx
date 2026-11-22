@@ -17,6 +17,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "@context/AuthContext";
 import api from "@lib/api";
 import { createVehicle } from "@lib/vehicles";
+import { askForPushSoon } from "@lib/push";
 
 export default function AddVehicleScreen() {
   const router = useRouter();
@@ -165,6 +166,9 @@ export default function AddVehicleScreen() {
       // the backend update immediately, not on next login.
       await refreshUser();
       router.back();
+      // Nearly every user adds a vehicle, so this is the main moment to offer
+      // notifications (does nothing if already on or "Not now" in the last 7 days).
+      askForPushSoon("vehicle");
     } catch (err) {
       console.error("Error creating vehicle:", err);
       Alert.alert("Error", "Failed to save vehicle.");

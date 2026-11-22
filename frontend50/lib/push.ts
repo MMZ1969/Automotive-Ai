@@ -10,6 +10,9 @@
 //     a question, after setting a reminder, and a card under a diagnosis) and
 //     only shows the OS prompt after the user taps "Turn on";
 //   - if the OS won't ask again (they declined before), we offer Settings.
+// 1.0.30: only 2 of 15 signups after 1.0.29 hit one of those three moments,
+// so two more moments nearly everyone reaches: after adding a vehicle
+// ("vehicle") and on opening Messages or the notifications bell ("messages").
 import api from "@lib/api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
@@ -17,7 +20,7 @@ import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
 import { Alert, Linking, Platform } from "react-native";
 
-export type PushReason = "question" | "reminder" | "diagnosis";
+export type PushReason = "question" | "reminder" | "diagnosis" | "vehicle" | "messages";
 export type PushStatus = "granted" | "ask" | "blocked" | "unsupported";
 
 const SAVED_KEY = "push:savedAt"; // when this device's token was last sent for the logged-in user
@@ -28,6 +31,8 @@ const COOLDOWN_MS: Record<PushReason, number> = {
   question: 3 * 24 * 60 * 60 * 1000,
   reminder: 3 * 24 * 60 * 60 * 1000,
   diagnosis: 30 * 24 * 60 * 60 * 1000,
+  vehicle: 7 * 24 * 60 * 60 * 1000,
+  messages: 7 * 24 * 60 * 60 * 1000,
 };
 const COPY: Record<PushReason, { title: string; body: string }> = {
   question: {
@@ -41,6 +46,14 @@ const COPY: Record<PushReason, { title: string; body: string }> = {
   diagnosis: {
     title: "Get a heads-up on replies?",
     body: "Turn on notifications to hear when a mechanic answers or a maintenance reminder is due. No spam.",
+  },
+  vehicle: {
+    title: "Want a heads-up when service is due?",
+    body: "Turn on notifications for maintenance reminders and when someone messages you or answers your question. No spam.",
+  },
+  messages: {
+    title: "Don't miss a message?",
+    body: "Turn on notifications so you know right away when someone messages you or replies to you.",
   },
 };
 
@@ -139,6 +152,12 @@ export async function askForPush(reason: PushReason): Promise<void> {
       { text: "Turn on", onPress: () => { turnOnPush(); } },
     ]);
   }
+}
+
+// askForPush after a short pause, so the alert lands on the settled screen
+// (not mid navigation transition). Fire-and-forget.
+export function askForPushSoon(reason: PushReason, delayMs = 700) {
+  setTimeout(() => { askForPush(reason).catch(() => {}); }, delayMs);
 }
 
 // For the in-line card: hidden for 30 days after "Not now".

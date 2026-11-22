@@ -3,6 +3,7 @@
 import { useAuth } from "@context/AuthContext";
 import { useTheme } from "@context/ThemeContext";
 import api from "@lib/api";
+import { askForPushSoon } from "@lib/push";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import {
@@ -47,7 +48,9 @@ export default function MessagesScreen() {
     }
   };
 
-  useFocusEffect(useCallback(() => { fetchConversations(); }, []));
+  // Opening Messages is when a missed push actually costs the user, so offer
+  // notifications here (no-op if already on or declined in the last 7 days).
+  useFocusEffect(useCallback(() => { fetchConversations(); askForPushSoon("messages"); }, []));
 
   const getOtherUser = (conv: any) => {
     return conv.user1?.id === user?.id ? conv.user2 : conv.user1;
