@@ -29,6 +29,7 @@ async function main() {
       sound: "default",
       priority: "high",
       channelId: "default",
+      badge: 3, // shows "3" on the app icon (the app clears it when opened)
     }),
   });
   const ticket = (await res.json())?.data;
