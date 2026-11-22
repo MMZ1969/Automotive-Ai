@@ -4,24 +4,65 @@ import { isTestAccountUser } from "../lib/testAccounts.js";
 // Helper function to send push notification.
 // badgeCount null = leave the app badge alone. data rides along to the app
 // (e.g. { type: "REMINDER", vehicleId } so a tap opens that vehicle).
+//
+// Reads Expo's ticket and, 20 s later, the delivery receipt, and logs every
+// failure as "PUSH FAIL | ...". Before 11/22 the response was never read, so a
+// rejected push (stale token, bad APNs/FCM credentials) left no trace.
+// Successes log one short "PUSH OK" line. Never throws.
 export async function sendPushNotification(pushToken, title, body, badgeCount = 1, data = undefined) {
-  if (!pushToken || !pushToken.startsWith("ExponentPushToken")) return;
+  if (!pushToken || !pushToken.startsWith("ExponentPushToken")) {
+    if (pushToken) console.warn(`PUSH SKIP | not an Expo token | ${String(pushToken).slice(0, 20)}…`);
+    return;
+  }
+  const tok = pushToken.slice(18, 30); // short id for logs, not the full token
 
   try {
-    await fetch("https://exp.host/--/api/v2/push/send", {
+    const res = await fetch("https://exp.host/--/api/v2/push/send", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { Accept: "application/json", "Content-Type": "application/json" },
       body: JSON.stringify({
         to: pushToken,
         title,
         body,
         sound: "default",
+        priority: "high",
+        channelId: "default", // the app creates this channel (lib/push.ts)
         ...(typeof badgeCount === "number" ? { badge: badgeCount } : {}),
         ...(data ? { data } : {}),
       }),
     });
+    const json = await res.json().catch(() => null);
+    const ticket = Array.isArray(json?.data) ? json.data[0] : json?.data;
+
+    if (!res.ok || !ticket || ticket.status !== "ok") {
+      console.error(
+        `PUSH FAIL | ticket | tok=${tok} | http=${res.status} | ` +
+          `${ticket?.details?.error || ticket?.message || JSON.stringify(json?.errors || json)}`
+      );
+      return;
+    }
+    console.log(`PUSH OK | tok=${tok} | "${String(title).slice(0, 30)}"`);
+
+    // The ticket only means Expo queued it; Apple/Google errors show up in the receipt.
+    setTimeout(() => checkPushReceipt(ticket.id, tok), 20000).unref?.();
   } catch (err) {
     console.error("PUSH NOTIFICATION ERROR:", err);
+  }
+}
+
+async function checkPushReceipt(ticketId, tok) {
+  try {
+    const rr = await fetch("https://exp.host/--/api/v2/push/getReceipts", {
+      method: "POST",
+      headers: { Accept: "application/json", "Content-Type": "application/json" },
+      body: JSON.stringify({ ids: [ticketId] }),
+    });
+    const receipt = (await rr.json().catch(() => null))?.data?.[ticketId];
+    if (receipt && receipt.status !== "ok") {
+      console.error(`PUSH FAIL | receipt | tok=${tok} | ${receipt.details?.error || ""} ${receipt.message || ""}`);
+    }
+  } catch (err) {
+    console.error("PUSH RECEIPT ERROR:", err?.message || err);
   }
 }
 
