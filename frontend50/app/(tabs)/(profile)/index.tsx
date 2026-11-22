@@ -39,7 +39,9 @@ export default function Profile() {
     // settling. Same guard fetchStats already has below.
     if (!user?.id) return;
     try {
-      setLoadingPosts(true);
+      // No setLoadingPosts(true) here: the spinner only shows on the very first
+      // load. Re-focusing the tab keeps the photos already on screen while this
+      // refreshes, so the layout never collapses and re-expands.
       const res = await api.get(`/api/posts?type=VANITY`);
       const myPosts = res.data.filter((p: any) => p.userId === user?.id);
       setVanityPosts(myPosts);
@@ -145,6 +147,11 @@ export default function Profile() {
   };
 
   const itemSize = 80;
+  // Rides & Builds is one swipeable row with a FIXED height (loading, empty or
+  // full), so the menu below never shifts while images load. Before 1.0.30 it
+  // was a wrapping grid that grew row by row and pushed Messages down onto
+  // My Garage mid-tap.
+  const galleryHeight = itemSize;
 
   const statPill = {
     backgroundColor: colors.card,
@@ -251,35 +258,44 @@ export default function Profile() {
             <Text style={{ color: colors.blue, fontSize: 13 }}>+ Add</Text>
           </TouchableOpacity>
         </View>
-        {loadingPosts ? (
-          <ActivityIndicator color={colors.blue} />
-        ) : vanityPosts.length === 0 ? (
-          <View style={{ alignItems: "center", paddingVertical: 24 }}>
-            <Text style={{ fontSize: 36, marginBottom: 8 }}>📸</Text>
-            <Text style={{ color: colors.textSecondary, fontSize: 14, textAlign: "center" }}>
-              No builds posted yet.{"\n"}Share your first ride!
-            </Text>
-          </View>
-        ) : (
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 4 }}>
-            {vanityPosts.map((post) => (
-              <TouchableOpacity
-                key={post.id}
-                onPress={() => router.push(`/(tabs)/post/${post.id}`)}
-                style={{ width: itemSize, height: itemSize, borderRadius: 10, overflow: "hidden", backgroundColor: colors.border }}
-              >
-                {post.imageUrl ? (
-                  <Image source={{ uri: post.imageUrl }} style={{ width: itemSize, height: itemSize }} resizeMode="cover" />
-                ) : (
-                  <View style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: 8 }}>
-                    <Text style={{ fontSize: 20, marginBottom: 4 }}>🚗</Text>
-                    <Text style={{ color: colors.textSecondary, fontSize: 10, textAlign: "center" }} numberOfLines={3}>{post.content}</Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
+        <View style={{ height: galleryHeight, justifyContent: "center" }}>
+          {loadingPosts && vanityPosts.length === 0 ? (
+            <ActivityIndicator color={colors.blue} />
+          ) : vanityPosts.length === 0 ? (
+            <TouchableOpacity
+              onPress={() => router.push("/(tabs)/create")}
+              style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 12 }}
+            >
+              <Text style={{ fontSize: 30 }}>📸</Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 14 }}>
+                No builds posted yet.{"\n"}Share your first ride!
+              </Text>
+            </TouchableOpacity>
+          ) : (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ gap: 6 }}
+            >
+              {vanityPosts.map((post) => (
+                <TouchableOpacity
+                  key={post.id}
+                  onPress={() => router.push(`/(tabs)/post/${post.id}`)}
+                  style={{ width: itemSize, height: itemSize, borderRadius: 10, overflow: "hidden", backgroundColor: colors.border }}
+                >
+                  {post.imageUrl ? (
+                    <Image source={{ uri: post.imageUrl }} style={{ width: itemSize, height: itemSize }} resizeMode="cover" />
+                  ) : (
+                    <View style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: 8 }}>
+                      <Text style={{ fontSize: 20, marginBottom: 4 }}>🚗</Text>
+                      <Text style={{ color: colors.textSecondary, fontSize: 10, textAlign: "center" }} numberOfLines={3}>{post.content}</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          )}
+        </View>
       </View>
 
       {/* MECHANIC MENU */}
