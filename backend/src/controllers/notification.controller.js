@@ -9,6 +9,11 @@ import { isTestAccountUser } from "../lib/testAccounts.js";
 // failure as "PUSH FAIL | ...". Before 11/22 the response was never read, so a
 // rejected push (stale token, bad APNs/FCM credentials) left no trace.
 // Successes log one short "PUSH OK" line. Never throws.
+//
+// DeviceNotRegistered (ticket or receipt) = Apple/Google say the app is gone
+// from that device (uninstalled / reinstalled). The token is cleared from every
+// user holding it, so reports stop counting them as reachable and we stop
+// sending into the void. A reinstall that grants permission sends a fresh token.
 export async function sendPushNotification(pushToken, title, body, badgeCount = 1, data = undefined) {
   if (!pushToken || !pushToken.startsWith("ExponentPushToken")) {
     if (pushToken) console.warn(`PUSH SKIP | not an Expo token | ${String(pushToken).slice(0, 20)}…`);
@@ -39,18 +44,19 @@ export async function sendPushNotification(pushToken, title, body, badgeCount = 
         `PUSH FAIL | ticket | tok=${tok} | http=${res.status} | ` +
           `${ticket?.details?.error || ticket?.message || JSON.stringify(json?.errors || json)}`
       );
+      if (ticket?.details?.error === "DeviceNotRegistered") await clearDeadToken(pushToken, tok);
       return;
     }
     console.log(`PUSH OK | tok=${tok} | "${String(title).slice(0, 30)}"`);
 
     // The ticket only means Expo queued it; Apple/Google errors show up in the receipt.
-    setTimeout(() => checkPushReceipt(ticket.id, tok), 20000).unref?.();
+    setTimeout(() => checkPushReceipt(ticket.id, pushToken, tok), 20000).unref?.();
   } catch (err) {
     console.error("PUSH NOTIFICATION ERROR:", err);
   }
 }
 
-async function checkPushReceipt(ticketId, tok) {
+async function checkPushReceipt(ticketId, pushToken, tok) {
   try {
     const rr = await fetch("https://exp.host/--/api/v2/push/getReceipts", {
       method: "POST",
@@ -60,9 +66,21 @@ async function checkPushReceipt(ticketId, tok) {
     const receipt = (await rr.json().catch(() => null))?.data?.[ticketId];
     if (receipt && receipt.status !== "ok") {
       console.error(`PUSH FAIL | receipt | tok=${tok} | ${receipt.details?.error || ""} ${receipt.message || ""}`);
+      if (receipt.details?.error === "DeviceNotRegistered") await clearDeadToken(pushToken, tok);
     }
   } catch (err) {
     console.error("PUSH RECEIPT ERROR:", err?.message || err);
+  }
+}
+
+// Only clears rows that still hold this exact token, so a user who already
+// sent a new one is untouched. Never throws.
+async function clearDeadToken(pushToken, tok) {
+  try {
+    const r = await prisma.user.updateMany({ where: { pushToken }, data: { pushToken: null } });
+    console.log(`PUSH TOKEN CLEARED | tok=${tok} | users=${r.count} | DeviceNotRegistered`);
+  } catch (err) {
+    console.error("PUSH TOKEN CLEAR ERROR:", err?.message || err);
   }
 }
 
