@@ -50,3 +50,6 @@ store/raw/*
 
 # Local reports: contain user emails and questions. Never commit (repo is public).
 backend/reports/
+
+# Welcome DM drafts: real user IDs + personal message text. Never commit.
+backend/welcome-dms.json

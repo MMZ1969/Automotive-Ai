@@ -1,4 +1,5 @@
 import withFixGoogleMapsPod from "./plugins/withFixGoogleMapsPod.js";
+import withOptionalPortrait from "./plugins/withOptionalPortrait.js";
 
 export default {
   expo: {
@@ -71,6 +72,8 @@ export default {
         },
       ],
       withFixGoogleMapsPod,
+      // Play: portrait lock made android.hardware.screen.portrait required (1.0.30 warning).
+      withOptionalPortrait,
       // Play Console: "DEX code optimization below threshold" (fix by Feb 2027).
       // Turns on R8 minify/obfuscation + resource shrinking for Android release builds.
       [
