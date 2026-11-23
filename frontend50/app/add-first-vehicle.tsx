@@ -37,14 +37,14 @@ export default function AddFirstVehicle() {
         </Text>
 
         <TouchableOpacity
-          onPress={() => { tap("get_verified"); router.push("/(tabs)/(profile)/settings"); }}
+          onPress={() => { tap("get_verified"); router.push("/(tabs)/mechanic/verify"); }}
           style={{ backgroundColor: colors.blue, paddingVertical: 16, borderRadius: 14, alignItems: "center", width: "100%", marginBottom: 12 }}
         >
           <Text style={{ color: "white", fontSize: 17, fontWeight: "700" }}>⭐ Get Verified</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          onPress={() => { tap("browse_jobs"); router.replace("/(tabs)/(profile)/settings"); }}
+          onPress={() => { tap("browse_jobs"); router.replace("/(tabs)/mechanic/jobs"); }}
           style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, paddingVertical: 16, borderRadius: 14, alignItems: "center", width: "100%", marginBottom: 20 }}
         >
           <Text style={{ color: colors.text, fontSize: 16, fontWeight: "700" }}>📍 Browse Jobs Near Me</Text>

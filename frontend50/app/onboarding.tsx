@@ -33,7 +33,9 @@ export default function OnboardingScreen() {
   const handleFinish = async (skipped = false) => {
     track("slides_done", { slide: currentIndex + 1, skipped });
     await AsyncStorage.setItem("hasSeenOnboarding", "true");
-    router.replace("/(auth)/login");
+    // New installs go to Create Account (it links to Login for existing users).
+    // Before 1.0.31 this went to Login, so new people had to find "Register".
+    router.replace("/(auth)/register");
   };
 
   return (

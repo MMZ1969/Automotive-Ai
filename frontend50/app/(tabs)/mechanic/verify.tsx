@@ -15,7 +15,7 @@ import { storage } from "../../../firebaseConfig.js";
 
 export default function VerifyMechanic() {
   const { colors } = useTheme();
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   // Already a blue ✓ Verified Mechanic: this screen is the upgrade to gold 🏁 Certified
   const alreadyVerified = !!user?.isVerified && !(user as any)?.isCertified;
   const router = useRouter();
@@ -101,6 +101,9 @@ export default function VerifyMechanic() {
         licenseNumber, shopName, shopLocation, experience, proofPhotoUrl,
       });
       track("verify_form_submit");
+      // Submitting completes a mechanic's onboarding on the server; refresh so
+      // the welcome screen (add-first-vehicle) moves on to the feed.
+      refreshUser().catch(() => {});
       Alert.alert("✅ Submitted!", "Your verification request has been sent. You'll get a notification once it's reviewed.", [
         { text: "OK", onPress: () => router.back() },
       ]);
