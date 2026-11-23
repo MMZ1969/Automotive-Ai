@@ -82,6 +82,16 @@ export const getPostById = async (req, res) => {
     });
     if (!post) return res.status(404).json({ error: "Post not found" });
     res.json(post);
+
+    // Opening a post counts as reading its notifications (question, comment,
+    // like). Before 11/23 they stayed unread until the bell was opened, so a
+    // question answered straight from the feed kept counting toward the icon
+    // badge, which every push sets to the unread total.
+    if (viewerId) {
+      prisma.notification
+        .updateMany({ where: { recipientId: viewerId, postId: id, read: false }, data: { read: true } })
+        .catch((err) => console.error("MARK POST NOTIFS READ ERROR:", err.message));
+    }
   } catch (err) {
     console.error("GET POST ERROR:", err);
     res.status(500).json({ error: "Failed to fetch post" });
