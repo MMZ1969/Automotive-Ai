@@ -4,11 +4,13 @@
 //   node send-test-push.js                          (defaults to maz@amazmade.com)
 //   node send-test-push.js amazmade.webdesign@gmail.com
 //   node send-test-push.js 100                      (by user id)
+//   node send-test-push.js 1 0                      (2nd arg = icon badge number; 0 clears it)
 import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 const arg = process.argv[2] || "maz@amazmade.com";
+const badge = process.argv[3] !== undefined ? Number(process.argv[3]) : 3;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function main() {
@@ -18,7 +20,7 @@ async function main() {
   if (!user) return console.log("No user found for", arg);
   if (!user.pushToken) return console.log(`#${user.id} ${user.email} has no push token. Open the app on the phone (log in), then retry.`);
 
-  console.log(`Sending test push to #${user.id} ${user.email}\n  token: ${user.pushToken}`);
+  console.log(`Sending test push (badge ${badge}) to #${user.id} ${user.email}\n  token: ${user.pushToken}`);
   const res = await fetch("https://exp.host/--/api/v2/push/send", {
     method: "POST",
     headers: { Accept: "application/json", "Content-Type": "application/json" },
@@ -29,7 +31,7 @@ async function main() {
       sound: "default",
       priority: "high",
       channelId: "default",
-      badge: 3, // shows "3" on the app icon (the app clears it when opened)
+      badge, // default 3 so the icon shows a number; 0 clears it (the app also clears it when opened)
     }),
   });
   const ticket = (await res.json())?.data;
