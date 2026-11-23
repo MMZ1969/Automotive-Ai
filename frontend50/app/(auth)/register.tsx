@@ -1,8 +1,9 @@
 import { useAuth } from "@context/AuthContext";
 import { useTheme } from "@context/ThemeContext";
 import { suggestEmailFix } from "@lib/emailTypo";
+import { track } from "@lib/track";
 import { router, useLocalSearchParams } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Alert, Linking, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 
@@ -24,28 +25,33 @@ export default function Register() {
     typeof params.code === "string" ? params.code.toUpperCase() : ""
   );
 
+  useEffect(() => { track("register_view"); }, []);
+
   const handleRegister = async (emailOverride?: string) => {
     const cleanEmail = (emailOverride ?? email).trim();
-    if (!name || !cleanEmail || !password) { Alert.alert("Missing fields", "All fields are required."); return; }
+    if (!name || !cleanEmail || !password) { track("register_blocked", { reason: "missing_fields" }); Alert.alert("Missing fields", "All fields are required."); return; }
     // gmail.comn / gmail.coms etc. — the code would bounce and the person
     // would be stuck. Offer the one-tap fix before we create anything.
     const fix = suggestEmailFix(cleanEmail);
     if (fix) {
+      track("register_blocked", { reason: "email_typo" });
       Alert.alert("Check your email", `Did you mean ${fix}?`, [
         { text: "Edit", style: "cancel" },
         { text: `Use ${fix}`, onPress: () => { setEmail(fix); handleRegister(fix); } },
       ]);
       return;
     }
-    if (!agreedToTerms) { Alert.alert("Terms Required", "You must agree to the Terms of Service and Community Guidelines to create an account."); return; }
-    if (password.length < 8) { Alert.alert("Weak Password", "Password must be at least 8 characters."); return; }
-    if (!/[0-9]/.test(password)) { Alert.alert("Weak Password", "Password must contain at least one number."); return; }
-    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) { Alert.alert("Weak Password", "Password must contain at least one special character (!@#$%^&* etc)."); return; }
+    if (!agreedToTerms) { track("register_blocked", { reason: "terms" }); Alert.alert("Terms Required", "You must agree to the Terms of Service and Community Guidelines to create an account."); return; }
+    if (password.length < 8) { track("register_blocked", { reason: "password_length" }); Alert.alert("Weak Password", "Password must be at least 8 characters."); return; }
+    if (!/[0-9]/.test(password)) { track("register_blocked", { reason: "password_number" }); Alert.alert("Weak Password", "Password must contain at least one number."); return; }
+    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) { track("register_blocked", { reason: "password_special" }); Alert.alert("Weak Password", "Password must contain at least one special character (!@#$%^&* etc)."); return; }
     try {
       setLoading(true);
+      track("register_submit", { role });
       await register({ name, email: cleanEmail, password, role, referralCode: referralCode.trim() || undefined });
     } catch (err: any) {
       if (err?.needsVerification) {
+        track("register_ok", { role });
         // Verification code entry lives on its own persistent route now —
         // not local state here — so it survives this screen unmounting,
         // the app backgrounding, a force-close, anything. See
@@ -56,6 +62,7 @@ export default function Register() {
         // permanent email address...") instead of axios's generic
         // "Request failed with status code 400".
         const serverMessage = err?.response?.data?.message || err?.response?.data?.error;
+        track("register_error", { reason: String(serverMessage || err?.message || "unknown").slice(0, 80) });
         Alert.alert("Registration failed", serverMessage || err.message || "Try again.");
       }
     } finally {

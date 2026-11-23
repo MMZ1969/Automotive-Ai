@@ -29,6 +29,7 @@ import reviewRoutes from "./routes/reviews.js";
 import uploadRoutes from "./routes/upload.js";
 import userRoutes from "./routes/user.routes.js";
 import vehiclesRoutes from "./routes/vehicles.routes.js";
+import eventsRoutes from "./routes/events.routes.js";
 
 const app = express();
 app.set("trust proxy", 1);
@@ -194,6 +195,7 @@ app.use("/api/reviews", reviewRoutes);
 app.use("/api/car-shows", carShowRoutes);
 app.use("/api/messages", messagesRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/events", eventsRoutes); // onboarding step logging (no auth required)
 
 // ─── DIAGNOSIS CACHE ──────────────────────────────────────────────────────────
 // Keyed by vehicle + exact query text. Two users (or the same user twice)

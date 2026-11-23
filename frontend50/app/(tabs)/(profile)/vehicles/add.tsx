@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -18,10 +18,13 @@ import { useAuth } from "@context/AuthContext";
 import api from "@lib/api";
 import { createVehicle } from "@lib/vehicles";
 import { askForPushSoon } from "@lib/push";
+import { track } from "@lib/track";
 
 export default function AddVehicleScreen() {
   const router = useRouter();
-  const { refreshUser } = useAuth();
+  const { refreshUser, user } = useAuth();
+  // "first" = this account hasn't finished onboarding yet (no vehicle / no verification).
+  useEffect(() => { track("vehicle_add_view", { first: !user?.hasCompletedOnboarding }); }, []);
 
   const [make, setMake] = useState("");
   const [model, setModel] = useState("");
@@ -101,11 +104,13 @@ export default function AddVehicleScreen() {
       const scannedVin = res.data.vin;
 
       if (!scannedVin) {
+        track("vin_scan", { ok: false });
         Alert.alert("No VIN Found", "Couldn't read a VIN from that photo. Try again with better lighting or a closer shot.");
         return;
       }
 
       setVin(scannedVin);
+      track("vin_scan", { ok: true });
 
       // Step 2 — NHTSA API decodes the VIN for free
       const nhtsaRes = await fetch(
@@ -137,6 +142,7 @@ export default function AddVehicleScreen() {
       Alert.alert("VIN Scanned! 🎉", `VIN: ${scannedVin}\n\nVehicle details have been filled in. Please verify and add any missing info.`);
     } catch (err) {
       console.error("VIN SCAN ERROR:", err);
+      track("vin_scan", { ok: false, error: true });
       Alert.alert("Error", "Could not scan VIN. Please enter it manually.");
     } finally {
       setScanning(false);
@@ -145,6 +151,7 @@ export default function AddVehicleScreen() {
 
   const handleSave = async () => {
     if (!make.trim() || !model.trim() || !year.trim()) {
+      track("vehicle_add_blocked", { reason: "missing_fields" });
       Alert.alert("Missing Fields", "Make, Model and Year are required.");
       return;
     }
@@ -162,6 +169,7 @@ export default function AddVehicleScreen() {
         notes,
         ...decodedVinData,
       });
+      track("vehicle_saved", { first: !user?.hasCompletedOnboarding, vin: !!vin });
       // Pull the fresh user object so hasCompletedOnboarding reflects
       // the backend update immediately, not on next login.
       await refreshUser();
@@ -171,6 +179,7 @@ export default function AddVehicleScreen() {
       askForPushSoon("vehicle");
     } catch (err) {
       console.error("Error creating vehicle:", err);
+      track("vehicle_add_error");
       Alert.alert("Error", "Failed to save vehicle.");
     } finally {
       setLoading(false);

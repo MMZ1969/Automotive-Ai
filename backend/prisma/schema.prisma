@@ -74,6 +74,7 @@ model User {
 messagesReceived Message[]        @relation("MessageReceiver")
 conversations1   Conversation[]   @relation("ConversationUser1")
 conversations2   Conversation[]   @relation("ConversationUser2")
+  onboardingEvents OnboardingEvent[]
 
   @@index([emailNormalized])
 }
@@ -477,4 +478,25 @@ model VehicleSpec {
 
   @@unique([makeKey, modelKey, yearFrom, yearTo, engine, specKey])
   @@index([makeKey, modelKey])
+}
+
+// One row per onboarding step an install reaches (first open, slides, register,
+// email code, first vehicle / verification). installId is a random id made on
+// the phone, so steps before an account exists still line up with the account
+// afterwards. userId is filled once the app is logged in. No email, no name.
+// Report: node onboarding-funnel.js. Steps are whitelisted in events.routes.js.
+model OnboardingEvent {
+  id         Int      @id @default(autoincrement())
+  installId  String
+  userId     Int?
+  step       String
+  meta       Json?
+  platform   String?
+  appVersion String?
+  createdAt  DateTime @default(now())
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([installId])
+  @@index([step, createdAt])
+  @@index([userId])
 }

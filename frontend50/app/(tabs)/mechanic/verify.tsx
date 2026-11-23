@@ -1,11 +1,12 @@
 import { useAuth } from "@context/AuthContext";
 import { useTheme } from "@context/ThemeContext";
 import api from "@lib/api";
+import { track } from "@lib/track";
 import { ensureFirebaseAuth } from "@lib/firebaseAuth";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { getDownloadURL, ref, uploadBytesResumable } from "firebase/storage";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
     ActivityIndicator, Alert, Image, Text, TextInput, TouchableOpacity, View,
 } from "react-native";
@@ -27,6 +28,7 @@ export default function VerifyMechanic() {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  useEffect(() => { track("verify_form_view"); }, []);
 
   const inputStyle = {
     backgroundColor: colors.card, color: colors.text,
@@ -79,14 +81,17 @@ export default function VerifyMechanic() {
 
   const handleSubmit = async () => {
     if (!shopName.trim()) {
+      track("verify_form_blocked", { reason: "shop_name" });
       Alert.alert("Missing info", "Shop or business name is required.");
       return;
     }
     if (alreadyVerified && !licenseNumber.trim()) {
+      track("verify_form_blocked", { reason: "cert_number" });
       Alert.alert("Add your number", "To become Certified, add your ASE number or state license / certification number.");
       return;
     }
     if (!licenseNumber.trim() && !proofPhotoUrl) {
+      track("verify_form_blocked", { reason: "proof" });
       Alert.alert("Add proof", "Add your ASE / certification number or a proof photo (work ID, uniform, cert, or business card).");
       return;
     }
@@ -95,10 +100,12 @@ export default function VerifyMechanic() {
       await api.post("/api/users/verification-request", {
         licenseNumber, shopName, shopLocation, experience, proofPhotoUrl,
       });
+      track("verify_form_submit");
       Alert.alert("✅ Submitted!", "Your verification request has been sent. You'll get a notification once it's reviewed.", [
         { text: "OK", onPress: () => router.back() },
       ]);
     } catch (err: any) {
+      track("verify_form_error", { reason: String(err?.response?.data?.error || err?.message || "unknown").slice(0, 80) });
       Alert.alert("Error", err?.response?.data?.error || "Could not submit request. Try again.");
     } finally {
       setSubmitting(false);

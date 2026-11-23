@@ -1,4 +1,5 @@
 import { useTheme } from "@context/ThemeContext";
+import { track } from "@lib/track";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import { useRef, useState } from "react";
@@ -29,7 +30,8 @@ export default function OnboardingScreen() {
     }
   };
 
-  const handleFinish = async () => {
+  const handleFinish = async (skipped = false) => {
+    track("slides_done", { slide: currentIndex + 1, skipped });
     await AsyncStorage.setItem("hasSeenOnboarding", "true");
     router.replace("/(auth)/login");
   };
@@ -84,7 +86,7 @@ export default function OnboardingScreen() {
         </TouchableOpacity>
 
         {currentIndex < SLIDES.length - 1 && (
-          <TouchableOpacity onPress={handleFinish} style={{ alignItems: "center", paddingVertical: 8 }}>
+          <TouchableOpacity onPress={() => handleFinish(true)} style={{ alignItems: "center", paddingVertical: 8 }}>
             <Text style={{ color: colors.textMuted, fontSize: 14 }}>Skip</Text>
           </TouchableOpacity>
         )}

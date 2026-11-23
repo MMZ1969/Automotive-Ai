@@ -1,5 +1,6 @@
 import { useAuth } from "@context/AuthContext";
 import { useTheme } from "@context/ThemeContext";
+import { track } from "@lib/track";
 import { useRouter } from "expo-router";
 import { useEffect } from "react";
 import { Text, TouchableOpacity, View } from "react-native";
@@ -9,6 +10,9 @@ export default function AddFirstVehicle() {
   const { colors } = useTheme();
   const { user } = useAuth();
   const isMechanic = user?.role === "MECHANIC";
+  const role = isMechanic ? "MECHANIC" : "DIYER";
+  const tap = (action: string) => track("first_vehicle_tap", { role, action });
+  useEffect(() => { track("first_vehicle_view", { role }); }, []);
 
   // Once the backend confirms onboarding is complete (vehicle added for a
   // DIYer, or verification submitted for a mechanic), move on automatically
@@ -33,24 +37,24 @@ export default function AddFirstVehicle() {
         </Text>
 
         <TouchableOpacity
-          onPress={() => router.push("/(tabs)/(profile)/settings")}
+          onPress={() => { tap("get_verified"); router.push("/(tabs)/(profile)/settings"); }}
           style={{ backgroundColor: colors.blue, paddingVertical: 16, borderRadius: 14, alignItems: "center", width: "100%", marginBottom: 12 }}
         >
           <Text style={{ color: "white", fontSize: 17, fontWeight: "700" }}>⭐ Get Verified</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          onPress={() => router.replace("/(tabs)/(profile)/settings")}  
+          onPress={() => { tap("browse_jobs"); router.replace("/(tabs)/(profile)/settings"); }}
           style={{ backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, paddingVertical: 16, borderRadius: 14, alignItems: "center", width: "100%", marginBottom: 20 }}
         >
           <Text style={{ color: colors.text, fontSize: 16, fontWeight: "700" }}>📍 Browse Jobs Near Me</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => router.push("/(tabs)/(profile)/vehicles/add")}>
+        <TouchableOpacity onPress={() => { tap("add_vehicle"); router.push("/(tabs)/(profile)/vehicles/add"); }}>
           <Text style={{ color: colors.textMuted, fontSize: 13 }}>Add a vehicle instead</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => router.replace("/(tabs)/feed")} style={{ paddingVertical: 10, marginTop: 16 }}>
+        <TouchableOpacity onPress={() => { tap("skip"); router.replace("/(tabs)/feed"); }} style={{ paddingVertical: 10, marginTop: 16 }}>
           <Text style={{ color: colors.textMuted, fontSize: 14 }}>Skip for now</Text>
         </TouchableOpacity>
       </View>
@@ -68,13 +72,13 @@ export default function AddFirstVehicle() {
       </Text>
 
       <TouchableOpacity
-        onPress={() => router.push("/(tabs)/(profile)/vehicles/add")}
+        onPress={() => { tap("add_vehicle"); router.push("/(tabs)/(profile)/vehicles/add"); }}
         style={{ backgroundColor: colors.blue, paddingVertical: 16, borderRadius: 14, alignItems: "center", width: "100%", marginBottom: 12 }}
       >
         <Text style={{ color: "white", fontSize: 17, fontWeight: "700" }}>🔧 Add Your First Vehicle</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity onPress={() => router.replace("/(tabs)/feed")} style={{ paddingVertical: 10 }}>
+      <TouchableOpacity onPress={() => { tap("skip"); router.replace("/(tabs)/feed"); }} style={{ paddingVertical: 10 }}>
         <Text style={{ color: colors.textMuted, fontSize: 14 }}>Skip for now</Text>
       </TouchableOpacity>
     </View>

@@ -1,9 +1,12 @@
 import { useTheme } from "@context/ThemeContext";
+import { track } from "@lib/track";
 import { router } from "expo-router";
+import { useEffect } from "react";
 import { Image, Text, TouchableOpacity, View } from "react-native";
 
 export default function Welcome() {
   const { colors } = useTheme();
+  useEffect(() => { track("welcome_view"); }, []);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background, justifyContent: "center", alignItems: "center", paddingHorizontal: 30 }}>

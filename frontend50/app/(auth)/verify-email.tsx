@@ -1,8 +1,9 @@
 import { useAuth } from "@context/AuthContext";
 import { useTheme } from "@context/ThemeContext";
 import api from "@lib/api";
+import { track } from "@lib/track";
 import { router, useLocalSearchParams } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Alert, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 
@@ -27,6 +28,7 @@ export default function VerifyEmail() {
   const [code, setCode] = useState("");
   const [verifying, setVerifying] = useState(false);
   const [resending, setResending] = useState(false);
+  useEffect(() => { track("verify_view"); }, []);
 
   const handleVerify = async () => {
     if (code.length !== 6) return;
@@ -37,7 +39,9 @@ export default function VerifyEmail() {
       // as /login) — log the user straight in instead of making them
       // re-enter their password on a screen they just fought to reach.
       await completeVerification(res.data.token, res.data.user);
+      track("verified");
     } catch (err: any) {
+      track("verify_error", { reason: String(err?.response?.data?.message || err?.message || "unknown").slice(0, 80) });
       Alert.alert("Error", err?.response?.data?.message || "Invalid or expired code. Try again.");
     } finally {
       setVerifying(false);
@@ -47,6 +51,7 @@ export default function VerifyEmail() {
   const handleResend = async () => {
     try {
       setResending(true);
+      track("verify_resend");
       await api.post("/api/auth/resend-verification", { email });
       Alert.alert("✅ Sent!", "Check your inbox for your new verification code.");
     } catch (err) {
@@ -70,7 +75,7 @@ export default function VerifyEmail() {
       {/* Typo'd addresses never get the code — give people an obvious way out
           instead of hammering Resend Code at an inbox that doesn't exist.
           Back keeps the register form filled in so it's a one-character fix. */}
-      <TouchableOpacity onPress={() => (router.canGoBack() ? router.back() : router.replace("/(auth)/register"))} style={{ marginBottom: 24 }}>
+      <TouchableOpacity onPress={() => { track("verify_back"); router.canGoBack() ? router.back() : router.replace("/(auth)/register"); }} style={{ marginBottom: 24 }}>
         <Text style={{ color: colors.textMuted, fontSize: 13, textDecorationLine: "underline" }}>Wrong email? Go back and fix it</Text>
       </TouchableOpacity>
 

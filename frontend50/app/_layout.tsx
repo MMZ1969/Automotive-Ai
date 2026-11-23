@@ -2,6 +2,7 @@ import { AuthProvider, useAuth } from "@context/AuthContext";
 import { LogProvider } from "@context/LogContext";
 import { ThemeProvider } from "@context/ThemeContext";
 import { VehicleProvider } from "@context/VehicleContext";
+import { track } from "@lib/track";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Notifications from "expo-notifications";
 import { Slot, useRouter, useSegments } from "expo-router";
@@ -56,6 +57,7 @@ function RouteGuard() {
   useEffect(() => {
     const checkOnboarding = async () => {
       const seen = await AsyncStorage.getItem("hasSeenOnboarding");
+      if (!seen) track("first_open");
       setHasSeenOnboarding(!!seen);
       setOnboardingChecked(true);
     };
