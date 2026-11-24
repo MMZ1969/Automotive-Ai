@@ -17,6 +17,7 @@
 //
 // Usage:  node onboarding-funnel.js        (last 30 days)
 //         node onboarding-funnel.js 7      (last 7 days)
+//         node onboarding-funnel.js 1 --raw  (also list every event: time, install, user, step, meta)
 // Output: console + reports/onboarding-funnel.txt
 import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
@@ -27,6 +28,7 @@ const TEST_EMAILS = ["test@google.com", "apple@test.com"];
 const OWN_PEOPLE = [6, 8, 69, 100]; // Lauren, Arch, Tony, MAZ (same list as signup-quality.js)
 const DAY = 24 * 60 * 60 * 1000;
 const DAYS = Math.max(1, Number(process.argv[2]) || 30);
+const RAW = process.argv.includes("--raw");
 const since = new Date(Date.now() - DAYS * DAY);
 
 const pct = (n, d) => (d ? `${Math.round((100 * n) / d)}%` : "—");
@@ -58,6 +60,12 @@ async function main() {
   if (!events.length) {
     log("\nNo events yet. They start with app 1.0.31 (and only after `npx prisma db push` + backend deploy).");
     return save();
+  }
+
+  if (RAW) {
+    log("\n── Raw events ──");
+    for (const e of events)
+      log(`  ${e.createdAt.toISOString().slice(5, 19).replace("T", " ")} | ${e.installId.slice(0, 12)} | user ${e.userId ?? "-"} | ${e.platform || "?"} ${e.appVersion || ""} | ${e.step}${e.meta ? " " + JSON.stringify(e.meta) : ""}`);
   }
 
   // Group by install.
@@ -145,10 +153,10 @@ async function main() {
     for (const [k, n] of rows) log(`  ${lpad(n, 4)}  ${k}`);
   };
 
-  // After the slides the app lands on Login, not Create Account.
+  // From 1.0.31 the slides lead to Create Account (before: Login).
   const afterSlides = fresh.filter((i) => i.steps.has("slides_done"));
   const toRegister = afterSlides.filter((i) => i.steps.has("register_view")).length;
-  log(`\n── After the slides (they land on Login) ──`);
+  log(`\n── After the slides (1.0.31+: Create Account; before: Login) ──`);
   log(`  ${afterSlides.length} finished/skipped the slides → ${toRegister} found Create Account (${pct(toRegister, afterSlides.length)})`);
   section("Slides: skipped vs finished", countMeta("slides_done", "skipped").map(([k, n]) => [k === "true" ? "skipped" : "went through all 5", n]));
   section("Sign Up blocked by the form (taps, not installs)", countMeta("register_blocked", "reason"));
